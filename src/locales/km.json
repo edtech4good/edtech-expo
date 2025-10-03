@@ -1,0 +1,82 @@
+{
+  "button": {
+    "ok": "អូខេ",
+    "yes": "បាទ/ចាស",
+    "no": "ទេ"
+  },
+  "drawer": {
+    "home": "ទំព័រដើម",
+    "profile": "ប្រវត្តិរូប",
+    "teacherDashboard": "ប្រវត្តិរូប",
+    "teacherTestScore": "ពិន្ទុសិស្ស",
+    "teacherStudentList": "រាយបញ្ចីរសិស្ស",
+    "teacherDownload": "ទាញទិន្នន័យ",
+    "logout": "ចាកចេញ"
+  },
+  "screen": {
+    "login": {
+      "loginButton": "ចូលគណនី",
+      "sessionExpiredMessage": "សូមព្យាយាមចូលគណនីម្តងទៀត",
+      "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!"
+    },
+    "profile": {
+      "header": "ប្រវត្តិរូប",
+      "hiLabel": "សួស្តី",
+      "studentIdLabel": "អត្តលេខសិស្ស",
+      "teacherIdLabel": "អត្តលេខគ្រូ",
+      "memberSinceLabel": "ជាសមាជិកតាំងពី",
+      "personalDetailTitle": "ពត៌មានផ្ទាល់ខ្លួន",
+      "firstNameLabel": "ឈ្មោះ",
+      "lastNameLabel": "នាមត្រកូល",
+      "dateOfBirthLabel": "ថ្ងៃខែឆ្នាំកំណើត",
+      "contactDetailTitle": "ពត៌មានទំនាក់ទំនង",
+      "mobileNumberLabel": "លេខទូរសព្ទ",
+      "n/a": "មិនមានចម្លើយ",
+      "schooNameLabel": "ឈ្មោះសាលា",
+      "classDetailTitle": "ពត៌មានថ្នាក់រៀន",
+      "classNameLabel": "ថ្នាក់",
+      "numOfStudentLabel": "ចំនួនសិស្ស",
+      "avgTimeSpentLabel": "ពេលវេលាប្រើប្រាស់ជាមធ្យម",
+      "lastLoginLabel": "ការចូលចុងក្រោយ"
+    },
+    "subject": {
+      "header": "មុខវិជ្ជា"
+    },
+    "course": {
+      "header": "ថ្នាក់"
+    },
+    "unit": {
+      "header": "មេរៀន",
+      "progressLabel": "វឌ្ឍនភាព"
+    },
+    "level": {
+      "header": "ចំណងជើងរង",
+      "progressLabel": "វឌ្ឍនភាព"
+    },
+    "lesson": {
+      "header": "លំហាត់",
+      "learningTitle": "សិក្សា",
+      "practiceTitle": "អនុវត្ត",
+      "quizTitle": "តេស្ត"
+    },
+    "practice": {
+      "submitButton": "បញ្ជូន",
+      "retryButton": "ព្យាយាមម្តងទៀត",
+      "correctTitle": "អបអរសាទរ!",
+      "correctMessage": "ល្អណាស់!",
+      "correctButton": "បន្ទាប់",
+      "incorrectTitle": "អូទេ!",
+      "showAnswerButton": "បង្ហាញចម្លើយ",
+      "incorrectMessage": "ចម្លើយរបស់អ្នកមិនត្រឹមត្រូវទេ",
+      "incorrectButton": "សូមព្យាយាមម្តងទៀត",
+      "exitQuizMessage": "តើអ្នកចង់បញ្ចប់ការធ្វើតេស្តមែនទេ?"
+    },
+    "result": {
+      "header": "លទ្ធផល",
+      "passedTitle": "អបអរសាទរ!",
+      "failedTitle": "សូមព្យាយាមម្តងទៀត!!",
+      "scoreLabel": "ពិន្ទុ",
+      "finishButton": "រួចរាល់"
+    }
+  }
+}

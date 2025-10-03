@@ -1,0 +1,36 @@
+{
+  "build": {
+    "preview": {
+      "node": "18.19.1",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "developmentClient": true,
+        "distribution": "internal"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "Staging",
+        "EXPO_PUBLIC_ACCESS_TYPE": "offline",
+        "EXPO_PUBLIC_BASE_URL": "https://your-staging-api-server.com",
+        "EXPO_PUBLIC_SYNC_URL": "https://your-staging-sync-server.com",
+        "EXPO_PUBLIC_RESOURCE_URL": "https://your-staging-resource-server.com"
+      }
+    },
+    "production": {
+      "node": "18.19.1",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "developmentClient": true,
+        "distribution": "internal"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "Prod",
+        "EXPO_PUBLIC_ACCESS_TYPE": "offline",
+        "EXPO_PUBLIC_BASE_URL": "https://your-production-api-server.com",
+        "EXPO_PUBLIC_SYNC_URL": "https://your-production-sync-server.com",
+        "EXPO_PUBLIC_RESOURCE_URL": "https://your-production-resource-server.com"
+      }
+    }
+  }
+}

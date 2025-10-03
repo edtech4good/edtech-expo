@@ -1,0 +1,81 @@
+{
+  "expo": {
+    "name": "expo_edtech",
+    "slug": "expo_edtech",
+    "version": "1.0.0",
+    "scheme": "edtech",
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "requireFullScreen": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff",
+        "orientation": "landscape"
+      },
+      "package": "net.glean.edtech.dev",
+      "permissions": [
+        "android:requestLegacyExternalStorage"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "LANDSCAPE"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 31,
+            "minSdkVersion": 21,
+            "buildToolsVersion": "34.0.0",
+            "testInstrumentationRunner": "androidx.test.runner.AndroidJUnitRunner",
+            "usesCleartextTraffic": true
+          },
+          "ios": {
+            "deploymentTarget": "13.4"
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Poppins-Regular.ttf",
+            "./assets/fonts/Poppins-Bold.ttf",
+            "./assets/fonts/Poppins-SemiBold.ttf",
+            "./assets/fonts/NotoSansKhmer-Regular.ttf",
+            "./assets/fonts/NotoSansKhmer-Bold.ttf",
+            "./assets/fonts/NotoSansKhmer-SemiBold.ttf"
+          ]
+        }
+      ],
+      "expo-build-properties"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}

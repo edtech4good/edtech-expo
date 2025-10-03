@@ -1,0 +1,40 @@
+<svg width="160" height="160" viewBox="0 0 280 281" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g filter="url(#filter0_d_223_6495)">
+    <g clip-path="url(#clip0_223_6495)">
+      <rect x="60" y="44" width="160" height="160" rx="80" fill="#0B5FFF" />
+      <ellipse cx="80" cy="76.3636" rx="80" ry="76.3636" transform="matrix(1 0 0 -1 60 189.455)" fill="white"
+        fill-opacity="0.2" />
+      <ellipse cx="89.1124" cy="90.7563" rx="13.2047" ry="8.10155" transform="rotate(-44.69 89.1124 90.7563)"
+        fill="white" fill-opacity="0.5" />
+      <ellipse cx="104.619" cy="74.0586" rx="7.111" ry="4.55644" transform="rotate(-44.69 104.619 74.0586)" fill="white"
+        fill-opacity="0.5" />
+      <g filter="url(#filter1_d_223_6495)">
+        <path
+          d="M156.191 96.0639L169.836 86.1748C172.621 84.1571 176.497 84.8023 178.491 87.6199L180.057 89.8329C182.052 92.6505 181.414 96.5703 178.628 98.5872L164.983 108.477C162.198 110.494 158.322 109.849 156.328 107.032L154.762 104.818C152.767 102.001 153.405 98.0815 156.191 96.0639Z"
+          fill="white" />
+        <path
+          d="M121.617 102.034L136.659 88.8289C140.583 85.3741 146.712 88.0529 146.922 93.3125L149.368 155.467C149.578 160.726 143.668 163.887 139.485 160.759L122.223 147.847C120.979 146.925 119.454 146.525 117.911 146.655C112.107 147.162 97.0806 146.557 94.287 127.358C91.372 107.294 111.469 104.068 118.001 103.553C118.7 103.498 119.376 103.329 120.009 103.054C120.588 102.802 121.131 102.46 121.617 102.034Z"
+          fill="white" />
+        <path
+          d="M179.799 114.782H163.013C159.59 114.782 156.812 117.592 156.812 121.054V123.773C156.812 127.236 159.59 130.046 163.013 130.046H179.799C183.222 130.046 186 127.236 186 123.773V121.054C186 117.592 183.222 114.782 179.799 114.782Z"
+          fill="white" />
+        <path
+          d="M180.849 141.085L164.789 136.137C161.519 135.124 158.048 136.994 157.054 140.31L156.271 142.915C155.27 146.222 157.119 149.726 160.397 150.738L176.456 155.688C179.726 156.7 183.19 154.83 184.191 151.514L184.974 148.909C185.976 145.602 184.127 142.098 180.849 141.085Z"
+          fill="white" />
+      </g>
+    </g>
+    <rect x="55" y="39" width="170" height="170" rx="85" stroke="white" stroke-width="10" />
+  </g>
+  <defs>
+    <filter id="filter0_d_223_6495" x="0" y="0.666666" width="280" height="280" filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+        result="hardAlpha" />
+      <feOffset dy="16.6667" />
+      <feGaussianBlur stdDeviation="25" />
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0" />
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_223_6495" />
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_223_6495" result="shape" />
+    </filter>
+</svg>

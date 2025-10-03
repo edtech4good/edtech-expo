@@ -1,0 +1,83 @@
+{
+  "button": {
+    "ok": "Ok",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "drawer": {
+    "home": "Home",
+    "profile": "Profile",
+    "teacherDashboard": "Dashboard",
+    "teacherTestScore": "Test Scores",
+    "teacherStudentList": "Students",
+    "teacherDownload": "Download",
+    "logout": "Logout"
+  },
+  "key": {},
+  "screen": {
+    "login": {
+      "loginButton": "Login",
+      "sessionExpiredMessage": "Please login again.",
+      "welcomeMessage": "Welcome to EdTech Learn!"
+    },
+    "profile": {
+      "header": "Profile",
+      "hiLabel": "Hi",
+      "studentIdLabel": "Student ID",
+      "teacherIdLabel": "Teacher ID",
+      "memberSinceLabel": "Member Since",
+      "personalDetailTitle": "Personal Detail",
+      "firstNameLabel": "First Name",
+      "lastNameLabel": "Last Name",
+      "dateOfBirthLabel": "Date of Birth",
+      "contactDetailTitle": "Contact Detail",
+      "mobileNumberLabel": "Mobile Number",
+      "n/a": "N/A",
+      "schooNameLabel": "School Name",
+      "classDetailTitle": "Detail",
+      "classNameLabel": "Class Name",
+      "numOfStudentLabel": "No. of Student",
+      "avgTimeSpentLabel": "Average Time Spent",
+      "lastLoginLabel": "Last Login"
+    },
+    "subject": {
+      "header": "Subjects"
+    },
+    "course": {
+      "header": "Courses"
+    },
+    "unit": {
+      "header": "Units",
+      "progressLabel": "Progress"
+    },
+    "level": {
+      "header": "Levels",
+      "progressLabel": "Progress"
+    },
+    "lesson": {
+      "header": "Lessons",
+      "learningTitle": "Learning",
+      "practiceTitle": "Practice",
+      "quizTitle": "Quiz"
+    },
+    "practice": {
+      "submitButton": "Submit",
+      "retryButton": "Retry",
+      "correctTitle": "Congratulations!",
+      "correctMessage": "Good job!",
+      "correctButton": "Next",
+      "incorrectTitle": "Oops..!",
+      "showAnswerButton": "Show answer",
+      "incorrectMessage": "Sorry, wrong answer...",
+      "incorrectButton": "Try again",
+      "exitQuizMessage": "Do you want to exit quiz?"
+    },
+    "result": {
+      "header": "Result",
+      "passedTitle": "Congratulations",
+      "failedTitle": "Try Again!!",
+      "scoreLabel": "Score",
+      "finishButton": "Finish"
+    }
+  }
+}
