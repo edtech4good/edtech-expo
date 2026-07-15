@@ -5,9 +5,20 @@ import Column from '../layouts/Column';
 import { useBreakpoint } from '@/services';
 import { useEffect } from 'react';
 // import { useEffect } from 'react';
+function isPlaceholderApiUrl(url: string | undefined): boolean {
+  if (!url?.trim()) return true;
+  return (
+    url.includes('your-api-server') ||
+    url.includes('your-sync-server') ||
+    url.includes('your-resource-server')
+  );
+}
+
 export default function DebugDisplay() {
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
+  const apiBase = process.env.EXPO_PUBLIC_BASE_URL ?? '';
+  const showEnvHint = __DEV__ && isPlaceholderApiUrl(apiBase);
   const currentDisplay = useBreakpoint({
     desktop: 'Desktop',
     mobile: 'Mobile',
@@ -37,7 +48,12 @@ export default function DebugDisplay() {
         alignSelf="flex-end"
         color={
           theme.colors.error
-        }>{`Env: ${process.env.EXPO_PUBLIC_BASE_URL}`}</SH3>
+        }>{`Env: ${apiBase || '(unset)'}`}</SH3>
+      {showEnvHint ? (
+        <SH3 alignSelf="flex-end" color={theme.colors.error}>
+          Fix .env EXPO_PUBLIC_BASE_URL → http://127.0.0.1:3001, then npx expo start -c
+        </SH3>
+      ) : null}
       <SH3
         alignSelf="flex-end"
         color={

@@ -59,6 +59,23 @@ const requestTransform: AsyncRequestTransform = async request => {
   console.log('Request: ', requestPayload);
 };
 
+function resolveExpoPublicUrl(
+  value: string | undefined,
+  envName: string,
+  devFallback: string,
+): string {
+  const trimmed = value?.trim();
+  if (trimmed) return trimmed;
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[Api] ${envName} is empty — using ${devFallback}. Set it in edtech-expo/.env and restart Expo (npx expo start -c).`,
+    );
+    return devFallback;
+  }
+  return '';
+}
+
 const responseTransform: AsyncResponseTransform = async response => {
   const requestResponse = {
     Status: response.status,
@@ -76,7 +93,28 @@ const responseTransform: AsyncResponseTransform = async response => {
 
   // if (response.status === 404 || response.status === 401)
   //   return router.replace('/login?isLoggedOut=true');
-  if (!response.ok) throw response.originalError.message;
+  if (!response.ok) {
+    const base = response.config?.baseURL ?? '';
+    const path = response.config?.url ?? '';
+    const fullUrl = `${base}${path}`;
+    const problem = response.problem;
+    if (
+      problem === 'NETWORK_ERROR' ||
+      problem === 'CONNECTION_ERROR' ||
+      problem === 'TIMEOUT_ERROR'
+    ) {
+      throw new Error(
+        `Cannot reach API at ${fullUrl || '(missing EXPO_PUBLIC_BASE_URL)'}. ` +
+          'Is edtech-lms-rpi-api running on that host/port (Lane C: http://127.0.0.1:3001)? ' +
+          'After changing .env, restart Metro with npx expo start -c. ' +
+          'On a phone or some emulators, use your computer LAN IP instead of localhost.',
+      );
+    }
+    const fromAxios = (response.originalError as Error | undefined)?.message;
+    const fromBody = _.get(response.data, 'message');
+    const msg = fromAxios || fromBody || problem || 'Request failed';
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+  }
 };
 
 export default class Api {
@@ -88,7 +126,11 @@ export default class Api {
 
   constructor() {
     this.apiSauceInstance = apisauce.create({
-      baseURL: process.env.EXPO_PUBLIC_BASE_URL,
+      baseURL: resolveExpoPublicUrl(
+        process.env.EXPO_PUBLIC_BASE_URL,
+        'EXPO_PUBLIC_BASE_URL',
+        'http://127.0.0.1:3001',
+      ),
       headers: {
         'Cache-Control': 'no-cache',
         'Accept-Language': 'en',
@@ -99,7 +141,11 @@ export default class Api {
     });
 
     this.lmsApiInstance = apisauce.create({
-      baseURL: process.env.EXPO_PUBLIC_SYNC_URL,
+      baseURL: resolveExpoPublicUrl(
+        process.env.EXPO_PUBLIC_SYNC_URL,
+        'EXPO_PUBLIC_SYNC_URL',
+        'http://127.0.0.1:3000',
+      ),
       headers: {
         'Cache-Control': 'no-cache',
         'Accept-Language': 'en',

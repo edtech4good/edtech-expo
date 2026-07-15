@@ -2,11 +2,24 @@
 
 A React Native/Expo application for educational technology, designed to work in both online and offline modes.
 
+## In the full system
+
+Expo is the **cross-platform** student/teacher client (mobile + web). It uses **two HTTP base URLs** in code ([`src/services/api/Api.ts`](src/services/api/Api.ts)):
+
+| Variable | Typical use |
+|----------|-------------|
+| **`EXPO_PUBLIC_BASE_URL`** | **Raspberry Pi / classroom API** — student auth, `GET /export/log`, `PUT /import/master`, most lesson APIs. |
+| **`EXPO_PUBLIC_SYNC_URL`** | **Central LMS API** — e.g. `GET /sync/content`, `PUT /log/import`, `POST /auth/school/login`. |
+
+Full sync sequence: [**ARCHITECTURE.md**](../ARCHITECTURE.md) § Sync playbook. Legacy user flows: [**docs/**](../docs/README.md).
+
+**Local dev (web first):** run central + Pi APIs, then Expo with `localhost` URLs in `.env` and press **`w`** after `npm start` — see [**LOCAL_DEVELOPMENT.md**](../LOCAL_DEVELOPMENT.md).
+
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js (v18.19.1 or higher)
+- Node.js (v18.19.1 or higher; LTS recommended)
 - npm or yarn
 - Expo CLI
 - Android Studio (for Android development)
@@ -14,11 +27,7 @@ A React Native/Expo application for educational technology, designed to work in 
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd edtech-expo
-   ```
+1. **Get the code** — clone or copy this repo (see parent [**ARCHITECTURE.md**](../ARCHITECTURE.md) for sibling projects).
 
 2. **Install dependencies**
    ```bash
@@ -198,8 +207,8 @@ edtech-expo/
 |----------|-------------|---------|
 | `EXPO_PUBLIC_ENV` | Environment type | `Staging`, `Production`, `Development` |
 | `EXPO_PUBLIC_ACCESS_TYPE` | Access mode | `online`, `offline` |
-| `EXPO_PUBLIC_BASE_URL` | Main API server URL | `https://your-api-server.com` |
-| `EXPO_PUBLIC_SYNC_URL` | Data sync server URL | `https://your-sync-server.com` |
+| `EXPO_PUBLIC_BASE_URL` | **Pi / classroom** API base (lessons, Pi import/export) | `http://192.168.x.x:3000` |
+| `EXPO_PUBLIC_SYNC_URL` | **Central LMS** API base (sync content, log import, school login) | `https://your-lms-api.example.com` |
 | `EXPO_PUBLIC_RESOURCE_URL` | Static assets server URL | `https://your-resource-server.com` |
 | `EXPO_PUBLIC_RESOURCE_PATH` | Resource path for assets | `your-resource-path%` |
 
@@ -269,11 +278,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-If you encounter any issues or have questions, please:
-
-1. Check the [Issues](../../issues) page for existing solutions
-2. Create a new issue with detailed information about your problem
-3. Include your environment details and steps to reproduce the issue
+If you encounter any issues or have questions, use your team’s issue tracker or internal docs.
 
 ## 🔄 Updates
 

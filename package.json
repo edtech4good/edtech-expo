@@ -77,6 +77,18 @@
     "styled-components": "^6.1.8",
     "text-encoding": "^0.7.0"
   },
+  "overrides": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "expo-router": {
+      "react": "18.2.0",
+      "react-dom": "18.2.0",
+      "react-helmet-async": {
+        "react": "18.2.0",
+        "react-dom": "18.2.0"
+      }
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
