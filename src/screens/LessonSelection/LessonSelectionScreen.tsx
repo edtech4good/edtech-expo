@@ -35,14 +35,21 @@ export default function LessonSelectionScreen() {
     selectedLesson?.lessonid || '',
   );
 
+  /**
+   * `type` is what decides which renderer runs. It has to be a stable key rather
+   * than `title`, which is translated: in Khmer `t('screen.lesson.learningTitle')`
+   * is 'សិក្សា', so comparing it against the literal 'Learning' was never true and
+   * every activity list rendered empty. The lesson still arrived from the API with
+   * its learnings, practices and quizzes; the screen just dropped them.
+   */
   const sectionData = useMemo(() => {
     if (_.isEmpty(lesson)) return [];
     return [
-      { title: t('screen.lesson.learningTitle'), data: lesson.lessonlearnings },
-      { title: t('screen.lesson.practiceTitle'), data: lesson.lessonpractices },
-      { title: t('screen.lesson.quizTitle'), data: lesson.lessonquizzes },
+      { type: 'learning' as const, title: t('screen.lesson.learningTitle'), data: lesson.lessonlearnings },
+      { type: 'practice' as const, title: t('screen.lesson.practiceTitle'), data: lesson.lessonpractices },
+      { type: 'quiz' as const, title: t('screen.lesson.quizTitle'), data: lesson.lessonquizzes },
     ];
-  }, [lesson]);
+  }, [lesson, t]);
 
   useEffect(() => {
     navigation.setOptions({ title: t('screen.lesson.header') });
@@ -69,26 +76,26 @@ export default function LessonSelectionScreen() {
     section,
   }: {
     section: {
+      type: ActivityType;
       title: string;
       data: LessonLearning[] | LessonPractice[] | LessonQuiz[];
     };
   }) => {
-    console.log(section.title);
     return (
       <Column paddingLeft={theme.layouts.large}>
         <H4 alignSelf="flex-start" fontWeight="semi">
           {section.title}
         </H4>
         <Row style={{ flexWrap: 'wrap' }}>
-          {section.title === 'Learning' &&
+          {section.type === 'learning' &&
             _.map(section.data, d => {
               return renderLessonLearning(d as LessonLearning);
             })}
-          {section.title === 'Practice' &&
+          {section.type === 'practice' &&
             _.map(section.data, d => {
               return renderLessonPractice(d as LessonPractice);
             })}
-          {section.title === 'Quiz' &&
+          {section.type === 'quiz' &&
             _.map(section.data, d => {
               return renderLessonQuiz(d as LessonQuiz);
             })}
