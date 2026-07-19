@@ -35,7 +35,7 @@ const BaseText = styled.Text.attrs<BaseTextProps>(props => ({
       props.color ?? props.theme.colors.onBackground,
       isDisabled(props.disabled),
     )};
-  font-family: ${props => props.fontFamily ?? 'PoppinsRegular'};
+  font-family: ${props => props.fontFamily ?? 'NotoSansKhmerRegular'};
   font-size: ${props => props.fontSize ?? props.theme.fontSizes.h4}px;
   align-self: ${props => props.alignSelf ?? 'center'};
   font-weight: ${props => props.fontWeight ?? 'normal'};

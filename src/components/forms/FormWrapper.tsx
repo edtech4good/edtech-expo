@@ -8,8 +8,6 @@ import Row from '../layouts/Row';
 import SizedBox from '../layouts/SizedBox';
 import H4 from '../texts/H4';
 import SH3 from '../texts/SH3';
-// import BodyText from '../text/BodyText';
-// import CaptionText from '../text/CaptionText';
 
 interface Props extends ViewProps {
   required?: boolean;
