@@ -1,11 +1,9 @@
 import {
   BaseButton,
-  CaptionText,
   Column,
   Expanded,
   H4,
   H6,
-  HeaderText,
   SH3,
   SizedBox,
   TitleText,

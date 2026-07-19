@@ -21,12 +21,8 @@ export { default as H5 } from './texts/H5';
 export { default as H6 } from './texts/H6';
 export { default as SH3 } from './texts/SH3';
 export { default as ResizeText } from './texts/ResizeText';
-export { default as BodyText } from './texts/BodyText';
 export { default as ButtonText } from './texts/ButtonText';
-export { default as CaptionText } from './texts/CaptionText';
-export { default as HeaderText } from './texts/HeaderText';
 export { default as OverlineText } from './texts/OverlineText';
-export { default as SubtitleText } from './texts/SubtitleText';
 export { default as TitleText } from './texts/TitleText';
 
 export { default as BaseButton } from './buttons/BaseButton';
