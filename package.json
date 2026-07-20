@@ -10,7 +10,7 @@
     "run:prod": "NODE_ENV=prod npx expo start -c",
     "run:staging": "NODE_ENV=test npx expo start -c",
     "build:android:staging": "eas build -p android --profile preview --local",
-    "build:android:prod": "eas build -p android --profile prod --local",
+    "build:android:prod": "eas build -p android --profile production --local",
     "build:web": "expo export -p web",
     "predeploy": "expo export -p web",
     "select:prod": "firebase target:apply hosting prod your-firebase-project-id",
