@@ -1,0 +1,60 @@
+{
+  "cli": {
+    "version": ">= 7.8.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "node": "18.19.1",
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "Development",
+        "EXPO_PUBLIC_ACCESS_TYPE": "online",
+        "EXPO_PUBLIC_BASE_URL": "http://127.0.0.1:3001",
+        "EXPO_PUBLIC_SYNC_URL": "http://127.0.0.1:3000",
+        "EXPO_PUBLIC_RESOURCE_URL": "http://127.0.0.1:8081",
+        "EXPO_PUBLIC_RESOURCE_PATH": "media"
+      }
+    },
+    "preview": {
+      "node": "18.19.1",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "Staging",
+        "EXPO_PUBLIC_ACCESS_TYPE": "online",
+        "EXPO_PUBLIC_BASE_URL": "https://your-staging-api-server.com",
+        "EXPO_PUBLIC_SYNC_URL": "https://your-staging-sync-server.com",
+        "EXPO_PUBLIC_RESOURCE_URL": "https://your-staging-resource-server.com",
+        "EXPO_PUBLIC_RESOURCE_PATH": "media"
+      }
+    },
+    "production": {
+      "node": "18.19.1",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "Prod",
+        "EXPO_PUBLIC_ACCESS_TYPE": "online",
+        "EXPO_PUBLIC_BASE_URL": "https://your-production-api-server.com",
+        "EXPO_PUBLIC_SYNC_URL": "https://your-production-sync-server.com",
+        "EXPO_PUBLIC_RESOURCE_URL": "https://your-production-resource-server.com",
+        "EXPO_PUBLIC_RESOURCE_PATH": "media"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
