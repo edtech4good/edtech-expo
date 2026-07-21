@@ -17,10 +17,10 @@ export interface ContinueLearningRowProps {
   /** Anything expo-image's `source` prop accepts; omit to show the surfaceVariant fallback. */
   imageSource?: ImageProps['source'];
   title: string;
-  /** 0–1 */
-  progress: number;
-  /** e.g. "62% · LESSON 10 OF 16" */
-  meta: string;
+  /** 0–1; omit to skip the progress bar (e.g. items with no per-item progress data). */
+  progress?: number;
+  /** e.g. "62% · LESSON 10 OF 16"; omit to skip the meta row. */
+  meta?: string;
   onPress?: (event: GestureResponderEvent) => void;
 }
 
@@ -58,7 +58,10 @@ export default function ContinueLearningRow({
   const titleFontFamily = useFont('semi', 'body');
   const scale = useSharedValue(1);
 
-  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const hasProgress = typeof progress === 'number';
+  const clampedProgress = hasProgress
+    ? Math.min(1, Math.max(0, progress as number))
+    : 0;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -128,14 +131,18 @@ export default function ContinueLearningRow({
           }}>
           {title}
         </Text>
-        <View style={{ marginTop: 8 }}>
-          <ProgressBar progress={clampedProgress} height={5} />
-        </View>
-        <View style={{ marginTop: 6 }}>
-          <EyebrowText size={9} color={theme.colors.onSurfaceVariant}>
-            {meta}
-          </EyebrowText>
-        </View>
+        {hasProgress && (
+          <View style={{ marginTop: 8 }}>
+            <ProgressBar progress={clampedProgress} height={5} />
+          </View>
+        )}
+        {meta != null && (
+          <View style={{ marginTop: 6 }}>
+            <EyebrowText size={9} color={theme.colors.onSurfaceVariant}>
+              {meta}
+            </EyebrowText>
+          </View>
+        )}
       </View>
       <View
         style={{

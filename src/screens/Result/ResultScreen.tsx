@@ -1,5 +1,6 @@
 import { Images } from '@/assets';
 import {
+  AppButton,
   Container,
   DefaultBackgroundImage,
   Expanded,
@@ -14,7 +15,7 @@ import {
   StudentProfileCard,
 } from '@/components';
 import { DashboardCardColors } from '@/constants';
-import { useResult, useSelection } from '@/services';
+import { useDesign, useResult, useSelection } from '@/services';
 import { router, useNavigation } from 'expo-router';
 import _ from 'lodash';
 import { useEffect, useMemo } from 'react';
@@ -24,6 +25,7 @@ import { useTheme } from 'styled-components/native';
 
 export default function ResultScreen() {
   const theme = useTheme();
+  const { isCorporate } = useDesign();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { course, unit, lesson } = useSelection();
@@ -124,9 +126,16 @@ export default function ResultScreen() {
           <Row>
             <Expanded flex={3} />
             <Expanded justifyContent="flex-end">
-              <FilledButton onPress={handleFinishPress}>
-                {t('screen.result.finishButton')}
-              </FilledButton>
+              {isCorporate ? (
+                <AppButton
+                  label={t('screen.result.finishButton')}
+                  onPress={handleFinishPress}
+                />
+              ) : (
+                <FilledButton onPress={handleFinishPress}>
+                  {t('screen.result.finishButton')}
+                </FilledButton>
+              )}
             </Expanded>
           </Row>
         )}

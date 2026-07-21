@@ -1,5 +1,6 @@
 import { Images } from '@/assets';
-import { Column, FilledButton, H3, H4, SizedBox } from '@/components';
+import { AppButton, Column, FilledButton, H3, H4, SizedBox } from '@/components';
+import { useDesign } from '@/services';
 import { useScreenDimension } from '@/services';
 import { Image } from 'expo-image';
 import _ from 'lodash';
@@ -28,6 +29,7 @@ export default function ResultPopUp({
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const { windowWidth } = useScreenDimension();
 
   const correctMessage = useMemo(
@@ -109,7 +111,11 @@ export default function ResultPopUp({
       <SizedBox.Large height />
       <SizedBox.Large height />
       <SizedBox.Large height />
-      <FilledButton onPress={onPress}>{displayButtonText}</FilledButton>
+      {isCorporate ? (
+        <AppButton label={displayButtonText} onPress={onPress} />
+      ) : (
+        <FilledButton onPress={onPress}>{displayButtonText}</FilledButton>
+      )}
     </View>
   );
 }

@@ -1,8 +1,10 @@
 import { Expanded, H4, IconButton, SizedBox } from '@/components';
-import { useResource } from '@/services';
+import QuizOption, { QuizOptionState } from '../ui/QuizOption';
+import { useDesign, useResource } from '@/services';
 import { Audio } from 'expo-av';
 import _ from 'lodash';
 import { useEffect, useMemo } from 'react';
+import { View } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 
 interface RadioProps {
@@ -63,6 +65,7 @@ export default function MCQTextItem({
   isCorrect,
 }: MCQTextItemProps) {
   const theme = useTheme();
+  const { isCorporate } = useDesign();
 
   const playbackObject = new Audio.Sound();
   const audioSource = useResource({ name: audioUrl ?? '' }, [audioUrl]);
@@ -98,6 +101,49 @@ export default function MCQTextItem({
     // );
     await playbackObject.playFromPositionAsync(0);
   };
+
+  if (isCorporate) {
+    // Corporate color-pass: the option itself becomes the Phase 2
+    // QuizOption (which adds a real incorrect state and the check/X
+    // badges); the audio play button — which QuizOption has no slot
+    // for — stays alongside so nothing is lost.
+    const state: QuizOptionState =
+      isShowingAnswer && isCorrect
+        ? 'correct'
+        : isShowingAnswer && isSelected && !isCorrect
+        ? 'incorrect'
+        : isSelected
+        ? 'selected'
+        : 'default';
+
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: '100%',
+          marginBottom: theme.layouts.large,
+          gap: 8,
+        }}>
+        <View style={{ flex: 1 }}>
+          <QuizOption
+            label={text}
+            state={state}
+            disabled={disabled}
+            onPress={onPress}
+          />
+        </View>
+        {!_.isEmpty(audioUrl) && (
+          <IconButton
+            onPress={handlePlayAudio}
+            icon="play-circle"
+            iconColor={theme.colors.primary}
+            iconSize={theme.fontSizes.h1}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <MCQWrapper isSelected={highlight} disabled={disabled} onPress={onPress}>

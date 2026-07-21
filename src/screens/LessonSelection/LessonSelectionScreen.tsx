@@ -1,19 +1,26 @@
 import {
   Column,
+  ContinueLearningRow,
   DefaultBackgroundImage,
+  EyebrowText,
   H4,
   LayoutScrollView,
   Row,
 } from '@/components';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import LessonItem from './components/LessonItem';
-import { useLesson } from '@/services';
+import { useDesign, useLesson } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson } from '@/redux/slices';
-import { LessonLearning, LessonPractice, LessonQuiz } from '@/models';
+import {
+  LessonLearning,
+  LessonLearningResource,
+  LessonPractice,
+  LessonQuiz,
+} from '@/models';
 import _ from 'lodash';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +35,7 @@ const routers = {
 export default function LessonSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
   const selectedLesson = useAppSelector(getSelectedLesson);
@@ -200,7 +208,95 @@ export default function LessonSelectionScreen() {
     );
   };
 
-  if (_.isEmpty(lesson)) return <DefaultBackgroundImage />;
+  if (_.isEmpty(lesson))
+    return isCorporate ? (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
+    ) : (
+      <DefaultBackgroundImage />
+    );
+
+  if (isCorporate) {
+    // Corporate lesson-content screen: the same three activity sections,
+    // restyled as eyebrow headers + row cards. Learning rows show the real
+    // per-item progress the lesson-detail fetch provides
+    // (studentlearningprogress); practices/quizzes have no per-item
+    // progress data, so their rows carry title only — no fake durations.
+    const learningProgress = (
+      ll: LessonLearning,
+    ): number | undefined => {
+      const resource = ll as Partial<LessonLearningResource>;
+      const pct = resource.studentlearningprogress?.progress_percentage;
+      if (typeof pct !== 'number' || pct <= 0) return undefined;
+      return Math.min(1, pct > 1 ? pct / 100 : pct);
+    };
+
+    const corporateSection = (
+      title: string,
+      rows: Array<{
+        key: string;
+        title: string;
+        progress?: number;
+        onPress: () => void;
+      }>,
+    ) =>
+      rows.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <EyebrowText size={10} color={theme.colors.primary}>
+            {title}
+          </EyebrowText>
+          {rows.map(({ key, ...row }) => (
+            <ContinueLearningRow key={key} {...row} />
+          ))}
+        </View>
+      );
+
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <ScrollView
+          style={{ flex: 1, width: '100%' }}
+          contentContainerStyle={{ alignItems: 'center' }}>
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 1024,
+              paddingHorizontal: theme.layouts.pageHorizontalPadding,
+              paddingVertical: theme.layouts.pageVerticalPadding,
+              gap: 24,
+            }}>
+            {corporateSection(
+              t('screen.lesson.learningTitle'),
+              _.sortBy(lesson?.lessonlearnings, 'lessonlearningorder').map(
+                ll => ({
+                  key: ll.lessonlearningid,
+                  title: ll.lessonlearningname,
+                  progress: learningProgress(ll),
+                  onPress: () => handleItemPress(ll, 'learning'),
+                }),
+              ),
+            )}
+            {corporateSection(
+              t('screen.lesson.practiceTitle'),
+              _.sortBy(lesson?.lessonpractices, 'lessonpracticeorder').map(
+                lp => ({
+                  key: lp.lessonpracticeid,
+                  title: lp.lessonpracticename,
+                  onPress: () => handleItemPress(lp, 'practice'),
+                }),
+              ),
+            )}
+            {corporateSection(
+              t('screen.lesson.quizTitle'),
+              (lesson?.lessonquizzes ?? []).map(lq => ({
+                key: lq.lessonquizid,
+                title: lq.lessonquizname,
+                onPress: () => handleItemPress(lq, 'quiz'),
+              })),
+            )}
+          </View>
+        </ScrollView>
+      </LayoutScrollView>
+    );
+  }
 
   console.log(sectionData);
   return (
