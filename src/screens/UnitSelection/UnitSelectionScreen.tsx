@@ -1,6 +1,8 @@
 import {
+  CorporateCardGrid,
   DefaultBackgroundImage,
   LayoutScrollView,
+  normalizeProgressFraction,
   ProgressCard,
   SizedBox,
 } from '@/components';
@@ -9,7 +11,7 @@ import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
-import { useBreakpoint } from '@/services';
+import { useBreakpoint, useDesign } from '@/services';
 import { router, useNavigation } from 'expo-router';
 import { useUnit } from '@/services';
 import { useAppSelector } from '@/redux';
@@ -20,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 export default function UnitSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
   const selectedCourse = useAppSelector(getSelectedCourse);
   const { fetch, units, selectUnit, clear } = useUnit(
@@ -51,6 +54,22 @@ export default function UnitSelectionScreen() {
     await selectUnit(unit);
     router.navigate('/home/levels');
   };
+
+  if (isCorporate) {
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <CorporateCardGrid
+          items={units.map(unit => ({
+            key: unit.levelid,
+            title: unit.levelname,
+            meta: unit.leveldescription,
+            progress: normalizeProgressFraction(unit.progress),
+            onPress: () => handleItemPress(unit),
+          }))}
+        />
+      </LayoutScrollView>
+    );
+  }
 
   const renderItemSeparator = () => <SizedBox.Large height />;
 

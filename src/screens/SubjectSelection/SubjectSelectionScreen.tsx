@@ -1,10 +1,11 @@
 import {
   AppTextField,
-  CurriculumCard,
+  CorporateCardGrid,
   DashboardCard,
   DefaultBackgroundImage,
   EyebrowText,
   LayoutScrollView,
+  normalizeProgressFraction,
   SizedBox,
 } from '@/components';
 import { router, useNavigation } from 'expo-router';
@@ -17,8 +18,6 @@ import { KeyExtractorHelper } from '@/utils';
 import { useSubject } from '@/services';
 import { Subject } from '@/models';
 import { useTranslation } from 'react-i18next';
-
-const CorporateGridSpacer = () => <View style={{ height: 20 }} />;
 
 export default function CourseSelectionScreen() {
   const theme = useTheme();
@@ -39,9 +38,6 @@ export default function CourseSelectionScreen() {
       (width - theme.layouts.large) / (227 + theme.layouts.large),
     ),
   });
-  const corporateColumns =
-    useBreakpoint({ mobile: 1, phablet: 2, tablet: 3, desktop: 3 }) ?? 3;
-
   useEffect(() => {
     navigation.setOptions({ title: t('screen.subject.header') });
   }, []);
@@ -75,33 +71,10 @@ export default function CourseSelectionScreen() {
       .filter(Boolean)
       .join(' ');
 
-    const gridGap = 20;
-
-    const renderCorporateItem = ({ item }: { item: Subject }) => {
-      const rawProgress = item.progress;
-      const normalizedProgress =
-        typeof rawProgress === 'number' && rawProgress > 0
-          ? rawProgress > 1
-            ? rawProgress / 100
-            : rawProgress
-          : undefined;
-
-      return (
-        <View style={{ flex: 1, maxWidth: `${100 / corporateColumns}%` }}>
-          <CurriculumCard
-            title={item.curriculumname}
-            meta={item.curriculumdescription}
-            progress={normalizedProgress}
-            onPress={() => handleItemPress(item)}
-          />
-        </View>
-      );
-    };
-
-    // The greeting/search header is a SIBLING of the FlatList, not its
-    // ListHeaderComponent: header cells re-mount inside VirtualizedList when
-    // the list re-renders per keystroke, which tears down the search field's
-    // DOM node and drops focus after every character typed.
+    // The greeting/search header is a SIBLING of the grid's FlatList, not
+    // its ListHeaderComponent: header cells re-mount inside VirtualizedList
+    // when the list re-renders per keystroke, which tears down the search
+    // field's DOM node and drops focus after every character typed.
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
         <View style={{ flex: 1, width: '100%', maxWidth: 1024 }}>
@@ -132,21 +105,14 @@ export default function CourseSelectionScreen() {
               placeholder={t('screen.subject.searchPlaceholder')}
             />
           </View>
-          <FlatList
-            key={`corporate-${corporateColumns}`}
-            style={{ flex: 1, width: '100%' }}
-            contentContainerStyle={{
-              paddingHorizontal: theme.layouts.pageHorizontalPadding,
-              paddingBottom: theme.layouts.pageVerticalPadding,
-            }}
-            data={visibleSubjects}
-            numColumns={corporateColumns}
-            {...(corporateColumns > 1
-              ? { columnWrapperStyle: { gap: gridGap } }
-              : {})}
-            ItemSeparatorComponent={CorporateGridSpacer}
-            renderItem={renderCorporateItem}
-            keyExtractor={KeyExtractorHelper}
+          <CorporateCardGrid
+            items={visibleSubjects.map(subject => ({
+              key: subject.curriculumid,
+              title: subject.curriculumname,
+              meta: subject.curriculumdescription,
+              progress: normalizeProgressFraction(subject.progress),
+              onPress: () => handleItemPress(subject),
+            }))}
           />
         </View>
       </LayoutScrollView>
