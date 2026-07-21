@@ -1,15 +1,18 @@
 import {
+  AppTextField,
+  CurriculumCard,
   DashboardCard,
   DefaultBackgroundImage,
+  EyebrowText,
   LayoutScrollView,
   SizedBox,
 } from '@/components';
 import { router, useNavigation } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
-import { FlatList, useWindowDimensions } from 'react-native';
-import { useBreakpoint } from '@/services';
+import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { useAuth, useBreakpoint, useDesign, useFont } from '@/services';
 import { KeyExtractorHelper } from '@/utils';
 import { useSubject } from '@/services';
 import { Subject } from '@/models';
@@ -19,6 +22,10 @@ export default function CourseSelectionScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
+  const { profile } = useAuth();
+  const displayFont = useFont('bold', 'display');
+  const [query, setQuery] = useState('');
   const { fetch, subjects, selectSubject } = useSubject();
 
   const { width } = useWindowDimensions();
@@ -30,6 +37,8 @@ export default function CourseSelectionScreen() {
       (width - theme.layouts.large) / (227 + theme.layouts.large),
     ),
   });
+  const corporateColumns =
+    useBreakpoint({ mobile: 1, phablet: 2, tablet: 3, desktop: 3 }) ?? 3;
 
   useEffect(() => {
     navigation.setOptions({ title: t('screen.subject.header') });
@@ -45,6 +54,96 @@ export default function CourseSelectionScreen() {
   };
 
   const renderItemSeparator = () => <SizedBox.Large height />;
+
+  if (isCorporate) {
+    // Corporate Home/Curricula per the handoff (§2/§6), tablet/web-first:
+    // greeting header, search pill (client-side filter — the API has no
+    // search endpoint), curriculum card grid. Category chips and the
+    // continue-learning row are deferred: curricula carry no category data,
+    // and no endpoint exposes "resume where you left off" yet (the JWT's
+    // studentcurrentlessonid/levelid claims are typed but unpopulated).
+    const trimmedQuery = query.trim().toLowerCase();
+    const visibleSubjects = trimmedQuery
+      ? subjects.filter(s =>
+          (s.curriculumname ?? '').toLowerCase().includes(trimmedQuery),
+        )
+      : subjects;
+
+    const studentName = [profile?.studentfirstname, profile?.studentlastname]
+      .filter(Boolean)
+      .join(' ');
+
+    const gridGap = 20;
+
+    const renderCorporateHeader = () => (
+      <View style={{ paddingVertical: theme.layouts.pageVerticalPadding }}>
+        <EyebrowText size={10} color={theme.colors.primary}>
+          {t('screen.subject.greeting')}
+        </EyebrowText>
+        {studentName !== '' && (
+          <Text
+            style={{
+              marginTop: 4,
+              fontFamily: displayFont,
+              fontSize: 24,
+              color: theme.colors.onBackground,
+            }}>
+            {studentName}
+          </Text>
+        )}
+        <SizedBox.Medium height />
+        <AppTextField
+          variant="search"
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t('screen.subject.searchPlaceholder')}
+        />
+      </View>
+    );
+
+    const renderCorporateItem = ({ item }: { item: Subject }) => {
+      const rawProgress = item.progress;
+      const normalizedProgress =
+        typeof rawProgress === 'number' && rawProgress > 0
+          ? rawProgress > 1
+            ? rawProgress / 100
+            : rawProgress
+          : undefined;
+
+      return (
+        <View style={{ flex: 1, maxWidth: `${100 / corporateColumns}%` }}>
+          <CurriculumCard
+            title={item.curriculumname}
+            meta={item.curriculumdescription}
+            progress={normalizedProgress}
+            onPress={() => handleItemPress(item)}
+          />
+        </View>
+      );
+    };
+
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <FlatList
+          key={`corporate-${corporateColumns}`}
+          style={{ flex: 1, width: '100%', maxWidth: 1024 }}
+          contentContainerStyle={{
+            paddingHorizontal: theme.layouts.pageHorizontalPadding,
+            paddingBottom: theme.layouts.pageVerticalPadding,
+          }}
+          data={visibleSubjects}
+          numColumns={corporateColumns}
+          {...(corporateColumns > 1
+            ? { columnWrapperStyle: { gap: gridGap } }
+            : {})}
+          ItemSeparatorComponent={() => <View style={{ height: gridGap }} />}
+          ListHeaderComponent={renderCorporateHeader}
+          renderItem={renderCorporateItem}
+          keyExtractor={KeyExtractorHelper}
+        />
+      </LayoutScrollView>
+    );
+  }
 
   const renderItem = ({ item, index }: { item: Subject; index: number }) => {
     const imageIndex = index % DashboardCardColors.length;

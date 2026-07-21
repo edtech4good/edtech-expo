@@ -45,7 +45,9 @@
       "lastLoginLabel": "Last Login"
     },
     "subject": {
-      "header": "Subjects"
+      "header": "Subjects",
+      "greeting": "Good morning",
+      "searchPlaceholder": "Search curricula"
     },
     "course": {
       "header": "Courses"

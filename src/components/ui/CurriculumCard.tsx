@@ -16,10 +16,11 @@ import ProgressBar from './ProgressBar';
 export interface CurriculumCardProps {
   /** Anything expo-image's `source` prop accepts; omit to show the surfaceVariant fallback. */
   imageSource?: ImageProps['source'];
-  category: string;
+  /** Omit to skip the category chip — curricula have no category data yet. */
+  category?: string;
   title: string;
-  /** e.g. "3 GRADES · 12 LEVELS · 38 HOURS" */
-  meta: string;
+  /** e.g. "3 GRADES · 12 LEVELS · 38 HOURS"; omit to skip the meta row. */
+  meta?: string;
   /** 0–1. When present, shows a progress bar under the meta plus an overlaid "NN%" pill. */
   progress?: number;
   onPress?: (event: GestureResponderEvent) => void;
@@ -120,22 +121,24 @@ export default function CurriculumCard({
         )}
       </View>
       <View style={{ padding: 12 }}>
-        <Chip label={category} />
+        {category != null && <Chip label={category} />}
         <Text
           numberOfLines={2}
           style={{
-            marginTop: 8,
+            marginTop: category != null ? 8 : 0,
             fontFamily: titleFontFamily,
             fontSize: 13,
             color: theme.colors.onSurface,
           }}>
           {title}
         </Text>
-        <View style={{ marginTop: 6 }}>
-          <EyebrowText size={9} color={theme.colors.onSurfaceVariant}>
-            {meta}
-          </EyebrowText>
-        </View>
+        {meta != null && (
+          <View style={{ marginTop: 6 }}>
+            <EyebrowText size={9} color={theme.colors.onSurfaceVariant}>
+              {meta}
+            </EyebrowText>
+          </View>
+        )}
         {hasProgress && (
           <View style={{ marginTop: 8 }}>
             <ProgressBar progress={clampedProgress} height={5} />
