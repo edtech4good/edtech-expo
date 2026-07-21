@@ -44,3 +44,9 @@ export {
   default as ContinueLearningRow,
   type ContinueLearningRowProps,
 } from './ContinueLearningRow';
+export {
+  default as CorporateCardGrid,
+  normalizeProgressFraction,
+  type CorporateCardGridItem,
+  type CorporateCardGridProps,
+} from './CorporateCardGrid';
