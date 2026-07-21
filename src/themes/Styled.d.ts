@@ -1,5 +1,11 @@
 import { fontWeights } from '@/constants';
 import 'styled-components/native';
+import type {
+  ThemeTokens,
+  ThemeFonts,
+  ThemeRadii,
+  ThemeShadows,
+} from './tokens/types';
 
 export interface FontWeight {
   normal;
@@ -9,6 +15,8 @@ export interface FontWeight {
 
 declare module 'styled-components/native' {
   export interface DefaultTheme {
+    name: ThemeTokens['name'];
+
     breakpoints: {
       DESKTOP_MIN_WIDTH: number;
       TABLET_MAX_WIDTH: number;
@@ -19,37 +27,11 @@ declare module 'styled-components/native' {
       DRAWER_LABEL_MIN_WIDTH: number;
       DRAWER_ROW_MIN_WIDTH: number;
     };
-    colors: {
-      primary: string;
-      primaryLight: string;
-      primaryDark: string;
-      onPrimary: string;
+    colors: ThemeTokens['colors'];
 
-      secondary: string;
-      secondaryLight: string;
-      secondaryDark: string;
-      onSecondary: string;
-
-      background: string;
-      onBackground: string;
-
-      surface: string;
-      onSurface: string;
-
-      surfaceVariant: string;
-      onSurfaceVariant: string;
-
-      outline: string;
-      divider: string;
-      placeholder: string;
-      shadow: string;
-
-      error: string;
-      customAppBar: string;
-      customHeaderTitle: string;
-
-      cards: Array<{ light: string; primary: string; highlight: string }>;
-    };
+    fonts: ThemeFonts;
+    radii: ThemeRadii;
+    shadows: ThemeShadows;
 
     fontSizes: {
       // header: number;

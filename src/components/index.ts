@@ -73,3 +73,6 @@ export { default as PoweredBy } from './PoweredBy';
 
 export { default as BouncyWrapper } from './animated/BouncyWrapper';
 export { default as ShakingWrapper } from './animated/ShakingWrapper';
+
+export { default as AppThemeProvider } from './AppThemeProvider';
+export { default as DevThemeToggle } from './DevThemeToggle';

@@ -4,16 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { ThemeProvider } from 'styled-components/native';
 
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from '@/locales/en.json';
 import km from '@/locales/km.json';
-import { DefaultBackgroundImage } from '@/components';
+import { AppThemeProvider, DefaultBackgroundImage } from '@/components';
 
 import { persistor, store } from '@/redux';
-import { appTheme } from '@/themes/Themes';
 import { Api, ApiContext } from '@/services';
 import { useFonts } from 'expo-font';
 import { StartScreen } from '@/screens';
@@ -28,6 +26,14 @@ export default function App() {
     NotoSansKhmerRegular: require('assets/fonts/NotoSansKhmer-Regular.ttf'),
     NotoSansKhmerBold: require('assets/fonts/NotoSansKhmer-Bold.ttf'),
     NotoSansKhmerSemiBold: require('assets/fonts/NotoSansKhmer-SemiBold.ttf'),
+    SpaceGroteskRegular: require('assets/fonts/SpaceGrotesk-Regular.ttf'),
+    SpaceGroteskSemiBold: require('assets/fonts/SpaceGrotesk-SemiBold.ttf'),
+    SpaceGroteskBold: require('assets/fonts/SpaceGrotesk-Bold.ttf'),
+    PlusJakartaSansRegular: require('assets/fonts/PlusJakartaSans-Regular.ttf'),
+    PlusJakartaSansSemiBold: require('assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    PlusJakartaSansBold: require('assets/fonts/PlusJakartaSans-Bold.ttf'),
+    SpaceMonoRegular: require('assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMonoBold: require('assets/fonts/SpaceMono-Bold.ttf'),
   });
 
   useEffect(() => {
@@ -89,15 +95,15 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider theme={appTheme}>
-        <Provider store={store}>
-          <PersistGate persistor={persistor}>
+      <Provider store={store}>
+        <PersistGate persistor={persistor}>
+          <AppThemeProvider>
             <ApiContext.Provider value={apiInstance}>
               <Slot />
             </ApiContext.Provider>
-          </PersistGate>
-        </Provider>
-      </ThemeProvider>
+          </AppThemeProvider>
+        </PersistGate>
+      </Provider>
     </GestureHandlerRootView>
   );
 }
