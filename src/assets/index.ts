@@ -43,6 +43,7 @@ import PoweredByImage from './images/powered_by.png';
 import LessonPreviewImage from './images/lesson_preview.png';
 import ScoreBadgeImage from './images/score_badge.png';
 import CorrectExpressionImage from './images/correct_expression.png';
+import CorporateCourseHeroImage from './images/corporate_course_hero.jpg';
 import IncorrectExpressionImage from './images/incorrect_expression.png';
 
 export const Images = {
@@ -91,5 +92,6 @@ export const Images = {
   LessonPreview: LessonPreviewImage,
   ScoreBadge: ScoreBadgeImage,
   CorrectExpression: CorrectExpressionImage,
+  CorporateCourseHero: CorporateCourseHeroImage,
   IncorrectExpression: IncorrectExpressionImage,
 };
