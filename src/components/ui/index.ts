@@ -55,3 +55,4 @@ export {
   type LessonRowProps,
   type LessonRowStatus,
 } from './LessonRow';
+export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';
