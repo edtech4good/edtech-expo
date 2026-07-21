@@ -1,6 +1,8 @@
 import {
+  CorporateCardGrid,
   DefaultBackgroundImage,
   LayoutScrollView,
+  normalizeProgressFraction,
   ProgressCard,
   SizedBox,
 } from '@/components';
@@ -9,7 +11,7 @@ import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
-import { useBreakpoint } from '@/services';
+import { useBreakpoint, useDesign } from '@/services';
 import {
   Redirect,
   router,
@@ -25,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 export default function UnitSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ gradeid?: string }>();
   const selectedCourse = useAppSelector(getSelectedCourse);
@@ -66,6 +69,24 @@ export default function UnitSelectionScreen() {
     });
   };
 
+  if (!gradeId) return <Redirect href="/home/subjects" />;
+
+  if (isCorporate) {
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <CorporateCardGrid
+          items={units.map(unit => ({
+            key: unit.levelid,
+            title: unit.levelname,
+            meta: unit.leveldescription,
+            progress: normalizeProgressFraction(unit.progress),
+            onPress: () => handleItemPress(unit),
+          }))}
+        />
+      </LayoutScrollView>
+    );
+  }
+
   const renderItemSeparator = () => <SizedBox.Large height />;
 
   const renderItem = ({ item, index }: { item: Unit; index: number }) => {
@@ -80,8 +101,6 @@ export default function UnitSelectionScreen() {
       />
     );
   };
-
-  if (!gradeId) return <Redirect href="/home/subjects" />;
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>

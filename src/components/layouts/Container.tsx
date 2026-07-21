@@ -18,19 +18,8 @@ interface Props extends ViewProps {
   paddingRight?: number;
 }
 
-const ContainerView = styled.View.attrs<Props>((props: Props) => ({
-  height: props.containerHeight,
-  width: props.containerWidth,
-  backgroundColor: props.backgroundColor,
-  justifyContent: props.justifyContent,
-  alignItems: props.alignItems,
-  borderRadius: props.borderRadius,
-  paddingTop: props.paddingTop,
-  paddingBottom: props.paddingBottom,
-  paddingLeft: props.paddingLeft,
-  paddingRight: props.paddingRight,
-}))`
-  width: ${props => props.containerWidth}px;
+const ContainerView = styled.View<Props>`
+  width: ${props => (props.containerWidth != null ? `${props.containerWidth}px` : '100%')};
   height: ${props => props.containerHeight}px;
   background-color: ${props =>
     props.backgroundColor ?? props.theme.colors.background};
@@ -62,7 +51,7 @@ function Container({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const appHeaderHeight = useHeaderHeight();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
 
   const screenHeightWithoutStatusBar = useMemo(
     () => height - insets.bottom,
@@ -73,13 +62,13 @@ function Container({
       removeHeaderSize
         ? screenHeightWithoutStatusBar - appHeaderHeight
         : screenHeightWithoutStatusBar,
-    [removeHeaderSize],
+    [removeHeaderSize, screenHeightWithoutStatusBar, appHeaderHeight],
   );
 
   return (
     <ContainerView
       containerHeight={containerHeight ?? resultHeight}
-      containerWidth={containerWidth ?? width}
+      containerWidth={containerWidth}
       backgroundColor={backgroundColor}
       justifyContent={justifyContent}
       alignItems={alignItems}

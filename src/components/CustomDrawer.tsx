@@ -17,49 +17,7 @@ import { useAuth, useSyncContent } from '@/services';
 import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import _ from 'lodash';
-
-interface DrawerContent {
-  title: string;
-  icon: string;
-  url: string;
-  route: string;
-}
-
-const studentDrawerContent: Array<DrawerContent> = [
-  {
-    title: 'drawer.home',
-    icon: 'home',
-    url: '/home/courses',
-    route: '/home/subjects',
-  },
-  {
-    title: 'drawer.profile',
-    icon: 'account-circle',
-    url: '/profile',
-    route: '/profile',
-  },
-];
-
-const teacherDrawerContent: Array<DrawerContent> = [
-  {
-    title: 'drawer.teacherDashboard',
-    icon: 'home',
-    url: 'teacher/dashboard',
-    route: 'teacher/dashboard',
-  },
-  {
-    title: 'drawer.teacherTestScore',
-    icon: 'home',
-    url: 'teacher/score',
-    route: 'teacher/score',
-  },
-  {
-    title: 'drawer.teacherDownload',
-    icon: 'home',
-    url: 'downloadRpi',
-    route: 'downloadRpi',
-  },
-];
+import { studentNavItems, teacherNavItems } from '@/constants';
 
 interface DrawerItemProps {
   title: string;
@@ -78,8 +36,8 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
   const drawerContentList = useMemo(
     () =>
       profile?.schooluserrole === 4
-        ? studentDrawerContent
-        : teacherDrawerContent,
+        ? studentNavItems
+        : teacherNavItems,
     [profile],
   );
 

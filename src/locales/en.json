@@ -18,7 +18,11 @@
     "login": {
       "loginButton": "Login",
       "sessionExpiredMessage": "Please login again.",
-      "welcomeMessage": "Welcome to EdTech Learn!"
+      "welcomeMessage": "Welcome to EdTech Learn!",
+      "welcomeTitle": "Welcome back",
+      "welcomeSubtitle": "Sign in to continue learning.",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password"
     },
     "profile": {
       "header": "Profile",
@@ -41,7 +45,9 @@
       "lastLoginLabel": "Last Login"
     },
     "subject": {
-      "header": "Subjects"
+      "header": "Subjects",
+      "greeting": "Good morning",
+      "searchPlaceholder": "Search curricula"
     },
     "course": {
       "header": "Courses"
@@ -52,7 +58,11 @@
     },
     "level": {
       "header": "Levels",
-      "progressLabel": "Progress"
+      "progressLabel": "Progress",
+      "lessonsProgress": "{{done}} of {{total}} lessons",
+      "lessonCountMeta": "{{count}} lessons",
+      "lessonChip": "Lesson {{n}}",
+      "continueLearning": "Continue learning"
     },
     "lesson": {
       "header": "Lessons",

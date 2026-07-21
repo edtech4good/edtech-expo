@@ -17,7 +17,11 @@
     "login": {
       "loginButton": "ចូលគណនី",
       "sessionExpiredMessage": "សូមព្យាយាមចូលគណនីម្តងទៀត",
-      "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!"
+      "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!",
+      "welcomeTitle": "សូមស្វាគមន៍",
+      "welcomeSubtitle": "ចូលគណនីដើម្បីបន្តការសិក្សា",
+      "emailPlaceholder": "អ៊ីមែល",
+      "passwordPlaceholder": "ពាក្យសម្ងាត់"
     },
     "profile": {
       "header": "ប្រវត្តិរូប",
@@ -40,7 +44,9 @@
       "lastLoginLabel": "ការចូលចុងក្រោយ"
     },
     "subject": {
-      "header": "មុខវិជ្ជា"
+      "header": "មុខវិជ្ជា",
+      "greeting": "អរុណសួស្តី",
+      "searchPlaceholder": "ស្វែងរកកម្មវិធីសិក្សា"
     },
     "course": {
       "header": "ថ្នាក់"
@@ -51,7 +57,11 @@
     },
     "level": {
       "header": "ចំណងជើងរង",
-      "progressLabel": "វឌ្ឍនភាព"
+      "progressLabel": "វឌ្ឍនភាព",
+      "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
+      "lessonCountMeta": "មេរៀន {{count}}",
+      "lessonChip": "មេរៀនទី {{n}}",
+      "continueLearning": "បន្តការសិក្សា"
     },
     "lesson": {
       "header": "លំហាត់",

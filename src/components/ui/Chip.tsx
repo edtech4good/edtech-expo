@@ -13,6 +13,12 @@ export interface ChipProps {
   active?: boolean;
   onPress?: () => void;
   icon?: ReactNode;
+  /**
+   * Override the language-derived face for labels whose script differs from
+   * the current UI language (e.g. the "ភាសាខ្មែរ" language-switch chip while
+   * the app is in English — the corporate Latin faces have no Khmer glyphs).
+   */
+  fontFamily?: string;
 }
 
 export default function Chip({
@@ -20,9 +26,11 @@ export default function Chip({
   active = false,
   onPress,
   icon,
+  fontFamily: fontFamilyOverride,
 }: ChipProps) {
   const theme = useTheme();
-  const fontFamily = useFont('semi', 'body');
+  const themeFontFamily = useFont('semi', 'body');
+  const fontFamily = fontFamilyOverride ?? themeFontFamily;
   const scale = useSharedValue(1);
 
   const height =

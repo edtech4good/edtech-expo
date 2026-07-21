@@ -44,3 +44,15 @@ export {
   default as ContinueLearningRow,
   type ContinueLearningRowProps,
 } from './ContinueLearningRow';
+export {
+  default as CorporateCardGrid,
+  normalizeProgressFraction,
+  type CorporateCardGridItem,
+  type CorporateCardGridProps,
+} from './CorporateCardGrid';
+export {
+  default as LessonRow,
+  type LessonRowProps,
+  type LessonRowStatus,
+} from './LessonRow';
+export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';

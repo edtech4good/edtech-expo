@@ -1,7 +1,9 @@
 import {
+  CorporateCardGrid,
   DashboardCard,
   DefaultBackgroundImage,
   LayoutScrollView,
+  normalizeProgressFraction,
   SizedBox,
 } from '@/components';
 import {
@@ -14,7 +16,7 @@ import { useEffect } from 'react';
 import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
 import { FlatList, useWindowDimensions } from 'react-native';
-import { useBreakpoint } from '@/services';
+import { useBreakpoint, useDesign } from '@/services';
 import { KeyExtractorHelper } from '@/utils';
 import { useCourse } from '@/services';
 import { useAppSelector } from '@/redux';
@@ -25,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 export default function CourseSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ curriculumid?: string }>();
   const selectedSubject = useAppSelector(getSelectedSubject);
@@ -67,6 +70,24 @@ export default function CourseSelectionScreen() {
     });
   };
 
+  if (!curriculumId) return <Redirect href="/home/subjects" />;
+
+  if (isCorporate) {
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <CorporateCardGrid
+          items={courses.map(course => ({
+            key: course.gradeid,
+            title: course.gradename,
+            meta: course.gradedescription,
+            progress: normalizeProgressFraction(course.progress),
+            onPress: () => handleItemPress(course),
+          }))}
+        />
+      </LayoutScrollView>
+    );
+  }
+
   const renderItemSeparator = () => <SizedBox.Large height />;
 
   const renderItem = ({ item, index }: { item: Course; index: number }) => {
@@ -80,8 +101,6 @@ export default function CourseSelectionScreen() {
       />
     );
   };
-
-  if (!curriculumId) return <Redirect href="/home/subjects" />;
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>

@@ -6,6 +6,7 @@ export { default as useAuth } from './hooks/useAuth';
 export { default as useLmsAuth } from './hooks/useLmsAuth';
 export { default as useBreakpoint } from './hooks/Breakpoint/useBreakpoint';
 export { default as useCourse } from './hooks/useCourse';
+export { default as useDesign } from './hooks/useDesign';
 export { default as useFont } from './hooks/useFont';
 export { default as useLesson } from './hooks/useLesson';
 export { default as useLevel } from './hooks/useLevel';
