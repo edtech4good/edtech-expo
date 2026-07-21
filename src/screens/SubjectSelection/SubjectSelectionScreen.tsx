@@ -48,7 +48,10 @@ export default function CourseSelectionScreen() {
 
   const handleItemPress = async (cur: Subject) => {
     await selectSubject(cur);
-    router.navigate('/home/courses');
+    router.navigate({
+      pathname: '/home/courses',
+      params: { curriculumid: cur.curriculumid },
+    });
   };
 
   const renderItemSeparator = () => <SizedBox.Large height />;

@@ -17,7 +17,12 @@ import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { KeyExtractorHelper } from '@/utils';
 import { useBreakpoint, useDesign, useFont } from '@/services';
-import { router, useNavigation } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from 'expo-router';
 import { useLevel } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedCourse, getSelectedUnit } from '@/redux/slices';
@@ -50,11 +55,16 @@ export default function LevelSelectionScreen() {
   const { isCorporate } = useDesign();
   const displayFont = useFont('bold', 'display');
   const navigation = useNavigation();
+  const params = useLocalSearchParams<{ levelid?: string }>();
   const selectedCourse = useAppSelector(getSelectedCourse);
   const selectedUnit = useAppSelector(getSelectedUnit);
-  const { fetch, clear, selectLesson, lessons } = useLevel(
-    selectedUnit?.levelid || '',
-  );
+  // The URL param survives a browser reload on web; the redux selection covers
+  // native, where navigate() is not always given params by older code paths.
+  const levelId =
+    (typeof params.levelid === 'string' && params.levelid) ||
+    selectedUnit?.levelid ||
+    '';
+  const { fetch, clear, selectLesson, lessons } = useLevel(levelId);
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -71,16 +81,22 @@ export default function LevelSelectionScreen() {
   }, []);
 
   useEffect(() => {
+    if (!levelId) return;
     fetch();
     return () => {
       clear();
     };
-  }, [selectedUnit]);
+  }, [levelId]);
 
   const handleItemPress = async (lesson: Lesson) => {
     await selectLesson(lesson);
-    router.navigate('/home/lessons');
+    router.navigate({
+      pathname: '/home/lessons',
+      params: { lessonid: lesson.lessonid },
+    });
   };
+
+  if (!levelId) return <Redirect href="/home/subjects" />;
 
   if (isCorporate) {
     // Corporate Level Detail per the handoff (§3 phone / §7 tablet): hero,
