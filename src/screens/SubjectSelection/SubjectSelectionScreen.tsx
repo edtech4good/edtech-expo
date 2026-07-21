@@ -18,6 +18,8 @@ import { useSubject } from '@/services';
 import { Subject } from '@/models';
 import { useTranslation } from 'react-i18next';
 
+const CorporateGridSpacer = () => <View style={{ height: 20 }} />;
+
 export default function CourseSelectionScreen() {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -75,32 +77,6 @@ export default function CourseSelectionScreen() {
 
     const gridGap = 20;
 
-    const renderCorporateHeader = () => (
-      <View style={{ paddingVertical: theme.layouts.pageVerticalPadding }}>
-        <EyebrowText size={10} color={theme.colors.primary}>
-          {t('screen.subject.greeting')}
-        </EyebrowText>
-        {studentName !== '' && (
-          <Text
-            style={{
-              marginTop: 4,
-              fontFamily: displayFont,
-              fontSize: 24,
-              color: theme.colors.onBackground,
-            }}>
-            {studentName}
-          </Text>
-        )}
-        <SizedBox.Medium height />
-        <AppTextField
-          variant="search"
-          value={query}
-          onChangeText={setQuery}
-          placeholder={t('screen.subject.searchPlaceholder')}
-        />
-      </View>
-    );
-
     const renderCorporateItem = ({ item }: { item: Subject }) => {
       const rawProgress = item.progress;
       const normalizedProgress =
@@ -122,25 +98,57 @@ export default function CourseSelectionScreen() {
       );
     };
 
+    // The greeting/search header is a SIBLING of the FlatList, not its
+    // ListHeaderComponent: header cells re-mount inside VirtualizedList when
+    // the list re-renders per keystroke, which tears down the search field's
+    // DOM node and drops focus after every character typed.
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
-        <FlatList
-          key={`corporate-${corporateColumns}`}
-          style={{ flex: 1, width: '100%', maxWidth: 1024 }}
-          contentContainerStyle={{
-            paddingHorizontal: theme.layouts.pageHorizontalPadding,
-            paddingBottom: theme.layouts.pageVerticalPadding,
-          }}
-          data={visibleSubjects}
-          numColumns={corporateColumns}
-          {...(corporateColumns > 1
-            ? { columnWrapperStyle: { gap: gridGap } }
-            : {})}
-          ItemSeparatorComponent={() => <View style={{ height: gridGap }} />}
-          ListHeaderComponent={renderCorporateHeader}
-          renderItem={renderCorporateItem}
-          keyExtractor={KeyExtractorHelper}
-        />
+        <View style={{ flex: 1, width: '100%', maxWidth: 1024 }}>
+          <View
+            style={{
+              paddingHorizontal: theme.layouts.pageHorizontalPadding,
+              paddingVertical: theme.layouts.pageVerticalPadding,
+            }}>
+            <EyebrowText size={10} color={theme.colors.primary}>
+              {t('screen.subject.greeting')}
+            </EyebrowText>
+            {studentName !== '' && (
+              <Text
+                style={{
+                  marginTop: 4,
+                  fontFamily: displayFont,
+                  fontSize: 24,
+                  color: theme.colors.onBackground,
+                }}>
+                {studentName}
+              </Text>
+            )}
+            <SizedBox.Medium height />
+            <AppTextField
+              variant="search"
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t('screen.subject.searchPlaceholder')}
+            />
+          </View>
+          <FlatList
+            key={`corporate-${corporateColumns}`}
+            style={{ flex: 1, width: '100%' }}
+            contentContainerStyle={{
+              paddingHorizontal: theme.layouts.pageHorizontalPadding,
+              paddingBottom: theme.layouts.pageVerticalPadding,
+            }}
+            data={visibleSubjects}
+            numColumns={corporateColumns}
+            {...(corporateColumns > 1
+              ? { columnWrapperStyle: { gap: gridGap } }
+              : {})}
+            ItemSeparatorComponent={CorporateGridSpacer}
+            renderItem={renderCorporateItem}
+            keyExtractor={KeyExtractorHelper}
+          />
+        </View>
       </LayoutScrollView>
     );
   }
