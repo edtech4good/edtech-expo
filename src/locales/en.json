@@ -58,7 +58,11 @@
     },
     "level": {
       "header": "Levels",
-      "progressLabel": "Progress"
+      "progressLabel": "Progress",
+      "lessonsProgress": "{{done}} of {{total}} lessons",
+      "lessonCountMeta": "{{count}} lessons",
+      "lessonChip": "Lesson {{n}}",
+      "continueLearning": "Continue learning"
     },
     "lesson": {
       "header": "Lessons",

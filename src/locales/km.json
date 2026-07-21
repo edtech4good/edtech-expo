@@ -57,7 +57,11 @@
     },
     "level": {
       "header": "ចំណងជើងរង",
-      "progressLabel": "វឌ្ឍនភាព"
+      "progressLabel": "វឌ្ឍនភាព",
+      "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
+      "lessonCountMeta": "មេរៀន {{count}}",
+      "lessonChip": "មេរៀនទី {{n}}",
+      "continueLearning": "បន្តការសិក្សា"
     },
     "lesson": {
       "header": "លំហាត់",

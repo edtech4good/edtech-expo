@@ -50,3 +50,8 @@ export {
   type CorporateCardGridItem,
   type CorporateCardGridProps,
 } from './CorporateCardGrid';
+export {
+  default as LessonRow,
+  type LessonRowProps,
+  type LessonRowStatus,
+} from './LessonRow';
