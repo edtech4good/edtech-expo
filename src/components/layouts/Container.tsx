@@ -30,7 +30,7 @@ const ContainerView = styled.View.attrs<Props>((props: Props) => ({
   paddingLeft: props.paddingLeft,
   paddingRight: props.paddingRight,
 }))`
-  width: ${props => props.containerWidth}px;
+  width: ${props => (props.containerWidth != null ? `${props.containerWidth}px` : '100%')};
   height: ${props => props.containerHeight}px;
   background-color: ${props =>
     props.backgroundColor ?? props.theme.colors.background};
@@ -62,7 +62,7 @@ function Container({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const appHeaderHeight = useHeaderHeight();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
 
   const screenHeightWithoutStatusBar = useMemo(
     () => height - insets.bottom,
@@ -79,7 +79,7 @@ function Container({
   return (
     <ContainerView
       containerHeight={containerHeight ?? resultHeight}
-      containerWidth={containerWidth ?? width}
+      containerWidth={containerWidth}
       backgroundColor={backgroundColor}
       justifyContent={justifyContent}
       alignItems={alignItems}

@@ -1,11 +1,12 @@
 import { DrawerButton } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getResourcePath } from '@/redux/slices';
-import { useFont, useSetting } from '@/services';
+import { useDesign, useFont, useSetting } from '@/services';
 import { Stack } from 'expo-router';
 import _ from 'lodash';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function HomeStack() {
@@ -14,6 +15,13 @@ export default function HomeStack() {
   const { t } = useTranslation();
   const { updateResourcePath } = useSetting();
   const resourcePath = useAppSelector(getResourcePath);
+  const { isCorporate } = useDesign();
+  const { width } = useWindowDimensions();
+
+  // Same isRail check as (home)/_layout.tsx: on the corporate permanent
+  // rail there's no drawer to toggle, so the hamburger button is dropped.
+  // Non-rail (kids theme, or corporate below tablet width) is unchanged.
+  const isRail = isCorporate && width >= theme.breakpoints.DEFAULT_MIN_WIDTH;
 
   useEffect(() => {
     if (!_.isEmpty(resourcePath)) return;
@@ -31,7 +39,7 @@ export default function HomeStack() {
           color: theme.colors.onBackground,
         },
         headerTitleAlign: 'center',
-        headerRight: () => <DrawerButton />,
+        headerRight: isRail ? undefined : () => <DrawerButton />,
       }}>
       <Stack.Screen
         name="subjects"
