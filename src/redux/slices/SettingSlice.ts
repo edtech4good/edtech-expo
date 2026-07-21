@@ -6,6 +6,7 @@ interface Props {
   language: 'en' | 'km';
   grantedStorageDirectory: string;
   resourcePath: string;
+  theme: 'kids' | 'corporate';
 }
 
 const name = 'setting';
@@ -14,6 +15,10 @@ const initialState: Props = {
   language: 'km',
   grantedStorageDirectory: '',
   resourcePath: '',
+  theme:
+    process.env.EXPO_PUBLIC_DEFAULT_THEME === 'corporate'
+      ? 'corporate'
+      : 'kids',
 };
 
 export const settingSlice = createSlice({
@@ -33,6 +38,10 @@ export const settingSlice = createSlice({
       state.resourcePath = action.payload;
       return state;
     },
+    changeThemeAction: (state, action) => {
+      state.theme = action.payload;
+      return state;
+    },
     clearAction: () => initialState,
   },
 });
@@ -43,3 +52,7 @@ export const getSelectedLanguage = (state: RootState) => state.setting.language;
 export const getGrantedStorageDirectory = (state: RootState) =>
   state.setting.grantedStorageDirectory;
 export const getResourcePath = (state: RootState) => state.setting.resourcePath;
+// redux-persist rehydrates old persisted state that predates the `theme`
+// key, so fall back to 'kids' rather than trusting the type.
+export const getSelectedTheme = (state: RootState) =>
+  state.setting.theme ?? 'kids';

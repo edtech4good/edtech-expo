@@ -194,7 +194,7 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
         file?.filetype !== 6
           ? {
               elevation: 7,
-              shadowColor: '#000',
+              shadowColor: theme.colors.shadow,
               shadowOffset: {
                 width: 0,
                 height: 0,

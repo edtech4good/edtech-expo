@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import _ from 'lodash';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Pressable } from 'react-native';
+import { useTheme } from 'styled-components/native';
 
 interface Props {
   id: string;
@@ -17,6 +18,7 @@ export default forwardRef<ShakingHandler, Props>(function DOption4Item(
   { id, source, onPress, disabled = false }: Props,
   ref,
 ) {
+  const theme = useTheme();
   const shakingRef = useRef<ShakingHandler>(null);
   const fileSource = useResource(
     {
@@ -48,7 +50,7 @@ export default forwardRef<ShakingHandler, Props>(function DOption4Item(
             width: 222,
             height: 111,
             resizeMode: 'contain',
-            shadowColor: '#000',
+            shadowColor: theme.colors.shadow,
             shadowOffset: {
               width: 0,
               height: 0,

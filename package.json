@@ -16,7 +16,8 @@
     "select:prod": "firebase target:apply hosting prod your-firebase-project-id",
     "deploy:prod": "NODE_ENV=prod yarn build:web && yarn select:prod && firebase deploy --only hosting:prod",
     "select:staging": "firebase target:apply hosting staging your-staging-target",
-    "deploy:staging": "NODE_ENV=test yarn build:web && yarn select:staging && firebase deploy --only hosting:staging"
+    "deploy:staging": "NODE_ENV=test yarn build:web && yarn select:staging && firebase deploy --only hosting:staging",
+    "test:themes": "npx --yes tsx src/themes/__tests__/themeParity.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.21.0",

@@ -212,7 +212,7 @@ export default function VideoControl({
                   width: 55,
                   height: 55,
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,
@@ -231,7 +231,7 @@ export default function VideoControl({
                   width: 65,
                   height: 65,
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,
@@ -250,7 +250,7 @@ export default function VideoControl({
                   width: 55,
                   height: 55,
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,

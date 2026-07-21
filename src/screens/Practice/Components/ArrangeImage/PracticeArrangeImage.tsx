@@ -162,7 +162,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
                 }
               : {
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,

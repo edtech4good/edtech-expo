@@ -136,7 +136,7 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
               borderWidth={3}
               style={{
                 elevation: 7,
-                shadowColor: '#000',
+                shadowColor: theme.colors.shadow,
                 shadowOffset: {
                   width: 0,
                   height: 0,
@@ -157,7 +157,7 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
                 style={{
                   minWidth: 120,
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,
@@ -172,12 +172,12 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
                 onPress={() => handleChangeLanguage('km')}
                 backgroundColor={theme.colors.secondary}
                 borderColor={theme.colors.surface}
-                fontFamily="PoppinsSemiBold"
+                fontFamily="NotoSansKhmerSemiBold"
                 borderWidth={3}
                 style={{
                   minWidth: 120,
                   elevation: 7,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: {
                     width: 0,
                     height: 0,

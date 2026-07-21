@@ -36,7 +36,7 @@ export default forwardRef<DraggableHandler, Props>(function ArrangeItem(
       position={position}
       style={{
         elevation: 7,
-        shadowColor: '#000',
+        shadowColor: theme.colors.shadow,
         shadowOffset: {
           width: 0,
           height: 0,

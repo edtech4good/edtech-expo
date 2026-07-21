@@ -57,7 +57,7 @@ export default function PracticeFile({
           width: 160,
           height: 160,
           borderRadius: 80,
-          shadowColor: '#000',
+          shadowColor: theme.colors.shadow,
           shadowOffset: {
             width: 0,
             height: 0,

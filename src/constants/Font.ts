@@ -18,3 +18,13 @@ export const fontWeights = {
   semi: 'SemiBold',
   bold: 'Bold',
 } as const;
+
+export type FontRole = 'display' | 'body' | 'mono';
+
+export const familyWeights = {
+  Poppins: { normal: 'Regular', semi: 'SemiBold', bold: 'Bold' },
+  NotoSansKhmer: { normal: 'Regular', semi: 'SemiBold', bold: 'Bold' },
+  SpaceGrotesk: { normal: 'Regular', semi: 'SemiBold', bold: 'Bold' },
+  PlusJakartaSans: { normal: 'Regular', semi: 'SemiBold', bold: 'Bold' },
+  SpaceMono: { normal: 'Regular', semi: 'Bold', bold: 'Bold' },
+} as const;
