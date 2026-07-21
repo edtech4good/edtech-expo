@@ -4,7 +4,12 @@ import {
   LayoutScrollView,
   SizedBox,
 } from '@/components';
-import { router, useNavigation } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from 'expo-router';
 import { useEffect } from 'react';
 import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
@@ -21,10 +26,15 @@ export default function CourseSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const params = useLocalSearchParams<{ curriculumid?: string }>();
   const selectedSubject = useAppSelector(getSelectedSubject);
-  const { fetch, clear, selectCourse, courses } = useCourse(
-    selectedSubject?.curriculumid || '',
-  );
+  // The URL param survives a browser reload on web; the redux selection covers
+  // native, where navigate() is not always given params by older code paths.
+  const curriculumId =
+    (typeof params.curriculumid === 'string' && params.curriculumid) ||
+    selectedSubject?.curriculumid ||
+    '';
+  const { fetch, clear, selectCourse, courses } = useCourse(curriculumId);
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -41,16 +51,20 @@ export default function CourseSelectionScreen() {
   }, []);
 
   useEffect(() => {
+    if (!curriculumId) return;
     fetch();
 
     return () => {
       clear();
     };
-  }, []);
+  }, [curriculumId]);
 
   const handleItemPress = async (course: Course) => {
     await selectCourse(course);
-    router.navigate('/home/units');
+    router.navigate({
+      pathname: '/home/units',
+      params: { gradeid: course.gradeid },
+    });
   };
 
   const renderItemSeparator = () => <SizedBox.Large height />;
@@ -66,6 +80,8 @@ export default function CourseSelectionScreen() {
       />
     );
   };
+
+  if (!curriculumId) return <Redirect href="/home/subjects" />;
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>

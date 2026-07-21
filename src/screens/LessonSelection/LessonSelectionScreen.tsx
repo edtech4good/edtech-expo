@@ -5,7 +5,12 @@ import {
   LayoutScrollView,
   Row,
 } from '@/components';
-import { router, useNavigation } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { ScrollView } from 'react-native';
 import { useTheme } from 'styled-components/native';
@@ -30,10 +35,15 @@ export default function LessonSelectionScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
 
+  const params = useLocalSearchParams<{ lessonid?: string }>();
   const selectedLesson = useAppSelector(getSelectedLesson);
-  const { fetch, clear, selectModule, lesson } = useLesson(
-    selectedLesson?.lessonid || '',
-  );
+  // The URL param survives a browser reload on web; the redux selection covers
+  // native, where navigate() is not always given params by older code paths.
+  const lessonId =
+    (typeof params.lessonid === 'string' && params.lessonid) ||
+    selectedLesson?.lessonid ||
+    '';
+  const { fetch, clear, selectModule, lesson } = useLesson(lessonId);
 
   /**
    * `type` is what decides which renderer runs. It has to be a stable key rather
@@ -56,12 +66,13 @@ export default function LessonSelectionScreen() {
   }, []);
 
   useEffect(() => {
+    if (!lessonId) return;
     fetch();
 
     return () => {
       clear();
     };
-  }, []);
+  }, [lessonId]);
 
   const handleItemPress = async (
     mod: LessonLearning | LessonPractice | LessonQuiz,
@@ -199,6 +210,8 @@ export default function LessonSelectionScreen() {
       </Column>
     );
   };
+
+  if (!lessonId) return <Redirect href="/home/subjects" />;
 
   if (_.isEmpty(lesson)) return <DefaultBackgroundImage />;
 

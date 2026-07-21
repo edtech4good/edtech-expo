@@ -10,7 +10,12 @@ import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
 import { useBreakpoint } from '@/services';
-import { router, useNavigation } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from 'expo-router';
 import { useLevel } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedUnit } from '@/redux/slices';
@@ -21,10 +26,15 @@ export default function LevelSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const params = useLocalSearchParams<{ levelid?: string }>();
   const selectedUnit = useAppSelector(getSelectedUnit);
-  const { fetch, clear, selectLesson, lessons } = useLevel(
-    selectedUnit?.levelid || '',
-  );
+  // The URL param survives a browser reload on web; the redux selection covers
+  // native, where navigate() is not always given params by older code paths.
+  const levelId =
+    (typeof params.levelid === 'string' && params.levelid) ||
+    selectedUnit?.levelid ||
+    '';
+  const { fetch, clear, selectLesson, lessons } = useLevel(levelId);
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -41,15 +51,19 @@ export default function LevelSelectionScreen() {
   }, []);
 
   useEffect(() => {
+    if (!levelId) return;
     fetch();
     return () => {
       clear();
     };
-  }, [selectedUnit]);
+  }, [levelId]);
 
   const handleItemPress = async (lesson: Lesson) => {
     await selectLesson(lesson);
-    router.navigate('/home/lessons');
+    router.navigate({
+      pathname: '/home/lessons',
+      params: { lessonid: lesson.lessonid },
+    });
   };
 
   const renderItemSeparator = () => <SizedBox.Large height />;
@@ -67,6 +81,8 @@ export default function LevelSelectionScreen() {
       />
     );
   };
+
+  if (!levelId) return <Redirect href="/home/subjects" />;
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>

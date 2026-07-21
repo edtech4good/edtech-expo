@@ -10,7 +10,12 @@ import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
 import { useBreakpoint } from '@/services';
-import { router, useNavigation } from 'expo-router';
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from 'expo-router';
 import { useUnit } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedCourse } from '@/redux/slices';
@@ -21,10 +26,15 @@ export default function UnitSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const params = useLocalSearchParams<{ gradeid?: string }>();
   const selectedCourse = useAppSelector(getSelectedCourse);
-  const { fetch, units, selectUnit, clear } = useUnit(
-    selectedCourse?.gradeid || '',
-  );
+  // The URL param survives a browser reload on web; the redux selection covers
+  // native, where navigate() is not always given params by older code paths.
+  const gradeId =
+    (typeof params.gradeid === 'string' && params.gradeid) ||
+    selectedCourse?.gradeid ||
+    '';
+  const { fetch, units, selectUnit, clear } = useUnit(gradeId);
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -41,15 +51,19 @@ export default function UnitSelectionScreen() {
   }, []);
 
   useEffect(() => {
+    if (!gradeId) return;
     fetch();
     return () => {
       clear();
     };
-  }, [selectedCourse]);
+  }, [gradeId]);
 
   const handleItemPress = async (unit: Unit) => {
     await selectUnit(unit);
-    router.navigate('/home/levels');
+    router.navigate({
+      pathname: '/home/levels',
+      params: { levelid: unit.levelid },
+    });
   };
 
   const renderItemSeparator = () => <SizedBox.Large height />;
@@ -66,6 +80,8 @@ export default function UnitSelectionScreen() {
       />
     );
   };
+
+  if (!gradeId) return <Redirect href="/home/subjects" />;
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>
