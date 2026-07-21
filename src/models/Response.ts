@@ -32,6 +32,14 @@ export interface UnitResponse {
   data: Unit[];
 }
 
+export interface LevelIndexResponse {
+  data: Omit<Unit, 'progress'>[];
+}
+
+export interface CourseIndexResponse {
+  data: Omit<Course, 'progress' | 'number_levels' | 'progress_points'>[];
+}
+
 export interface LevelResponse {
   data: Level;
 }

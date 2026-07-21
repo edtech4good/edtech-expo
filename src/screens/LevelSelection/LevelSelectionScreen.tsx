@@ -23,9 +23,9 @@ import {
   useLocalSearchParams,
   useNavigation,
 } from 'expo-router';
-import { useLevel } from '@/services';
+import { useLevel, useLevelHeader } from '@/services';
 import { useAppSelector } from '@/redux';
-import { getSelectedCourse, getSelectedUnit } from '@/redux/slices';
+import { getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
 import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
@@ -56,7 +56,6 @@ export default function LevelSelectionScreen() {
   const displayFont = useFont('bold', 'display');
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ levelid?: string }>();
-  const selectedCourse = useAppSelector(getSelectedCourse);
   const selectedUnit = useAppSelector(getSelectedUnit);
   // The URL param survives a browser reload on web; the redux selection covers
   // native, where navigate() is not always given params by older code paths.
@@ -65,6 +64,10 @@ export default function LevelSelectionScreen() {
     selectedUnit?.levelid ||
     '';
   const { fetch, clear, selectLesson, lessons } = useLevel(levelId);
+  const { unit: headerUnit, gradeName: headerGradeName } = useLevelHeader(
+    levelId,
+    isCorporate,
+  );
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -111,7 +114,7 @@ export default function LevelSelectionScreen() {
     const upNext = sortedLessons.find(l => (l.progress ?? 0) < 100);
     const levelProgress = Math.min(
       100,
-      Math.max(0, Math.round(selectedUnit?.progress ?? 0)),
+      Math.max(0, Math.round(headerUnit?.progress ?? 0)),
     );
 
     const statusFor = (lesson: Lesson): LessonRowStatus => {
@@ -134,11 +137,9 @@ export default function LevelSelectionScreen() {
         />
         <SizedBox.Medium height />
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {selectedCourse?.gradename != null && (
-            <Chip label={selectedCourse.gradename} />
-          )}
-          {selectedUnit?.levelname != null && (
-            <Chip label={selectedUnit.levelname} active />
+          {headerGradeName != null && <Chip label={headerGradeName} />}
+          {headerUnit?.levelname != null && (
+            <Chip label={headerUnit.levelname} active />
           )}
         </View>
         <SizedBox.Medium height />
@@ -148,11 +149,11 @@ export default function LevelSelectionScreen() {
             fontSize: 22,
             color: theme.colors.onBackground,
           }}>
-          {selectedUnit?.levelname ?? ''}
+          {headerUnit?.levelname ?? ''}
         </Text>
-        {selectedUnit?.leveldescription ? (
+        {headerUnit?.leveldescription ? (
           <View style={{ marginTop: 4 }}>
-            <EyebrowText size={10}>{selectedUnit.leveldescription}</EyebrowText>
+            <EyebrowText size={10}>{headerUnit.leveldescription}</EyebrowText>
           </View>
         ) : null}
         <SizedBox.Medium height />
