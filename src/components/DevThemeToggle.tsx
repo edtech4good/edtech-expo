@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { useAppDispatch, useAppSelector } from '@/redux';
@@ -6,7 +7,7 @@ import { ThemeName } from '@/themes/Themes';
 
 // Dev-only affordance for switching between the kids and corporate themes
 // live, without touching persisted settings UI. Never rendered in a
-// production build.
+// production build. Long-press opens the component gallery (/gallery).
 export default function DevThemeToggle() {
   const dispatch = useAppDispatch();
   const name = useAppSelector(getSelectedTheme);
@@ -18,10 +19,15 @@ export default function DevThemeToggle() {
     dispatch(SettingActions.changeThemeAction(next));
   };
 
+  const handleLongPress = () => {
+    router.push('/gallery');
+  };
+
   return (
     <TouchableOpacity
       style={styles.pill}
       onPress={handlePress}
+      onLongPress={handleLongPress}
       activeOpacity={0.6}
     >
       <Text style={styles.label}>{name}</Text>
