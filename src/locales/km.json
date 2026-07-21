@@ -44,7 +44,9 @@
       "lastLoginLabel": "ការចូលចុងក្រោយ"
     },
     "subject": {
-      "header": "មុខវិជ្ជា"
+      "header": "មុខវិជ្ជា",
+      "greeting": "អរុណសួស្តី",
+      "searchPlaceholder": "ស្វែងរកកម្មវិធីសិក្សា"
     },
     "course": {
       "header": "ថ្នាក់"
