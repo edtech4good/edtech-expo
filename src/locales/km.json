@@ -17,7 +17,11 @@
     "login": {
       "loginButton": "ចូលគណនី",
       "sessionExpiredMessage": "សូមព្យាយាមចូលគណនីម្តងទៀត",
-      "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!"
+      "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!",
+      "welcomeTitle": "សូមស្វាគមន៍",
+      "welcomeSubtitle": "ចូលគណនីដើម្បីបន្តការសិក្សា",
+      "emailPlaceholder": "អ៊ីមែល",
+      "passwordPlaceholder": "ពាក្យសម្ងាត់"
     },
     "profile": {
       "header": "ប្រវត្តិរូប",

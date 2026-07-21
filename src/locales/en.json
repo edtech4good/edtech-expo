@@ -18,7 +18,11 @@
     "login": {
       "loginButton": "Login",
       "sessionExpiredMessage": "Please login again.",
-      "welcomeMessage": "Welcome to EdTech Learn!"
+      "welcomeMessage": "Welcome to EdTech Learn!",
+      "welcomeTitle": "Welcome back",
+      "welcomeSubtitle": "Sign in to continue learning.",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password"
     },
     "profile": {
       "header": "Profile",

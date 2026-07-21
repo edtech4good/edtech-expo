@@ -1,9 +1,13 @@
 import { Images } from '@/assets';
 import {
+  AppButton,
+  Chip,
   DebugDisplay,
   DefaultBackgroundImage,
   Expanded,
+  EyebrowText,
   FilledButton,
+  FormAppTextField,
   FormInput,
   FormPassword,
   GenericModal,
@@ -14,14 +18,18 @@ import {
 } from '@/components';
 import { LoginPayload, ModalHandler } from '@/models';
 import { useAppDispatch, useAppSelector } from '@/redux';
-import { getGrantedStorageDirectory, SettingActions } from '@/redux/slices';
-import { useAuth, useSetting } from '@/services';
+import {
+  getGrantedStorageDirectory,
+  getSelectedLanguage,
+  SettingActions,
+} from '@/redux/slices';
+import { useAuth, useDesign, useFont, useSetting } from '@/services';
 import { useLocalSearchParams } from 'expo-router';
 import _ from 'lodash';
 import { useEffect, useRef } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Image } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 interface Props {
@@ -34,6 +42,10 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
+  const selectedLanguage = useAppSelector(getSelectedLanguage);
+  const displayFont = useFont('bold', 'display');
+  const bodyFont = useFont('normal', 'body');
   const { login, isLogginIn, error } = useAuth();
   const { isLoggedOut } = useLocalSearchParams();
   const { requestStoragePermission, updateResourcePath } = useSetting();
@@ -83,6 +95,97 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     if (!modalRef.current) return;
     modalRef.current.hide();
   };
+
+  if (isCorporate) {
+    // Corporate layout per the handoff (§1 Login), tablet/web-first: cream
+    // page, logo slot, welcome heading, fields, primary pill. "Use company
+    // SSO" and "Forgot password?" are omitted — no backend for either
+    // (Bucket C in docs/corporate-design-per-school.md). The logo slot shows
+    // the EdTech lockup until Phase 4 wires per-school branding.
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <FormProvider {...methods}>
+          <Expanded justifyContent="center" alignItems="center">
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 480,
+                paddingHorizontal: theme.layouts.pageHorizontalPadding,
+              }}>
+              <Image
+                source={Images.BrandLogo}
+                resizeMethod="resize"
+                resizeMode="contain"
+                style={{ alignSelf: 'center', width: 280, height: 72 }}
+              />
+              <SizedBox.Large height />
+              <Text
+                style={{
+                  fontFamily: displayFont,
+                  fontSize: 30,
+                  color: theme.colors.onBackground,
+                  textAlign: 'center',
+                }}>
+                {t('screen.login.welcomeTitle')}
+              </Text>
+              <SizedBox.Small height />
+              <Text
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 14,
+                  lineHeight: 22,
+                  color: theme.colors.onSurfaceVariant,
+                  textAlign: 'center',
+                }}>
+                {t('screen.login.welcomeSubtitle')}
+              </Text>
+              <SizedBox.Large height />
+              <FormAppTextField
+                name="username"
+                placeholder={t('screen.login.emailPlaceholder')}
+                rules={{ required: true }}
+              />
+              <SizedBox.Medium height />
+              <FormAppTextField
+                name="password"
+                placeholder={t('screen.login.passwordPlaceholder')}
+                secureTextEntry
+                rules={{ required: true }}
+              />
+              <SizedBox.Large height />
+              <AppButton
+                label={t('screen.login.loginButton')}
+                loading={isLogginIn}
+                fullWidth
+                onPress={methods.handleSubmit(handleLogin)}
+              />
+              <SizedBox.Large height />
+              <Row justifyContent="center">
+                <Chip
+                  label="English"
+                  active={selectedLanguage === 'en'}
+                  onPress={() => handleChangeLanguage('en')}
+                />
+                <SizedBox.Medium width />
+                <Chip
+                  label="ភាសាខ្មែរ"
+                  fontFamily="NotoSansKhmerSemiBold"
+                  active={selectedLanguage === 'km'}
+                  onPress={() => handleChangeLanguage('km')}
+                />
+              </Row>
+              <SizedBox.Large height />
+              <EyebrowText size={9} style={{ textAlign: 'center' }}>
+                POWERED BY EDTECH FOR GOOD
+              </EyebrowText>
+            </View>
+          </Expanded>
+        </FormProvider>
+        <GenericModal ref={modalRef} onConfirm={handleCloseModal} />
+        {__DEV__ && <DebugDisplay />}
+      </LayoutScrollView>
+    );
+  }
 
   return (
     <LayoutScrollView

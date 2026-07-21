@@ -43,6 +43,7 @@ export { default as TeacherProfileCard } from './TeacherProfileCard';
 export { default as FormWrapper } from './forms/FormWrapper';
 export { default as FormInput } from './forms/FormInput';
 export { default as FormPassword } from './forms/FormPassword';
+export { default as FormAppTextField } from './forms/FormAppTextField';
 
 export { default as PracticeHeading } from './practices/PracticeHeading';
 export { default as PracticeFooter } from './practices/PracticeFooter';
