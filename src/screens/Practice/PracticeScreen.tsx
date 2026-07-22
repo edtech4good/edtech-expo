@@ -1,4 +1,5 @@
 import {
+  BackButton,
   BlackVeil,
   DefaultBackgroundImage,
   Expanded,
@@ -9,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { useAppSelector } from '@/redux';
-import { getSelectedModule } from '@/redux/slices';
+import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
 import { usePractice } from '@/services';
 import _ from 'lodash';
 import {
@@ -41,6 +42,7 @@ export default function PracticeScreen() {
   const navigation = useNavigation();
 
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLesson = useAppSelector(getSelectedLesson);
   const { fetch, questions, saveResult } = usePractice(
     (selectedModule as LessonPractice)?.lessonpracticeid ?? '',
   );
@@ -74,7 +76,8 @@ export default function PracticeScreen() {
 
   useEffect(() => {
     navigation.setOptions({
-      title: (selectedModule as LessonPractice).lessonpracticename,
+      title: (selectedModule as LessonPractice)?.lessonpracticename,
+      headerLeft: () => <BackButton onPress={handleBackPress} />,
     });
   }, []);
 
@@ -86,6 +89,20 @@ export default function PracticeScreen() {
   useEffect(() => {
     console.log('===== Current Question =====', currentQuestion);
   }, [currentQuestion]);
+
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      const params = selectedLesson
+        ? { lessonid: selectedLesson.lessonid }
+        : undefined;
+      router.replace({
+        pathname: '/home/lessons',
+        params,
+      });
+    }
+  };
 
   const handleSubmitPress = async (
     tries: number,
