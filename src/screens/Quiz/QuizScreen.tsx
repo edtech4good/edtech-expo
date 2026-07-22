@@ -14,7 +14,7 @@ import {
   QuizResult,
 } from '@/models';
 import { useAppSelector } from '@/redux';
-import { getSelectedModule } from '@/redux/slices';
+import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
 import { useQuiz, useResult } from '@/services';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
@@ -62,6 +62,7 @@ export default function QuizScreen() {
 
   const { calculateResult } = useResult();
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLesson = useAppSelector(getSelectedLesson);
   const { fetch, saveResult, questions } = useQuiz(
     (selectedModule as LessonQuiz)?.lessonquizid ?? '',
   );
@@ -93,11 +94,10 @@ export default function QuizScreen() {
   });
 
   useEffect(() => {
-    if (navigation.canGoBack())
-      navigation.setOptions({
-        headerLeft: () => <BackButton onPress={handleBackPress} />,
-      });
-  }, []);
+    navigation.setOptions({
+      headerLeft: () => <BackButton onPress={handleBackPress} />,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     if (!selectedModule) return;
@@ -114,7 +114,17 @@ export default function QuizScreen() {
   };
 
   const handleGoBack = () => {
-    router.back();
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      const params = selectedLesson
+        ? { lessonid: selectedLesson.lessonid }
+        : undefined;
+      router.replace({
+        pathname: '/home/lessons',
+        params,
+      });
+    }
   };
 
   const handleModalPress = async () => {
