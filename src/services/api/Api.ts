@@ -1,5 +1,6 @@
 import {
   BaselineCurriculumPayload,
+  CourseIndexResponse,
   CourseResponse,
   CurriculumResponse,
   EdtechLoginPayload,
@@ -9,6 +10,7 @@ import {
   LessonPracticeResponse,
   LessonQuizResponse,
   LessonResponse,
+  LevelIndexResponse,
   LevelResponse,
   LmsLoginPayload,
   PracticeResult,
@@ -216,6 +218,22 @@ export default class Api {
     courseId: string,
   ): Promise<ApiResponse<UnitResponse, UnitResponse>> {
     return this.apiSauceInstance.get<UnitResponse>(`level/grade/${courseId}`);
+  }
+
+  // Fetch every level row, unscoped by course — used to resolve a level's
+  // header data when the redux selection doesn't cover the requested id
+  // (e.g. a deep reload / shared link with no selection in the store).
+  async fetchAllUnits(): Promise<
+    ApiResponse<LevelIndexResponse, LevelIndexResponse>
+  > {
+    return this.apiSauceInstance.get<LevelIndexResponse>('level/all');
+  }
+
+  // Fetch every course row, unscoped by curriculum — see fetchAllUnits.
+  async fetchAllCourses(): Promise<
+    ApiResponse<CourseIndexResponse, CourseIndexResponse>
+  > {
+    return this.apiSauceInstance.get<CourseIndexResponse>('grade/all');
   }
 
   // Fourth fetch Level using UnitId
