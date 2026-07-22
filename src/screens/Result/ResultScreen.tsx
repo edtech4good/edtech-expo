@@ -1,9 +1,11 @@
 import { Images } from '@/assets';
 import {
   AppButton,
+  CircularProgress,
   Container,
   DefaultBackgroundImage,
   Expanded,
+  EyebrowText,
   FilledButton,
   H3,
   H5,
@@ -57,6 +59,65 @@ export default function ResultScreen() {
   const handleFinishPress = () => {
     router.back();
   };
+
+  if (isCorporate) {
+    const metaLine = [course?.gradename, unit?.levelname, lesson?.lessonname]
+      .filter((value): value is string => Boolean(value))
+      .join(' · ');
+
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <Container
+          backgroundColor="transparent"
+          removeHeaderSize
+          justifyContent="center"
+          alignItems="center"
+          paddingLeft={theme.layouts.pageHorizontalPadding}
+          paddingRight={theme.layouts.pageHorizontalPadding}
+          paddingTop={theme.layouts.pageVerticalPadding}
+          paddingBottom={theme.layouts.pageVerticalPadding}>
+          <EyebrowText>{t('screen.result.header')}</EyebrowText>
+          <SizedBox.Medium height />
+          <H3
+            fontWeight="bold"
+            color={hasPassed ? theme.colors.success : theme.colors.error}>
+            {title}
+          </H3>
+          <SizedBox.Large height />
+          <CircularProgress
+            progress={percentage / 100}
+            size={132}
+            label={`${Math.round(percentage)}%`}
+          />
+          <SizedBox.Large height />
+          <H6 fontWeight="semi" color={theme.colors.onSurfaceVariant}>
+            {t('screen.result.scoreLabel')}
+          </H6>
+          <SizedBox.Small height />
+          <H3 fontWeight="semi" color={theme.colors.onSurface}>
+            {`${score}/${maxScore}`}
+          </H3>
+          {metaLine.length > 0 && (
+            <>
+              <SizedBox.Large height />
+              <EyebrowText>{metaLine}</EyebrowText>
+            </>
+          )}
+          {Platform.OS === 'web' && (
+            <>
+              <SizedBox.Large height />
+              <Row justifyContent="center">
+                <AppButton
+                  label={t('screen.result.finishButton')}
+                  onPress={handleFinishPress}
+                />
+              </Row>
+            </>
+          )}
+        </Container>
+      </LayoutScrollView>
+    );
+  }
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>
@@ -126,16 +187,9 @@ export default function ResultScreen() {
           <Row>
             <Expanded flex={3} />
             <Expanded justifyContent="flex-end">
-              {isCorporate ? (
-                <AppButton
-                  label={t('screen.result.finishButton')}
-                  onPress={handleFinishPress}
-                />
-              ) : (
-                <FilledButton onPress={handleFinishPress}>
-                  {t('screen.result.finishButton')}
-                </FilledButton>
-              )}
+              <FilledButton onPress={handleFinishPress}>
+                {t('screen.result.finishButton')}
+              </FilledButton>
             </Expanded>
           </Row>
         )}
