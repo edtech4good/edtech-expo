@@ -91,7 +91,12 @@ export default function App() {
     });
   }, []);
 
-  if (!fontsLoaded || !isReady) <StartScreen />;
+  // StartScreen needs the theme (useTheme) and i18n contexts, and
+  // AppThemeProvider needs the redux store, so the loading gate has to live
+  // inside the provider tree rather than as an early return above it.
+  // fontError keeps a failed font download from leaving the splash up forever
+  // — the app proceeds on fallback fonts instead.
+  const isLoading = (!fontsLoaded && !fontError) || !isReady;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -99,7 +104,7 @@ export default function App() {
         <PersistGate persistor={persistor}>
           <AppThemeProvider>
             <ApiContext.Provider value={apiInstance}>
-              <Slot />
+              {isLoading ? <StartScreen /> : <Slot />}
             </ApiContext.Provider>
           </AppThemeProvider>
         </PersistGate>
