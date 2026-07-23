@@ -97,11 +97,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <PersistGate persistor={persistor}>
-          <AppThemeProvider>
-            <ApiContext.Provider value={apiInstance}>
+          <ApiContext.Provider value={apiInstance}>
+            <AppThemeProvider>
               <Slot />
-            </ApiContext.Provider>
-          </AppThemeProvider>
+            </AppThemeProvider>
+          </ApiContext.Provider>
         </PersistGate>
       </Provider>
     </GestureHandlerRootView>

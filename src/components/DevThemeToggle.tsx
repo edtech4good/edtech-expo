@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useAppDispatch, useAppSelector } from '@/redux';
 import { getSelectedTheme, SettingActions } from '@/redux/slices';
 import { ThemeName } from '@/themes/Themes';
+import { setDevPillTouched } from '@/services/devThemeOverride';
 
 // Dev-only affordance for switching between the kids and corporate themes
 // live, without touching persisted settings UI. Never rendered in a
@@ -16,6 +17,7 @@ export default function DevThemeToggle() {
 
   const handlePress = () => {
     const next: ThemeName = name === 'kids' ? 'corporate' : 'kids';
+    setDevPillTouched();
     dispatch(SettingActions.changeThemeAction(next));
   };
 

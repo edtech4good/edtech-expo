@@ -7,12 +7,13 @@ import {
   LoginPayload,
   Profile,
 } from '@/models';
-import { AuthenticationActions, getProfile } from '@/redux/slices';
+import { AuthenticationActions, getProfile, SettingActions } from '@/redux/slices';
 import { router } from 'expo-router';
 import { Decoder } from '@/utils';
 import _ from 'lodash';
 import { toAuthPayload } from '@/transforms';
 import useSyncContent from './useSyncContent';
+import { isDevPillTouched } from '@/services/devThemeOverride';
 
 export default function useAuth() {
   const dispatch = useAppDispatch();
@@ -60,6 +61,16 @@ export default function useAuth() {
           profile,
         }),
       );
+
+      // A dev who has manually toggled the theme pill keeps their choice —
+      // the server-derived claim only applies until the pill is touched.
+      const uithemeClaim = profile.uitheme;
+      if (
+        (uithemeClaim === 'kids' || uithemeClaim === 'corporate') &&
+        !(__DEV__ && isDevPillTouched())
+      ) {
+        dispatch(SettingActions.changeThemeAction(uithemeClaim));
+      }
 
       // await uploadContentToRpi();
       // return;
