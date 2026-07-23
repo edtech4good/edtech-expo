@@ -3,6 +3,7 @@ export * from './api/ApiContext';
 export * from './hooks/useDraggable';
 export * from './hooks/useParentLayout';
 export { default as useAuth } from './hooks/useAuth';
+export { default as useBrandingRefresh } from './hooks/useBrandingRefresh';
 export { default as useLmsAuth } from './hooks/useLmsAuth';
 export { default as useBreakpoint } from './hooks/Breakpoint/useBreakpoint';
 export { default as useCourse } from './hooks/useCourse';

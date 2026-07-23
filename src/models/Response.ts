@@ -20,6 +20,14 @@ export interface EdtechLoginResponse {
   data: { accessToken: string };
 }
 
+export interface BrandingResponse {
+  error: boolean;
+  data: {
+    uitheme: 'kids' | 'corporate';
+    brandingconfig: { logourl?: string; displayname?: string } | null;
+  };
+}
+
 export interface SubjectResponse {
   data: Subject[];
 }

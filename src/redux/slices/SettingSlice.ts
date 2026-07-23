@@ -2,11 +2,17 @@ import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import i18next from 'i18next';
 
+interface BrandingConfig {
+  logourl?: string;
+  displayname?: string;
+}
+
 interface Props {
   language: 'en' | 'km';
   grantedStorageDirectory: string;
   resourcePath: string;
   theme: 'kids' | 'corporate';
+  branding: BrandingConfig | null;
 }
 
 const name = 'setting';
@@ -19,6 +25,7 @@ const initialState: Props = {
     process.env.EXPO_PUBLIC_DEFAULT_THEME === 'corporate'
       ? 'corporate'
       : 'kids',
+  branding: null,
 };
 
 export const settingSlice = createSlice({
@@ -42,6 +49,10 @@ export const settingSlice = createSlice({
       state.theme = action.payload;
       return state;
     },
+    setBrandingAction: (state, action) => {
+      state.branding = action.payload;
+      return state;
+    },
     clearAction: () => initialState,
   },
 });
@@ -56,3 +67,5 @@ export const getResourcePath = (state: RootState) => state.setting.resourcePath;
 // key, so fall back to 'kids' rather than trusting the type.
 export const getSelectedTheme = (state: RootState) =>
   state.setting.theme ?? 'kids';
+export const getBranding = (state: RootState) =>
+  state.setting.branding ?? null;

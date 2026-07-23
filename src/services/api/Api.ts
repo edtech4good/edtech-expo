@@ -3,6 +3,7 @@ import {
   CourseIndexResponse,
   CourseResponse,
   CurriculumResponse,
+  BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
   LessonLearningResponse,
@@ -187,6 +188,16 @@ export default class Api {
       '/auth/login',
       payload,
     );
+  }
+
+  // Per-school UI theme + branding, resolved by school name. Always 200;
+  // unknown school names fall back to the kids theme server-side.
+  async fetchBranding(
+    schoolName: string,
+  ): Promise<ApiResponse<BrandingResponse, BrandingResponse>> {
+    return this.apiSauceInstance.get<BrandingResponse>('school/branding', {
+      schoolname: schoolName,
+    });
   }
 
   async lmsLogin(

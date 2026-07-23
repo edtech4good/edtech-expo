@@ -32,6 +32,8 @@ export interface Profile {
   studentid: string;
   studentlastname: string;
   sub: string;
+  uitheme?: 'kids' | 'corporate';
+  schoolid?: string | null;
 }
 
 export interface StudentProgress {
