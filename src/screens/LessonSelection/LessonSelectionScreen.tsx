@@ -28,6 +28,8 @@ import {
 } from '@/models';
 import _ from 'lodash';
 import { useTranslation } from 'react-i18next';
+import { getRemoteResourceUrl } from '@/utils';
+import type { ImageProps } from 'expo-image';
 
 type ActivityType = 'learning' | 'practice' | 'quiz';
 
@@ -63,9 +65,21 @@ export default function LessonSelectionScreen() {
   const sectionData = useMemo(() => {
     if (_.isEmpty(lesson)) return [];
     return [
-      { type: 'learning' as const, title: t('screen.lesson.learningTitle'), data: lesson.lessonlearnings },
-      { type: 'practice' as const, title: t('screen.lesson.practiceTitle'), data: lesson.lessonpractices },
-      { type: 'quiz' as const, title: t('screen.lesson.quizTitle'), data: lesson.lessonquizzes },
+      {
+        type: 'learning' as const,
+        title: t('screen.lesson.learningTitle'),
+        data: lesson.lessonlearnings,
+      },
+      {
+        type: 'practice' as const,
+        title: t('screen.lesson.practiceTitle'),
+        data: lesson.lessonpractices,
+      },
+      {
+        type: 'quiz' as const,
+        title: t('screen.lesson.quizTitle'),
+        data: lesson.lessonquizzes,
+      },
     ];
   }, [lesson, t]);
 
@@ -234,9 +248,7 @@ export default function LessonSelectionScreen() {
     // per-item progress the lesson-detail fetch provides
     // (studentlearningprogress); practices/quizzes have no per-item
     // progress data, so their rows carry title only — no fake durations.
-    const learningProgress = (
-      ll: LessonLearning,
-    ): number | undefined => {
+    const learningProgress = (ll: LessonLearning): number | undefined => {
       const resource = ll as Partial<LessonLearningResource>;
       const pct = resource.studentlearningprogress?.progress_percentage;
       if (typeof pct !== 'number' || pct <= 0) return undefined;
@@ -249,6 +261,7 @@ export default function LessonSelectionScreen() {
         key: string;
         title: string;
         progress?: number;
+        imageSource?: ImageProps['source'];
         onPress: () => void;
       }>,
     ) =>
@@ -262,6 +275,10 @@ export default function LessonSelectionScreen() {
           ))}
         </View>
       );
+
+    const lessonImageUrl = getRemoteResourceUrl(
+      `lesson-${lesson.lessonid}.jpg`,
+    );
 
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
@@ -283,6 +300,9 @@ export default function LessonSelectionScreen() {
                   key: ll.lessonlearningid,
                   title: ll.lessonlearningname,
                   progress: learningProgress(ll),
+                  imageSource: lessonImageUrl
+                    ? { uri: lessonImageUrl }
+                    : undefined,
                   onPress: () => handleItemPress(ll, 'learning'),
                 }),
               ),
@@ -293,6 +313,9 @@ export default function LessonSelectionScreen() {
                 lp => ({
                   key: lp.lessonpracticeid,
                   title: lp.lessonpracticename,
+                  imageSource: lessonImageUrl
+                    ? { uri: lessonImageUrl }
+                    : undefined,
                   onPress: () => handleItemPress(lp, 'practice'),
                 }),
               ),
@@ -302,6 +325,9 @@ export default function LessonSelectionScreen() {
               (lesson?.lessonquizzes ?? []).map(lq => ({
                 key: lq.lessonquizid,
                 title: lq.lessonquizname,
+                imageSource: lessonImageUrl
+                  ? { uri: lessonImageUrl }
+                  : undefined,
                 onPress: () => handleItemPress(lq, 'quiz'),
               })),
             )}
