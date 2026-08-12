@@ -17,7 +17,7 @@ import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { useBreakpoint, useDesign } from '@/services';
-import { KeyExtractorHelper } from '@/utils';
+import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useCourse } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedSubject } from '@/redux/slices';
@@ -76,13 +76,19 @@ export default function CourseSelectionScreen() {
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
         <CorporateCardGrid
-          items={courses.map(course => ({
-            key: course.gradeid,
-            title: course.gradename,
-            meta: course.gradedescription,
-            progress: normalizeProgressFraction(course.progress),
-            onPress: () => handleItemPress(course),
-          }))}
+          items={courses.map(course => {
+            const remoteUrl = getRemoteResourceUrl(
+              `grade-${course.gradeid}.jpg`,
+            );
+            return {
+              key: course.gradeid,
+              title: course.gradename,
+              meta: course.gradedescription,
+              progress: normalizeProgressFraction(course.progress),
+              imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+              onPress: () => handleItemPress(course),
+            };
+          })}
         />
       </LayoutScrollView>
     );

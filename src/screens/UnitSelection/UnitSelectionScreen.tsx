@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
-import { KeyExtractorHelper } from '@/utils';
+import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useBreakpoint, useDesign } from '@/services';
 import {
   Redirect,
@@ -75,13 +75,17 @@ export default function UnitSelectionScreen() {
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
         <CorporateCardGrid
-          items={units.map(unit => ({
-            key: unit.levelid,
-            title: unit.levelname,
-            meta: unit.leveldescription,
-            progress: normalizeProgressFraction(unit.progress),
-            onPress: () => handleItemPress(unit),
-          }))}
+          items={units.map(unit => {
+            const remoteUrl = getRemoteResourceUrl(`level-${unit.levelid}.jpg`);
+            return {
+              key: unit.levelid,
+              title: unit.levelname,
+              meta: unit.leveldescription,
+              progress: normalizeProgressFraction(unit.progress),
+              imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+              onPress: () => handleItemPress(unit),
+            };
+          })}
         />
       </LayoutScrollView>
     );
