@@ -15,7 +15,8 @@ import {
 } from '@/models';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
-import { useQuiz, useResult } from '@/services';
+import { useDesign, useQuiz, useResult } from '@/services';
+import { ActivityIndicator, View } from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -58,6 +59,7 @@ import { useTranslation } from 'react-i18next';
 export default function QuizScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
   const { calculateResult } = useResult();
@@ -157,7 +159,22 @@ export default function QuizScreen() {
     if (!practiceRef.current) return;
   };
 
-  if (_.isEmpty(currentQuestion)) return <DefaultBackgroundImage />;
+  if (_.isEmpty(currentQuestion)) {
+    if (isCorporate) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: theme.colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
+    }
+    return <DefaultBackgroundImage />;
+  }
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>

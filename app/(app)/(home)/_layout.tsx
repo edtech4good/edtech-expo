@@ -1,5 +1,5 @@
 import { CustomDrawer, DrawerButton, NavRail, NAV_RAIL_WIDTH } from '@/components';
-import { useDesign } from '@/services';
+import { useDesign, useFont } from '@/services';
 import { Drawer } from 'expo-router/drawer';
 import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
@@ -9,14 +9,13 @@ export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const font = useFont('semi');
   const { width } = useWindowDimensions();
 
   // Corporate theme at tablet width replaces the phone drawer with a
   // permanent left nav rail (docs/design/corporate-mobile/README.md).
   // Kids theme and narrow widths keep the existing right-side drawer.
   const isRail = isCorporate && width >= theme.breakpoints.DEFAULT_MIN_WIDTH;
-
-  console.log('MAJI');
 
   return (
     <Drawer
@@ -35,7 +34,7 @@ export default function Home() {
       screenOptions={{
         headerTitleAlign: 'center',
         headerTitleStyle: {
-          fontFamily: 'PoppinsSemiBold',
+          fontFamily: font,
           fontSize: theme.fontSizes.h4,
           color: theme.colors.customHeaderTitle,
         },
