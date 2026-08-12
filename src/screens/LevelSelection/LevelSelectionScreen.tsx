@@ -10,12 +10,12 @@ import {
   ProgressCard,
   SizedBox,
 } from '@/components';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { KeyExtractorHelper } from '@/utils';
+import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useBreakpoint, useDesign, useFont } from '@/services';
 import {
   Redirect,
@@ -78,6 +78,11 @@ export default function LevelSelectionScreen() {
       (width - theme.layouts.large) / (395 + theme.layouts.large),
     ),
   });
+  // Tracks whether the remote hero image failed to load, so we can fall
+  // back to the static asset. Declared unconditionally alongside the other
+  // hooks — this screen has an early `if (!levelId) return <Redirect …>`
+  // below, and hooks must never run conditionally.
+  const [heroLoadFailed, setHeroLoadFailed] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: t('screen.level.header') });
@@ -85,6 +90,7 @@ export default function LevelSelectionScreen() {
 
   useEffect(() => {
     if (!levelId) return;
+    setHeroLoadFailed(false);
     fetch();
     return () => {
       clear();
@@ -123,10 +129,21 @@ export default function LevelSelectionScreen() {
       return 'todo';
     };
 
+    // A broken remote image would blank a hero that today always shows, so
+    // (unlike the curriculum cards) this needs an explicit runtime
+    // fallback: try the remote hero, and drop back to the bundled asset on
+    // load failure or when no remote URL is resolvable at all.
+    const remoteHeroUrl = getRemoteResourceUrl(`level-${levelId}.jpg`);
+    const heroSource =
+      remoteHeroUrl && !heroLoadFailed
+        ? { uri: remoteHeroUrl }
+        : Images.CorporateCourseHero;
+
     const detailHeader = (
       <View style={{ paddingBottom: theme.layouts.pageVerticalPadding }}>
         <Image
-          source={Images.CorporateCourseHero}
+          source={heroSource}
+          onError={() => setHeroLoadFailed(true)}
           contentFit="cover"
           contentPosition="top"
           style={{

@@ -14,7 +14,7 @@ import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import { useAuth, useBreakpoint, useDesign, useFont } from '@/services';
-import { KeyExtractorHelper } from '@/utils';
+import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useSubject } from '@/services';
 import { Subject } from '@/models';
 import { useTranslation } from 'react-i18next';
@@ -109,13 +109,19 @@ export default function CourseSelectionScreen() {
             />
           </View>
           <CorporateCardGrid
-            items={visibleSubjects.map(subject => ({
-              key: subject.curriculumid,
-              title: subject.curriculumname,
-              meta: subject.curriculumdescription,
-              progress: normalizeProgressFraction(subject.progress),
-              onPress: () => handleItemPress(subject),
-            }))}
+            items={visibleSubjects.map(subject => {
+              const remoteUrl = getRemoteResourceUrl(
+                `curriculum-${subject.curriculumid}.jpg`,
+              );
+              return {
+                key: subject.curriculumid,
+                title: subject.curriculumname,
+                meta: subject.curriculumdescription,
+                progress: normalizeProgressFraction(subject.progress),
+                imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+                onPress: () => handleItemPress(subject),
+              };
+            })}
           />
         </View>
       </LayoutScrollView>
