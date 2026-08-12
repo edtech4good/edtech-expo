@@ -1,4 +1,5 @@
 import { CustomDrawer, DrawerButton } from '@/components';
+import { useFont } from '@/services';
 import { Drawer } from 'expo-router/drawer';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
@@ -6,8 +7,8 @@ import { useTheme } from 'styled-components/native';
 export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const font = useFont('semi');
 
-  console.log('MAJU');
   return (
     <Drawer
       drawerContent={CustomDrawer}
@@ -15,7 +16,7 @@ export default function Home() {
       screenOptions={{
         headerTitleAlign: 'center',
         headerTitleStyle: {
-          fontFamily: 'PoppinsSemiBold',
+          fontFamily: font,
           fontSize: theme.fontSizes.h4,
           color: theme.colors.customHeaderTitle,
         },

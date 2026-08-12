@@ -42,9 +42,7 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
   );
 
   const handleDrawerPress = (url: string) => {
-    console.log('JESUS');
     if (url.includes('downloadRpi')) {
-      console.log('Downloading');
       downloadContentFromRpi();
     } else router.navigate(url);
   };

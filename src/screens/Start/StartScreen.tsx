@@ -8,13 +8,40 @@ import {
   LayoutScrollView,
   SizedBox,
 } from '@/components';
+import { useDesign } from '@/services';
 import { useTranslation } from 'react-i18next';
-import { Image } from 'react-native';
+import { ActivityIndicator, Image, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function StartScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { isCorporate } = useDesign();
+
+  if (isCorporate) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <Image
+          source={Images.BrandLogo}
+          resizeMethod="resize"
+          resizeMode="contain"
+          style={{
+            maxWidth: 240,
+            minWidth: 160,
+            marginBottom: 24,
+          }}
+        />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>
       <DefaultBackgroundImage />

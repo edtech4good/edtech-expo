@@ -87,7 +87,7 @@ export default function ResultPopUp({
     <View
       style={{
         flexDirection: 'column',
-        borderRadius: theme.layouts.defaultRadius,
+        borderRadius: isCorporate ? theme.radii.dialog : theme.layouts.defaultRadius,
         padding: theme.layouts.large * 2,
         backgroundColor: theme.colors.surface,
         justifyContent: 'center',
@@ -103,14 +103,18 @@ export default function ResultPopUp({
       <SizedBox.Large height />
       <SizedBox.Large height />
       <SizedBox.Large height />
-      {/* {image()} */}
-      <Image
-        source={image}
-        style={{ width: 160, height: 160, resizeMode: 'contain' }}
-      />
-      <SizedBox.Large height />
-      <SizedBox.Large height />
-      <SizedBox.Large height />
+      {!isCorporate && (
+        <>
+          {/* {image()} */}
+          <Image
+            source={image}
+            style={{ width: 160, height: 160, resizeMode: 'contain' }}
+          />
+          <SizedBox.Large height />
+          <SizedBox.Large height />
+          <SizedBox.Large height />
+        </>
+      )}
       {isCorporate ? (
         <AppButton label={displayButtonText} onPress={onPress} />
       ) : (

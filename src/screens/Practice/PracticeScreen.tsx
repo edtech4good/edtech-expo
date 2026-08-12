@@ -11,7 +11,8 @@ import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
-import { usePractice } from '@/services';
+import { useDesign, usePractice } from '@/services';
+import { ActivityIndicator, View } from 'react-native';
 import _ from 'lodash';
 import {
   LessonPractice,
@@ -39,6 +40,7 @@ export interface PracticeProps {
 
 export default function PracticeScreen() {
   const theme = useTheme();
+  const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
   const selectedModule = useAppSelector(getSelectedModule);
@@ -168,7 +170,22 @@ export default function PracticeScreen() {
     }
   };
 
-  if (_.isEmpty(currentQuestion)) return <DefaultBackgroundImage />;
+  if (_.isEmpty(currentQuestion)) {
+    if (isCorporate) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: theme.colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
+    }
+    return <DefaultBackgroundImage />;
+  }
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>
