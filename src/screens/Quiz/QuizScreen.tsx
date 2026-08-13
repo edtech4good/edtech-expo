@@ -15,7 +15,7 @@ import {
 } from '@/models';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
-import { useDesign, useQuiz, useResult } from '@/services';
+import { useDesign, useQuiz, useResult, notifyResultQueued } from '@/services';
 import { ActivityIndicator, View } from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
@@ -138,9 +138,14 @@ export default function QuizScreen() {
         result: methods.getValues('result'),
         endtime: createTimeStamp(),
       } as QuizResult;
-      await saveResult(quizResult);
+      const { synced } = await saveResult(quizResult);
       await calculateResult(methods.getValues('result'));
       router.replace('/home/result');
+      if (!synced)
+        notifyResultQueued(
+          t('screen.practice.resultQueuedTitle'),
+          t('screen.practice.resultQueuedMessage'),
+        );
     }
   };
 

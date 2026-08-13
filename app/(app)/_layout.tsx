@@ -1,7 +1,7 @@
 import { useAppSelector } from '@/redux';
 import { getAccessToken, getSelectedLanguage } from '@/redux/slices';
 import { StartScreen } from '@/screens';
-import { useApi } from '@/services';
+import { useApi, flushPendingResults } from '@/services';
 import { Stack } from 'expo-router';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
@@ -18,8 +18,10 @@ export default function InitialStack() {
   }, []);
 
   const handleCheckAuth = async () => {
-    if (accessToken)
+    if (accessToken) {
       await api.setHeaders({ authorization: `Bearer ${accessToken}` });
+      flushPendingResults(api);
+    }
     setIsReady(true);
   };
 

@@ -11,7 +11,7 @@ import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
-import { useDesign, usePractice } from '@/services';
+import { useDesign, usePractice, notifyResultQueued } from '@/services';
 import { ActivityIndicator, View } from 'react-native';
 import _ from 'lodash';
 import {
@@ -25,6 +25,7 @@ import { createTimeStamp } from '@/utils';
 import { Modal } from 'react-native';
 import ResultPopUp from './Components/ResultPopUp';
 import { toPracticeQuestionResult } from '@/transforms';
+import { useTranslation } from 'react-i18next';
 
 export interface PracticeProps {
   question: Question;
@@ -40,6 +41,7 @@ export interface PracticeProps {
 
 export default function PracticeScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
@@ -118,8 +120,13 @@ export default function PracticeScreen() {
           result: methods.getValues('result'),
           endtime: createTimeStamp(),
         } as PracticeResult;
-        await saveResult(practiceResult);
+        const { synced } = await saveResult(practiceResult);
         router.back();
+        if (!synced)
+          notifyResultQueued(
+            t('screen.practice.resultQueuedTitle'),
+            t('screen.practice.resultQueuedMessage'),
+          );
       } else setQuestion(val => val + 1);
       return;
     }
@@ -156,8 +163,13 @@ export default function PracticeScreen() {
           result: methods.getValues('result'),
           endtime: createTimeStamp(),
         } as PracticeResult;
-        await saveResult(practiceResult);
+        const { synced } = await saveResult(practiceResult);
         router.back();
+        if (!synced)
+          notifyResultQueued(
+            t('screen.practice.resultQueuedTitle'),
+            t('screen.practice.resultQueuedMessage'),
+          );
         return;
       }
       setQuestion(val => val + 1);

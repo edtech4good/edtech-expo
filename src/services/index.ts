@@ -25,3 +25,4 @@ export { default as useSetting } from './hooks/useSetting';
 export { default as useTeacherProfile } from './hooks/useTeacherProfile';
 export { default as useTestScore } from './hooks/useTestScore';
 export { default as useSyncContent } from './hooks/useSyncContent';
+export * from './pendingResults';

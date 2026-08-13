@@ -80,7 +80,9 @@
       "showAnswerButton": "Show answer",
       "incorrectMessage": "Sorry, wrong answer...",
       "incorrectButton": "Try again",
-      "exitQuizMessage": "Do you want to exit quiz?"
+      "exitQuizMessage": "Do you want to exit quiz?",
+      "resultQueuedTitle": "Saved on this device",
+      "resultQueuedMessage": "We couldn't reach the server. Your result is saved and will be sent automatically when the connection is back."
     },
     "result": {
       "header": "Result",

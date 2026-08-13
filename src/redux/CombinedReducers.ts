@@ -11,6 +11,7 @@ import {
   unitSlice,
 } from './slices';
 import { resultSlice } from './slices/ResultSlice';
+import { pendingResultSlice } from './slices/PendingResultSlice';
 
 export const combinedReducers = combineReducers({
   [authenticationSlice.name]: authenticationSlice.reducer,
@@ -23,4 +24,5 @@ export const combinedReducers = combineReducers({
   [resultSlice.name]: resultSlice.reducer,
   [selectionSlice.name]: selectionSlice.reducer,
   [standardSlice.name]: standardSlice.reducer,
+  [pendingResultSlice.name]: pendingResultSlice.reducer,
 });
