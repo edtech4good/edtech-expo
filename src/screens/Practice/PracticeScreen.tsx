@@ -132,16 +132,6 @@ export default function PracticeScreen() {
       );
       const currentResults = methods.getValues('result');
       methods.setValue('result', [...currentResults, result]);
-      if (question === questions.length - 1) {
-        console.log('COMPLETED : ', methods.getValues('result'));
-        const practiceResult = {
-          starttime: methods.getValues('starttime'),
-          result: methods.getValues('result'),
-          endtime: createTimeStamp(),
-        } as PracticeResult;
-        await saveResult(practiceResult);
-        router.back();
-      }
     }
     setModal(val => ({
       isCorrect,
@@ -157,10 +147,19 @@ export default function PracticeScreen() {
     practiceRef.current.retry();
   };
 
-  const handleModalPress = () => {
+  const handleModalPress = async () => {
     if (isCorrect) {
       setModal(val => ({ ...val, isVisible: false }));
-      if (_.isEmpty(questions[question + 1])) return;
+      if (_.isEmpty(questions[question + 1])) {
+        const practiceResult = {
+          starttime: methods.getValues('starttime'),
+          result: methods.getValues('result'),
+          endtime: createTimeStamp(),
+        } as PracticeResult;
+        await saveResult(practiceResult);
+        router.back();
+        return;
+      }
       setQuestion(val => val + 1);
     } else {
       setModal(val => ({ ...val, isVisible: false }));
