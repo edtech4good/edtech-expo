@@ -14,6 +14,11 @@ import _ from 'lodash';
 import { toAuthPayload } from '@/transforms';
 import useSyncContent from './useSyncContent';
 import { isDevPillTouched } from '@/services/devThemeOverride';
+// Relative, not the '@/services' barrel: this file is itself re-exported by
+// that barrel, and a barrel self-import is a module cycle (benign under
+// Metro's CJS interop today, but one hoisted usage away from breaking).
+// Sibling hooks (usePractice, useQuiz) import the same module the same way.
+import { flushPendingResults } from '../pendingResults';
 
 export default function useAuth() {
   const dispatch = useAppDispatch();
@@ -61,6 +66,12 @@ export default function useAuth() {
           profile,
         }),
       );
+
+      // Drain any items parked by a previous user on this device now that
+      // the api instance carries the new user's token and the store carries
+      // their profile — fire-and-forget, same as the app-start flush in
+      // app/(app)/_layout.tsx; the flush chain never rejects.
+      flushPendingResults(api);
 
       // A dev who has manually toggled the theme pill keeps their choice —
       // the server-derived claim only applies until the pill is touched.
