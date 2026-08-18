@@ -11,6 +11,7 @@ export interface PendingResultItem {
   payload: PracticeResult | QuizResult;
   queuedAt: number;
   attempts: number;
+  ownerId: string | null;
 }
 
 interface PendingResultState {

@@ -1,11 +1,13 @@
 import { Alert, Platform } from 'react-native';
 import { store } from '@/redux';
-import { getPendingResults, PendingResultActions } from '@/redux/slices';
+import { getPendingResults, getProfile, PendingResultActions } from '@/redux/slices';
 import type { PendingResultItem } from '@/redux/slices';
 import type Api from './api/Api';
 import { PracticeResult, QuizResult } from '@/models';
 
 const SUBMIT_WAIT_MS = 10000;
+const MAX_POISON_ATTEMPTS = 10;
+const MIN_POISON_AGE_MS = 24 * 60 * 60 * 1000;
 
 let flushChain: Promise<void> = Promise.resolve();
 
@@ -13,6 +15,12 @@ async function doFlush(api: Api): Promise<void> {
   try {
     const items = getPendingResults(store.getState());
     for (const item of items) {
+      const currentOwnerId = getProfile(store.getState())?.schooluserid ?? null;
+      // A null ownerId is a legacy/dev item that predates ownership tracking;
+      // treat it as belonging to whoever is currently logged in.
+      if (item.ownerId !== null && item.ownerId !== currentOwnerId) {
+        continue;
+      }
       try {
         if (item.kind === 'practice') {
           await api.savePracticeResult(
@@ -24,7 +32,6 @@ async function doFlush(api: Api): Promise<void> {
         }
         store.dispatch(PendingResultActions.dequeueResult(item.id));
       } catch (err) {
-        store.dispatch(PendingResultActions.bumpAttempts(item.id));
         const status = (err as any)?.status;
         const isPoisonPayload =
           typeof status === 'number' &&
@@ -34,6 +41,18 @@ async function doFlush(api: Api): Promise<void> {
           status !== 408 &&
           status !== 429;
         if (isPoisonPayload) {
+          store.dispatch(PendingResultActions.bumpAttempts(item.id));
+          const refreshed = getPendingResults(store.getState()).find(
+            i => i.id === item.id,
+          );
+          const attempts = refreshed?.attempts ?? item.attempts + 1;
+          const age = Date.now() - item.queuedAt;
+          if (attempts >= MAX_POISON_ATTEMPTS && age > MIN_POISON_AGE_MS) {
+            store.dispatch(PendingResultActions.dequeueResult(item.id));
+            console.warn(
+              `[pendingResults] dropping poison item id=${item.id} kind=${item.kind} lessonId=${item.lessonId} status=${status} attempts=${attempts}`,
+            );
+          }
           continue;
         }
         return;
@@ -62,6 +81,7 @@ export async function submitResult(
     ...input,
     queuedAt: Date.now(),
     attempts: 0,
+    ownerId: getProfile(store.getState())?.schooluserid ?? null,
   };
 
   store.dispatch(PendingResultActions.enqueueResult(item));
