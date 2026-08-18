@@ -2,6 +2,8 @@
 
 # dependencies
 node_modules/
+# yarn is the package manager; prevent npm install from re-tracking this file
+package-lock.json
 
 # Expo
 .expo/

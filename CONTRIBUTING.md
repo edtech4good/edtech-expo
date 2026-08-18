@@ -31,7 +31,7 @@ If you have a suggestion for a new feature or improvement:
 
 1. Fork the repository
 2. Clone your fork locally
-3. Install dependencies: `npm install` or `yarn install`
+3. Install dependencies: `yarn install`
 4. Copy configuration files:
    ```bash
    cp env.example .env
