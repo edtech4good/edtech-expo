@@ -20,7 +20,7 @@ Full sync sequence: [**ARCHITECTURE.md**](../ARCHITECTURE.md) § Sync playbook. 
 ### Prerequisites
 
 - Node.js (v18.19.1 or higher; LTS recommended)
-- npm or yarn
+- Yarn (Classic/v1)
 - Expo CLI
 - Android Studio (for Android development)
 - Xcode (for iOS development, macOS only)
@@ -30,11 +30,12 @@ Full sync sequence: [**ARCHITECTURE.md**](../ARCHITECTURE.md) § Sync playbook. 
 1. **Get the code** — clone or copy this repo (see parent [**ARCHITECTURE.md**](../ARCHITECTURE.md) for sibling projects).
 
 2. **Install dependencies**
+   
+   This project uses **Yarn** as its package manager. Install dependencies with:
    ```bash
-   npm install
-   # or
    yarn install
    ```
+   Always use `yarn` — do not use npm for consistency.
 
 3. **Environment Setup**
    
@@ -285,8 +286,6 @@ If you encounter any issues or have questions, use your team’s issue tracker o
 Keep your dependencies up to date:
 
 ```bash
-npm update
-# or
 yarn upgrade
 ```
 
