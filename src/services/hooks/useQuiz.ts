@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApi } from '../api/ApiContext';
 import { LessonQuizResource, QuizResult } from '@/models';
 import _ from 'lodash';
+import { submitResult } from '../pendingResults';
 
 export default function useQuiz(lessonQuizId: string) {
   const api = useApi();
@@ -17,9 +18,12 @@ export default function useQuiz(lessonQuizId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: QuizResult) => {
-    await api.saveQuizResult(lessonQuizId, results);
-  };
+  const saveResult = async (results: QuizResult) =>
+    submitResult(api, {
+      kind: 'quiz',
+      lessonId: lessonQuizId,
+      payload: results,
+    });
 
   return { fetch, saveResult, isFetching, questions };
 }

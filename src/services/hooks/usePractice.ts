@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApi } from '../api/ApiContext';
 import _ from 'lodash';
 import { LessonPracticeResource, PracticeResult } from '@/models';
+import { submitResult } from '../pendingResults';
 
 export default function usePractice(lessonLearningId: string) {
   const api = useApi();
@@ -18,9 +19,12 @@ export default function usePractice(lessonLearningId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: PracticeResult) => {
-    await api.savePracticeResult(lessonLearningId, results);
-  };
+  const saveResult = async (results: PracticeResult) =>
+    submitResult(api, {
+      kind: 'practice',
+      lessonId: lessonLearningId,
+      payload: results,
+    });
 
   return { fetch, saveResult, questions, isFetching };
 }

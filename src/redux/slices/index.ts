@@ -8,3 +8,4 @@ export * from './LessonSlice';
 export * from './ResultSlice';
 export * from './SelectionSlice';
 export * from './StandardSlice';
+export * from './PendingResultSlice';

@@ -13,7 +13,7 @@ import {
 } from 'redux-persist';
 
 import { combinedReducers } from './CombinedReducers';
-import { authenticationSlice, selectionSlice, settingSlice } from './slices';
+import { authenticationSlice, selectionSlice, settingSlice, pendingResultSlice } from './slices';
 
 const logger = createLogger({
   duration: true,
@@ -24,7 +24,7 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: [authenticationSlice.name, selectionSlice.name, settingSlice.name],
+  whitelist: [authenticationSlice.name, selectionSlice.name, settingSlice.name, pendingResultSlice.name],
 };
 
 const reducers = (state: any, action: never) => {

@@ -106,17 +106,23 @@ const responseTransform: AsyncResponseTransform = async response => {
       problem === 'CONNECTION_ERROR' ||
       problem === 'TIMEOUT_ERROR'
     ) {
-      throw new Error(
+      const err = new Error(
         `Cannot reach API at ${fullUrl || '(missing EXPO_PUBLIC_BASE_URL)'}. ` +
           'Is edtech-lms-rpi-api running on that host/port (Lane C: http://127.0.0.1:3001)? ' +
           'After changing .env, restart Metro with npx expo start -c. ' +
           'On a phone or some emulators, use your computer LAN IP instead of localhost.',
       );
+      (err as any).status = response.status;
+      (err as any).problem = response.problem;
+      throw err;
     }
     const fromAxios = (response.originalError as Error | undefined)?.message;
     const fromBody = _.get(response.data, 'message');
     const msg = fromAxios || fromBody || problem || 'Request failed';
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    (err as any).status = response.status;
+    (err as any).problem = response.problem;
+    throw err;
   }
 };
 
