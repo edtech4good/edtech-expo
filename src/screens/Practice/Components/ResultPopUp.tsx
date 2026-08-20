@@ -3,15 +3,14 @@ import { AppButton, Column, FilledButton, H3, H4, SizedBox } from '@/components'
 import { useDesign } from '@/services';
 import { useScreenDimension } from '@/services';
 import { Image } from 'expo-image';
-import _ from 'lodash';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export interface CustomMessage {
-  correctMessage: string;
-  incorrectMessage: string;
+  correctMessage?: string;
+  incorrectMessage?: string;
 }
 
 interface Props {
@@ -33,23 +32,14 @@ export default function ResultPopUp({
   const { windowWidth } = useScreenDimension();
 
   const correctMessage = useMemo(
-    () =>
-      _.get(
-        customMessages,
-        'correctMessage',
-        t('screen.practice.correctMessage'),
-      ),
-    [customMessages],
+    () => customMessages?.correctMessage || t('screen.practice.correctMessage'),
+    [customMessages, t],
   );
 
   const incorrectMessage = useMemo(
     () =>
-      _.get(
-        customMessages,
-        'incorrectMessage',
-        t('screen.practice.incorrectMessage'),
-      ),
-    [customMessages],
+      customMessages?.incorrectMessage || t('screen.practice.incorrectMessage'),
+    [customMessages, t],
   );
 
   const header = useMemo(
@@ -62,7 +52,7 @@ export default function ResultPopUp({
 
   const description = useMemo(
     () => (isCorrect ? correctMessage : incorrectMessage),
-    [isCorrect],
+    [isCorrect, correctMessage, incorrectMessage],
   );
 
   const image = useMemo(

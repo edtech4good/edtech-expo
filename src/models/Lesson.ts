@@ -82,12 +82,20 @@ export interface Question {
     questionoptions: QuestionOption[];
     questiontext: string;
     questioncorrectvalue: string;
+    questionfeedback?: {
+      correctmessage: string | null;
+      incorrectmessage: string | null;
+    } | null;
   };
   questionoptions: QuestionOption[];
   questionstatus: boolean;
   questiontags: string[];
   questiontext: string;
   questioncorrectvalue: string;
+  questionfeedback?: {
+    correctmessage: string | null;
+    incorrectmessage: string | null;
+  } | null;
   templatetypeid: keyof typeof TemplateTypeById;
 }
 

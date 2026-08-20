@@ -34,28 +34,6 @@ import PracticeArrangeImage from '../Practice/Components/ArrangeImage/PracticeAr
 import PracticeDragDrop from '../Practice/Components/DragDrop/PracticeDragDrop';
 import { useTranslation } from 'react-i18next';
 
-// const CustomMessages: Record<string, CustomMessage> = {
-//   'Have you ever had a post on social media and get misunderstood?': {
-//     correctMessage: "You're not alone. Misunderstandings are common.",
-//     incorrectMessage: "That's great! But it's still important to be aware.",
-//   },
-//   "What could go wrong with Dara's post?": {
-//     correctMessage:
-//       "Correct! It's important to consider how others might interpret your post.",
-//     incorrectMessage:
-//       'Jokes can sometimes be taken the wrong way, especially without context.',
-//   },
-//   'Soon, Dara notices comments that show some friends are confused. What should Dara do next?':
-//     {
-//       correctMessage: 'Yes, explaining can help clarify the situation.',
-//       incorrectMessage: 'Ignoring can escalate the misunderstanding.',
-//     },
-//   'Do you feel more confident about sharing on social media now?': {
-//     correctMessage: 'Great! Keep these tips in mind.',
-//     incorrectMessage: "That's okay, practice makes perfect",
-//   },
-// };
-
 export default function QuizScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -77,7 +55,7 @@ export default function QuizScreen() {
   const [{ isCorrect, isVisible, customMessages }, setModal] = useState<{
     isVisible: boolean;
     isCorrect: boolean;
-    customMessages?: { correctMessage: string; incorrectMessage: string };
+    customMessages?: { correctMessage?: string; incorrectMessage?: string };
   }>({
     isVisible: false,
     isCorrect: false,
@@ -153,9 +131,18 @@ export default function QuizScreen() {
     const result = toQuizQuestionResult(isCorrect, currentQuestion);
     const currentResults = methods.getValues('result');
     methods.setValue('result', [...currentResults, result]);
+    const fb = currentQuestion?.question?.questionobject?.questionfeedback;
+    const customMessages =
+      fb && (fb.correctmessage || fb.incorrectmessage)
+        ? {
+            correctMessage: fb.correctmessage || undefined,
+            incorrectMessage: fb.incorrectmessage || undefined,
+          }
+        : undefined;
     setModal(val => ({
       isCorrect,
       isVisible: true,
+      customMessages,
     }));
     console.log('Cur Result: ', methods.getValues('result'));
   };
