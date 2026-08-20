@@ -27,7 +27,7 @@ export default function CourseItem({
   const cardWidth = useBreakpoint({
     desktop: 227,
     tablet: Math.min((width - theme.layouts.large * 6) / 5, 227),
-    mobile: (width - theme.layouts.large * 3) / 5,
+    mobile: (width - theme.layouts.large * 3) / 2,
   });
 
   const renderBush = () => {
