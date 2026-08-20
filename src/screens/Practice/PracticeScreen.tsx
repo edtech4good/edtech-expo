@@ -60,7 +60,7 @@ export default function PracticeScreen() {
     isVisible: boolean;
     isCorrect: boolean;
     tries: number;
-    customMessages?: { correctMessage: string; incorrectMessage: string };
+    customMessages?: { correctMessage?: string; incorrectMessage?: string };
   }>({
     isVisible: false,
     isCorrect: false,
@@ -140,10 +140,19 @@ export default function PracticeScreen() {
       const currentResults = methods.getValues('result');
       methods.setValue('result', [...currentResults, result]);
     }
+    const fb = currentQuestion?.question?.questionobject?.questionfeedback;
+    const customMessages =
+      fb && (fb.correctmessage || fb.incorrectmessage)
+        ? {
+            correctMessage: fb.correctmessage || undefined,
+            incorrectMessage: fb.incorrectmessage || undefined,
+          }
+        : undefined;
     setModal(val => ({
       isCorrect,
       isVisible: true,
       tries,
+      customMessages,
     }));
     console.log('Cur Result: ', methods.getValues('result'));
   };
