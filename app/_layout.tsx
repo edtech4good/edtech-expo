@@ -1,9 +1,11 @@
 import { Slot } from 'expo-router';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -12,7 +14,7 @@ import km from '@/locales/km.json';
 import { AppThemeProvider, DefaultBackgroundImage } from '@/components';
 
 import { persistor, store } from '@/redux';
-import { Api, ApiContext } from '@/services';
+import { Api, ApiContext, getDeviceClass } from '@/services';
 import { useFonts } from 'expo-font';
 import { StartScreen } from '@/screens';
 
@@ -40,6 +42,21 @@ export default function App() {
     if (!fontsLoaded) return;
     console.log('%cFont Loaded', 'color:green;');
   }, [fontsLoaded]);
+
+  // Per-device orientation policy (ROADMAP Track B): phones locked portrait,
+  // tablets locked landscape. Runs once on mount, independent of the
+  // isLoading gate below, so a phone doesn't show a landscape splash while
+  // fonts/i18n are loading. Lesson-video rotation exception deferred.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const lock =
+      getDeviceClass() === 'phone'
+        ? ScreenOrientation.OrientationLock.PORTRAIT_UP
+        : ScreenOrientation.OrientationLock.LANDSCAPE;
+    ScreenOrientation.lockAsync(lock).catch(() => {
+      // Some platforms/devices reject the lock; never block boot on it.
+    });
+  }, []);
 
   const [isReady, setIsReady] = useState(false);
 
