@@ -106,6 +106,42 @@ export default class SizedBox extends Component<Props> {
     </SizedBoxComponent>
   );
 
+  static XLarge = ({
+    backgroundColor = 'transparent',
+    height,
+    width,
+    borderRadius = 0,
+    children,
+    style,
+  }: ExtendedProps) => (
+    <SizedBoxComponent
+      height={height ? Metrics.layouts.xlarge : 1}
+      width={width ? Metrics.layouts.xlarge : 1}
+      borderRadius={borderRadius}
+      backgroundColor={backgroundColor}
+      style={style}>
+      {children}
+    </SizedBoxComponent>
+  );
+
+  static XXLarge = ({
+    backgroundColor = 'transparent',
+    height,
+    width,
+    borderRadius = 0,
+    children,
+    style,
+  }: ExtendedProps) => (
+    <SizedBoxComponent
+      height={height ? Metrics.layouts.xxlarge : 1}
+      width={width ? Metrics.layouts.xxlarge : 1}
+      borderRadius={borderRadius}
+      backgroundColor={backgroundColor}
+      style={style}>
+      {children}
+    </SizedBoxComponent>
+  );
+
   render() {
     return (
       <SizedBoxComponent

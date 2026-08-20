@@ -1,6 +1,7 @@
 import { Dimensions } from 'react-native';
 import { RFValue } from 'react-native-responsive-fontsize';
 
+// FIXME(responsive): module-scope snapshot — stale after rotation; do not add new consumers (use useWindowDimensions).
 const dimensions = Dimensions.get('window');
 const { height, width } = dimensions;
 
@@ -91,6 +92,9 @@ export const layouts = {
   small: 8,
   medium: 12,
   large: 16,
+  xlarge: 24,
+  xxlarge: 32,
+  xxxlarge: 48,
 
   drawerMinWidth: 64.5,
   drawerMaxWidth: 215,
