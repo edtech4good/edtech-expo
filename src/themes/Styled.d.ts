@@ -21,6 +21,8 @@ declare module 'styled-components/native' {
       DESKTOP_MIN_WIDTH: number;
       TABLET_MAX_WIDTH: number;
       TABLET_MIN_WIDTH: number;
+      PHABLET_MAX_WIDTH: number;
+      PHABLET_MIN_WIDTH: number;
       MOBILE_MAX_WIDTH: number;
       MOBILE_MIN_WIDTH: number;
       DEFAULT_MIN_WIDTH: number;
@@ -113,6 +115,9 @@ declare module 'styled-components/native' {
       small: number;
       medium: number;
       large: number;
+      xlarge: number;
+      xxlarge: number;
+      xxxlarge: number;
 
       drawerMinWidth: number;
       drawerMaxWidth: number;
