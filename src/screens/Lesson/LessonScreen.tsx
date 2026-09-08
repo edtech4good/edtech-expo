@@ -29,7 +29,11 @@ export default function LessonScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const controllerOpacity = React.useMemo(() => new Animated.Value(1), []);
-  const videoPlayerHeight = React.useMemo(() => height, []);
+  // Phone portrait (ROADMAP Track B, phone learner path): a full-width 16:9
+  // box centred vertically. Landscape keeps the full-window player.
+  const isPortrait = height > width;
+  const playerWidth = width;
+  const playerHeight = isPortrait ? Math.round((width * 9) / 16) : height;
   const isNativeDevice = React.useMemo(() => Platform.OS !== 'web', []);
   let blurTimeOut: NodeJS.Timeout;
   // const [videoSource, ]
@@ -191,12 +195,14 @@ export default function LessonScreen() {
   };
 
   return (
-    <LayoutScrollView backgroundColor={'black'}>
+    <LayoutScrollView
+      backgroundColor={'black'}
+      justifyContent={isPortrait ? 'center' : 'flex-start'}>
       <FormProvider {...methods}>
         <Video
           ref={video}
-          style={{ width, height }}
-          videoStyle={{ width, height: videoPlayerHeight }}
+          style={{ width: playerWidth, height: playerHeight }}
+          videoStyle={{ width: playerWidth, height: playerHeight }}
           source={{
             uri: source,
           }}

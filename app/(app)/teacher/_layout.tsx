@@ -9,6 +9,10 @@ export default function Home() {
   const { t } = useTranslation();
   const font = useFont('semi');
 
+  // Own Drawer navigator under the (app) Stack, a sibling of (home) — never
+  // inside any nav shell (rail / tabs / kids drawer). DrawerButton's
+  // toggleDrawer resolves against this Drawer. Learners (schooluserrole 4)
+  // never reach it (useAuth routes them to /home), so no useNavShell gating.
   return (
     <Drawer
       drawerContent={CustomDrawer}

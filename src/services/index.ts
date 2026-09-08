@@ -12,6 +12,7 @@ export {
   default as useDeviceClass,
   getDeviceClass,
 } from './hooks/useDeviceClass';
+export { default as useNavShell } from './hooks/useNavShell';
 export { default as useFont } from './hooks/useFont';
 export { default as useLesson } from './hooks/useLesson';
 export { default as useLevel } from './hooks/useLevel';
