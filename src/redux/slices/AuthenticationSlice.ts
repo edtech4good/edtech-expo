@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import { Profile } from '@/models';
+import { clearAllData } from '../CommonAction';
 
 interface Props {
   accessToken?: string;
@@ -23,6 +24,9 @@ export const authenticationSlice = createSlice({
       state.profile = action.payload.profile;
       return state;
     },
+  },
+  extraReducers: builder => {
+    builder.addCase(clearAllData, () => initialState);
   },
 });
 

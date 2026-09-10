@@ -7,7 +7,11 @@ import {
   LoginPayload,
   Profile,
 } from '@/models';
-import { AuthenticationActions, getProfile, SettingActions } from '@/redux/slices';
+import {
+  AuthenticationActions,
+  getProfile,
+  SettingActions,
+} from '@/redux/slices';
 import { router } from 'expo-router';
 import { Decoder } from '@/utils';
 import _ from 'lodash';
@@ -96,6 +100,12 @@ export default function useAuth() {
   };
 
   const logout = async () => {
+    // Clear the apisauce authorization header before the redux dispatch —
+    // clearAllData() resets AuthenticationSlice's accessToken, but the Api
+    // instance's headers are independent state that setHeaders() never
+    // unsets, so the token otherwise keeps authenticating requests made
+    // after logout.
+    api.clearAuthHeader();
     await dispatch(clearAllData());
     router.replace('/login');
   };

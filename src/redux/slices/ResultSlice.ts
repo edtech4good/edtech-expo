@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
+import { clearAllData } from '../CommonAction';
 
 const name = 'result';
 
@@ -30,6 +31,9 @@ export const resultSlice = createSlice({
       return state;
     },
     clearResult: () => initialState,
+  },
+  extraReducers: builder => {
+    builder.addCase(clearAllData, () => initialState);
   },
 });
 

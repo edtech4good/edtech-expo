@@ -24,6 +24,7 @@ import {
   SettingActions,
 } from '@/redux/slices';
 import { useAuth, useDesign, useFont, useSetting } from '@/services';
+import { isOnlineOnly } from '@/utils';
 import { useLocalSearchParams } from 'expo-router';
 import _ from 'lodash';
 import { useEffect, useRef } from 'react';
@@ -62,7 +63,10 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
 
   useEffect(() => {
     // console.log('Granted Directory: ', grantedDirectory);
-    if (!_.isEmpty(grantedDirectory)) return;
+    // Online mode (MIV/DCRS phone app) has no local content directory and
+    // must never trigger Android's Storage Access Framework folder picker —
+    // that flow exists only for the offline/Raspberry-Pi kiosk mode.
+    if (isOnlineOnly() || !_.isEmpty(grantedDirectory)) return;
     handleStorageDirectory();
   }, []);
 
