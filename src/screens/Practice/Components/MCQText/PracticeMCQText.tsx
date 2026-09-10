@@ -9,7 +9,7 @@ import {
   ExpandedWithLayout,
 } from '@/components';
 import { PracticeProps } from '../../PracticeScreen';
-import { useResource, useScreenDimension } from '@/services';
+import { useBreakpoint, useResource, useScreenDimension } from '@/services';
 import { FlatList } from 'react-native';
 import {
   forwardRef,
@@ -49,6 +49,18 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     const theme = useTheme();
     const { unblockHeightWithoutHeader } = useScreenDimension();
 
+    // ROADMAP Track B (phone learner path): below 768dp the landscape
+    // two-pane row (media | options, each crushed to ~180dp) is replaced
+    // with a vertical stack — heading, then media, then options filling
+    // the remaining scrollable space. Tablet/desktop keep today's row.
+    const isStacked =
+      useBreakpoint({
+        mobile: true,
+        phablet: false,
+        tablet: false,
+        desktop: false,
+      }) === true;
+
     const [attempt, setAttempt] = useState<PracticeAttempt>({
       tries: 1,
       selections: {},
@@ -62,8 +74,6 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     );
 
     const playbackObject = useMemo(() => new Audio.Sound(), []);
-
-    console.log('Current Source is : ', source);
 
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions'),
@@ -199,11 +209,12 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
         />
         <SizedBox.Large height />
         <Expanded
-          flexDirection="row"
-          paddingLeft={theme.layouts.large}
-          paddingRight={theme.layouts.large}>
+          flexDirection={isStacked ? 'column' : 'row'}
+          paddingLeft={isStacked ? theme.layouts.medium : theme.layouts.large}
+          paddingRight={isStacked ? theme.layouts.medium : theme.layouts.large}>
           {!_.isEmpty(source) && (
             <ExpandedWithLayout
+              flex={isStacked ? 1 : undefined}
               backgroundColor={theme.colors.surface}
               justifyContent="center">
               <PracticeFile
@@ -213,13 +224,17 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
               />
             </ExpandedWithLayout>
           )}
-          {!_.isEmpty(source) && <SizedBox.Large width />}
-          <Expanded flex={1.5}>
+          {!_.isEmpty(source) &&
+            (isStacked ? <SizedBox.Large height /> : <SizedBox.Large width />)}
+          <Expanded flex={isStacked ? 2 : 1.5}>
             <FlatList
               style={{ flex: 1, width: '100%' }}
               data={options}
               renderItem={renderItem}
               keyExtractor={KeyExtractorHelper}
+              contentContainerStyle={
+                isStacked ? { paddingBottom: theme.layouts.medium } : undefined
+              }
             />
           </Expanded>
         </Expanded>

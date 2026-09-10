@@ -1,5 +1,6 @@
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useMemo } from 'react';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { useContext, useMemo } from 'react';
 import { useWindowDimensions, ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styled, { useTheme } from 'styled-components/native';
@@ -52,10 +53,17 @@ function Container({
   const insets = useSafeAreaInsets();
   const appHeaderHeight = useHeaderHeight();
   const { height } = useWindowDimensions();
+  // The corporate phone shell renders a bottom Tabs navigator (see
+  // useNavShell). Screens that pin their height off the window need to
+  // leave room for that bar, or content/footers render underneath it.
+  // BottomTabBarHeightContext (not useBottomTabBarHeight, which throws
+  // outside a tab navigator) is undefined -> 0 under the kids drawer and
+  // corporate rail shells, so this is byte-identical to today there.
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
   const screenHeightWithoutStatusBar = useMemo(
-    () => height - insets.bottom,
-    [insets, height],
+    () => height - insets.bottom - tabBarHeight,
+    [insets, height, tabBarHeight],
   );
   const resultHeight = useMemo(
     () =>

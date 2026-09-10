@@ -49,14 +49,20 @@ export default function PracticeFile({
       />
     );
 
+  // Ceiling of 160 matches today's row-mode size (media pane ~500dp tall);
+  // in the stacked phone layout the pane can be as short as ~80-140dp, so
+  // shrink to the available space instead of overflowing into neighboring
+  // content.
+  const audioSize = Math.min(160, imageSize);
+
   return (
     <Pressable onPress={onPress}>
       <Image
         source={Images.SoundButton}
         style={{
-          width: 160,
-          height: 160,
-          borderRadius: 80,
+          width: audioSize,
+          height: audioSize,
+          borderRadius: audioSize / 2,
           shadowColor: theme.colors.shadow,
           shadowOffset: {
             width: 0,

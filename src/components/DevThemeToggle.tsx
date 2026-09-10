@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppDispatch, useAppSelector } from '@/redux';
 import { getSelectedTheme, SettingActions } from '@/redux/slices';
@@ -12,6 +13,7 @@ import { setDevPillTouched } from '@/services/devThemeOverride';
 export default function DevThemeToggle() {
   const dispatch = useAppDispatch();
   const name = useAppSelector(getSelectedTheme);
+  const insets = useSafeAreaInsets();
 
   if (!__DEV__) return null;
 
@@ -27,11 +29,10 @@ export default function DevThemeToggle() {
 
   return (
     <TouchableOpacity
-      style={styles.pill}
+      style={[styles.pill, { top: insets.top + 12, right: 12 }]}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      activeOpacity={0.6}
-    >
+      activeOpacity={0.6}>
       <Text style={styles.label}>{name}</Text>
     </TouchableOpacity>
   );
@@ -40,8 +41,6 @@ export default function DevThemeToggle() {
 const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
     zIndex: 9999,
     elevation: 9999,
     minHeight: 32,

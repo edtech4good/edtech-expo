@@ -22,7 +22,7 @@ import { router, useNavigation } from 'expo-router';
 import _ from 'lodash';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Platform } from 'react-native';
+import { Image } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function ResultScreen() {
@@ -57,7 +57,12 @@ export default function ResultScreen() {
   }, []);
 
   const handleFinishPress = () => {
-    router.back();
+    if (navigation.canGoBack()) router.back();
+    else
+      router.replace({
+        pathname: '/home/lessons',
+        params: lesson ? { lessonid: lesson.lessonid } : undefined,
+      });
   };
 
   if (isCorporate) {
@@ -103,17 +108,13 @@ export default function ResultScreen() {
               <EyebrowText>{metaLine}</EyebrowText>
             </>
           )}
-          {Platform.OS === 'web' && (
-            <>
-              <SizedBox.Large height />
-              <Row justifyContent="center">
-                <AppButton
-                  label={t('screen.result.finishButton')}
-                  onPress={handleFinishPress}
-                />
-              </Row>
-            </>
-          )}
+          <SizedBox.Large height />
+          <Row justifyContent="center">
+            <AppButton
+              label={t('screen.result.finishButton')}
+              onPress={handleFinishPress}
+            />
+          </Row>
         </Container>
       </LayoutScrollView>
     );
@@ -183,16 +184,14 @@ export default function ResultScreen() {
           </Expanded>
         </Expanded>
 
-        {Platform.OS === 'web' && (
-          <Row>
-            <Expanded flex={3} />
-            <Expanded justifyContent="flex-end">
-              <FilledButton onPress={handleFinishPress}>
-                {t('screen.result.finishButton')}
-              </FilledButton>
-            </Expanded>
-          </Row>
-        )}
+        <Row>
+          <Expanded flex={3} />
+          <Expanded justifyContent="flex-end">
+            <FilledButton onPress={handleFinishPress}>
+              {t('screen.result.finishButton')}
+            </FilledButton>
+          </Expanded>
+        </Row>
       </Container>
     </LayoutScrollView>
   );

@@ -1,21 +1,84 @@
-import { CustomDrawer, DrawerButton, NavRail, NAV_RAIL_WIDTH } from '@/components';
-import { useDesign, useFont } from '@/services';
+import {
+  CustomDrawer,
+  DrawerButton,
+  NavRail,
+  NAV_RAIL_WIDTH,
+} from '@/components';
+import { useFont, useNavShell } from '@/services';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
+import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
-  const { isCorporate } = useDesign();
   const font = useFont('semi');
-  const { width } = useWindowDimensions();
+  const { isRail, isTabs } = useNavShell();
 
-  // Corporate theme at tablet width replaces the phone drawer with a
-  // permanent left nav rail (docs/design/corporate-mobile/README.md).
-  // Kids theme and narrow widths keep the existing right-side drawer.
-  const isRail = isCorporate && width >= theme.breakpoints.DEFAULT_MIN_WIDTH;
+  // Rendering <Tabs> vs <Drawer> below is a component-type swap in this
+  // layout's own output (not inside a shared child slot like drawerContent),
+  // so React remounts the whole subtree when isTabs flips — the hook-order
+  // caveat on drawerContent below does not apply to this branch. It still
+  // matters that every hook in this component is called unconditionally
+  // above the branch, exactly as they are here. Swapping shells also resets
+  // nested navigation state (React Navigation discards state whose navigator
+  // type changed), so a web resize across 768dp lands on Home rather than
+  // crashing; phones are orientation-locked so this only fires via the dev
+  // theme toggle.
+  if (isTabs) {
+    return (
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+          tabBarStyle: {
+            backgroundColor: theme.colors.surface,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.divider,
+          },
+          tabBarLabelStyle: {
+            fontFamily: font,
+            fontSize: 10,
+          },
+        }}>
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: t('drawer.home'),
+            tabBarTestID: 'tab-home',
+            tabBarAccessibilityLabel: t('drawer.home'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="home" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile/index"
+          options={{
+            headerShown: true,
+            title: t('drawer.profile'),
+            headerTitleAlign: 'center',
+            headerTitleStyle: {
+              fontFamily: font,
+              fontSize: theme.fontSizes.h4,
+              color: theme.colors.customHeaderTitle,
+            },
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: theme.colors.customAppBar },
+            tabBarTestID: 'tab-profile',
+            tabBarAccessibilityLabel: t('drawer.profile'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="account-circle" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen name="dashboard/index" options={{ href: null }} />
+      </Tabs>
+    );
+  }
 
   return (
     <Drawer
