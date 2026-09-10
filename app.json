@@ -74,8 +74,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "9390adb7-3dd4-45f1-b8ad-d98b282a7436"
       }
-    }
+    },
+    "owner": "jesseorndorff"
   }
 }

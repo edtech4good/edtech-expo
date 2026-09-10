@@ -4,4 +4,5 @@ export * from './TransformHelper';
 export * from './DragDropHelper';
 export * from './DurationHelper';
 export * from './remoteResource';
+export * from './accessMode';
 export { default as Decoder } from './decoder/Decoder';

@@ -181,6 +181,15 @@ export default class Api {
     this.lmsApiInstance.setHeaders(headers);
   }
 
+  // Logout must remove the token from both apisauce instances, not just the
+  // redux store — setHeaders() only ever adds/overwrites headers, so a
+  // stale authorization header otherwise survives sign-out and keeps
+  // authenticating requests made after logout.
+  clearAuthHeader(): void {
+    this.apiSauceInstance.deleteHeader('authorization');
+    this.lmsApiInstance.deleteHeader('authorization');
+  }
+
   /**
    *
    * 400 = unmatch credential

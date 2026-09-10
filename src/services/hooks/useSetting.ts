@@ -4,9 +4,24 @@ import {
   getResourcePath,
   SettingActions,
 } from '@/redux/slices';
+import { isOnlineOnly } from '@/utils';
 import * as FileSystem from 'expo-file-system';
 import _ from 'lodash';
 import { Platform } from 'react-native';
+
+// Wraps a StorageAccessFramework.readDirectoryAsync call so a rejection
+// (e.g. an empty/invalid directory URI) logs once instead of surfacing as
+// an unhandled promise rejection dev toast.
+async function safeReadDirectoryAsync(directoryUri: string): Promise<string[]> {
+  try {
+    return await FileSystem.StorageAccessFramework.readDirectoryAsync(
+      directoryUri,
+    );
+  } catch (e) {
+    console.warn('[useSetting] readDirectoryAsync failed: ', e);
+    return [];
+  }
+}
 
 export default function useSetting() {
   const dispatch = useAppDispatch();
@@ -15,11 +30,10 @@ export default function useSetting() {
   const resourcePath = useAppSelector(getResourcePath);
 
   const requestStoragePermission = async () => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || isOnlineOnly()) return;
     const grantedDirectory =
       await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
 
-    console.log('====> ', grantedDirectory);
     if (_.isEmpty(grantedDirectory) || grantedDirectory.granted === false)
       return;
 
@@ -31,10 +45,9 @@ export default function useSetting() {
   };
 
   const updateResourcePath = async () => {
-    if (Platform.OS === 'web') return;
-    const allFiles = await FileSystem.StorageAccessFramework.readDirectoryAsync(
-      storageDirectory,
-    );
+    if (Platform.OS === 'web' || isOnlineOnly() || _.isEmpty(storageDirectory))
+      return;
+    const allFiles = await safeReadDirectoryAsync(storageDirectory);
     if (_.isEmpty(allFiles)) return;
     const tempPath = allFiles[0];
     const splitIndex = tempPath.lastIndexOf('%2F');
@@ -44,18 +57,14 @@ export default function useSetting() {
   };
 
   const readFileInStorage = async () => {
-    const allFiles = await FileSystem.StorageAccessFramework.readDirectoryAsync(
-      storageDirectory,
-    );
+    const allFiles = await safeReadDirectoryAsync(storageDirectory);
   };
 
   const retrieveFile = async (fileName: string) => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || isOnlineOnly() || _.isEmpty(storageDirectory))
+      return;
     try {
-      const allFiles =
-        await FileSystem.StorageAccessFramework.readDirectoryAsync(
-          storageDirectory,
-        );
+      const allFiles = await safeReadDirectoryAsync(storageDirectory);
       const tempPath = allFiles[0];
       const splitIndex = tempPath.lastIndexOf('%2F');
       const splitUri = tempPath.substring(0, splitIndex);
