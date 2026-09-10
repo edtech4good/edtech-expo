@@ -32,7 +32,7 @@ export default function InitialStack() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="(home)" />
-      <Stack.Screen name="(teacher)" />
+      <Stack.Screen name="teacher" />
     </Stack>
   );
 }

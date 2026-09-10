@@ -18,6 +18,7 @@ export interface AppIconButtonProps {
   size?: number;
   /** Required — icon-only buttons have no visible label. */
   accessibilityLabel: string;
+  testID?: string;
 }
 
 const PRESS_EASING = Easing.bezier(0.22, 1, 0.36, 1);
@@ -56,6 +57,7 @@ export default function AppIconButton({
   disabled = false,
   size = DEFAULT_SIZE,
   accessibilityLabel,
+  testID,
 }: AppIconButtonProps) {
   const theme = useTheme();
   const scale = useSharedValue(1);
@@ -125,6 +127,7 @@ export default function AppIconButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !isInteractive }}
+      testID={testID}
       $size={size}
       $backgroundColor={backgroundColor}
       $shadowColor={disabled ? undefined : palette.shadowColor}

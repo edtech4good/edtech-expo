@@ -7,21 +7,12 @@ export {
   default as AppTextField,
   type AppTextFieldProps,
 } from './AppTextField';
-export {
-  default as AppCheckbox,
-  type AppCheckboxProps,
-} from './AppCheckbox';
+export { default as AppCheckbox, type AppCheckboxProps } from './AppCheckbox';
 export { default as AppRadio, type AppRadioProps } from './AppRadio';
 export { default as AppSwitch, type AppSwitchProps } from './AppSwitch';
-export {
-  default as EyebrowText,
-  type EyebrowTextProps,
-} from './EyebrowText';
+export { default as EyebrowText, type EyebrowTextProps } from './EyebrowText';
 export { default as Chip, type ChipProps } from './Chip';
-export {
-  default as ProgressBar,
-  type ProgressBarProps,
-} from './ProgressBar';
+export { default as ProgressBar, type ProgressBarProps } from './ProgressBar';
 export {
   default as CircularProgress,
   type CircularProgressProps,
@@ -56,3 +47,4 @@ export {
   type LessonRowStatus,
 } from './LessonRow';
 export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';
+export { default as LogoutButton } from './LogoutButton';
