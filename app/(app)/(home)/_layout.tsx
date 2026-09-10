@@ -1,6 +1,7 @@
 import {
   CustomDrawer,
   DrawerButton,
+  LogoutButton,
   NavRail,
   NAV_RAIL_WIDTH,
 } from '@/components';
@@ -68,6 +69,10 @@ export default function Home() {
             },
             headerShadowVisible: false,
             headerStyle: { backgroundColor: theme.colors.customAppBar },
+            headerRight: () => <LogoutButton />,
+            headerRightContainerStyle: {
+              paddingRight: theme.layouts.medium,
+            },
             tabBarTestID: 'tab-profile',
             tabBarAccessibilityLabel: t('drawer.profile'),
             tabBarIcon: ({ color, size }) => (
