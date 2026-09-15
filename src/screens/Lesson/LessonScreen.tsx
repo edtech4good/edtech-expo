@@ -17,7 +17,11 @@ import VideoControl from './components/VideoControl';
 import { router, useNavigation } from 'expo-router';
 import { useAppSelector } from '@/redux';
 import { getSelectedModule } from '@/redux/slices';
-import { useLearning, useSetting } from '@/services';
+import {
+  OfflineBannerHeightContext,
+  useLearning,
+  useSetting,
+} from '@/services';
 import { LessonLearning } from '@/models';
 import ResumeVideoPopUp from './components/ResumeVideoPopUp';
 import { StatusBar } from 'expo-status-bar';
@@ -28,12 +32,19 @@ export default function LessonScreen() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
+  // The visible corporate OfflineBanner (OfflineBannerFrame, safeAreaTop on
+  // this route) adds its own height above the screen; subtract it in
+  // landscape so the full-window player (and its controls) doesn't drop
+  // below the fold on the tablet rail when offline.
+  const offlineBannerHeight = React.useContext(OfflineBannerHeightContext);
   const controllerOpacity = React.useMemo(() => new Animated.Value(1), []);
   // Phone portrait (ROADMAP Track B, phone learner path): a full-width 16:9
   // box centred vertically. Landscape keeps the full-window player.
   const isPortrait = height > width;
   const playerWidth = width;
-  const playerHeight = isPortrait ? Math.round((width * 9) / 16) : height;
+  const playerHeight = isPortrait
+    ? Math.round((width * 9) / 16)
+    : height - offlineBannerHeight;
   const isNativeDevice = React.useMemo(() => Platform.OS !== 'web', []);
   let blurTimeOut: NodeJS.Timeout;
   // const [videoSource, ]

@@ -1,5 +1,10 @@
 import { ResultScreen } from '@/screens';
+import { OfflineBannerFrame } from '@/components';
 
 export default function ResultPage() {
-  return <ResultScreen />;
+  return (
+    <OfflineBannerFrame>
+      <ResultScreen />
+    </OfflineBannerFrame>
+  );
 }
