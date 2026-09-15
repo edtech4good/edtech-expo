@@ -2,7 +2,8 @@
   "button": {
     "ok": "Ok",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "back": "Back"
   },
   "drawer": {
     "home": "Home",

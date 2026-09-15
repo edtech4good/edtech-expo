@@ -75,6 +75,9 @@ export default function QuizScreen() {
 
   useEffect(() => {
     navigation.setOptions({
+      ...(isCorporate && (selectedModule as LessonQuiz)?.lessonquizname
+        ? { title: (selectedModule as LessonQuiz).lessonquizname }
+        : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
     });
   }, [navigation]);

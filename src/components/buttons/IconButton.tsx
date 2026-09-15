@@ -50,6 +50,8 @@ interface Props extends ButtonProps {
 
   badgeCount?: number;
 
+  accessibilityLabel?: string;
+
   onPress?: () => void;
 }
 
@@ -66,6 +68,7 @@ export default function IconButton({
   iconSize,
   badgeCount = 0,
   style = {},
+  accessibilityLabel,
   onPress = () => undefined,
 }: Props) {
   const theme = useTheme();
@@ -79,7 +82,9 @@ export default function IconButton({
       paddingVertical={paddingVertical}
       style={style}
       onPress={onPress}
-      disabled={disabled}>
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button">
       {/* <Icon IconAsset={icon} color={iconColor} size={iconSize} /> */}
       <MaterialCommunityIcons
         name={icon}

@@ -1,6 +1,7 @@
 import { useTheme } from 'styled-components/native';
 import IconButton from './IconButton';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onPress?: () => void;
@@ -8,6 +9,7 @@ interface Props {
 
 export default function BackButton({ onPress = undefined }: Props) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   const handleBackPress = () => {
     if (onPress) onPress();
@@ -20,6 +22,7 @@ export default function BackButton({ onPress = undefined }: Props) {
       icon="keyboard-backspace"
       iconSize={theme.fontSizes.h3}
       style={{ marginLeft: theme.layouts.large }}
+      accessibilityLabel={t('button.back')}
     />
   );
 }
