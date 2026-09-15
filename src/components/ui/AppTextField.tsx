@@ -32,7 +32,10 @@ export interface AppTextFieldProps {
   autoFocus?: boolean;
 }
 
-const HEIGHTS: Record<AppTextFieldVariant, number> = { default: 52, search: 44 };
+const HEIGHTS: Record<AppTextFieldVariant, number> = {
+  default: 52,
+  search: 44,
+};
 const BASE_HORIZONTAL_PADDING = 16;
 
 function AlertGlyph({ color }: { color: string }) {
@@ -194,7 +197,10 @@ export default function AppTextField({
     ? theme.colors.surfaceVariant
     : theme.colors.surface;
 
-  const textColor = disabled ? theme.colors.placeholder : theme.colors.onSurface;
+  // Disabled copy keeps the handoff's Muted; `placeholder` is now dark enough for real placeholder text (U-03).
+  const textColor = disabled
+    ? theme.colors.secondaryLight
+    : theme.colors.onSurface;
 
   const showSecureToggle = secureTextEntry;
   const isObscured = secureTextEntry && !isSecureVisible;

@@ -27,17 +27,22 @@ const colors: ThemeTokens['colors'] = {
   // 1.47:1; this slate is 3.89:1 against the fill and 7.05:1 on white
   // (WCAG UI-component floor is 3:1). The quiz variant keeps `divider`.
   progressTrack: '#4A5A6E',
-  placeholder: '#94A3B8',
+  // U-03: placeholder on white 2.56 -> 5.46
+  placeholder: '#5A6B80',
   shadow: 'rgba(9,16,29,0.05)',
-  error: '#FF640D',
+  // U-24: onPrimary-on-error (white text/icons) 2.97 -> 4.99
+  error: '#C7420A',
   customAppBar: '#FFF9EE',
   customHeaderTitle: '#09101D',
 
-  selection: '#06AFBC',
+  // U-23: selection ring on white 2.67 -> 4.14
+  selection: '#078A95',
   success: '#22DB8D',
   warning: '#FFC228',
-  warningText: '#B8860B',
-  lessonChip: '#2AAADD',
+  // U-21: warningText on 18% warning tint 2.86 -> 7.01
+  warningText: '#6B4B00',
+  // U-22: onPrimary (white) on lessonChip 2.66 -> 5.37
+  lessonChip: '#16729A',
   videoAccent: '#00A2E3',
 
   cards: [
