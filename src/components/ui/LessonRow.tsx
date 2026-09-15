@@ -144,7 +144,9 @@ export default function LessonRow({
               paddingHorizontal: 8,
               paddingVertical: 2,
             }}>
-            <EyebrowText size={9} color={theme.colors.onPrimary}>
+            <EyebrowText
+              size={theme.fontSizes.eyebrow}
+              color={theme.colors.onPrimary}>
               {chipLabel}
             </EyebrowText>
           </View>
@@ -153,7 +155,7 @@ export default function LessonRow({
           numberOfLines={2}
           style={{
             fontFamily: titleFontFamily,
-            fontSize: 13,
+            fontSize: theme.fontSizes.body,
             color: theme.colors.onSurface,
           }}>
           {title}

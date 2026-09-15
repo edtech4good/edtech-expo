@@ -4,13 +4,13 @@ import H3 from '../texts/H3';
 import { QuestionHeading } from '@/models';
 import Expanded from '../layouts/Expanded';
 import SizedBox from '../layouts/SizedBox';
-import { Image } from 'react-native';
+import { Image, Text } from 'react-native';
 import { Images } from '@/assets';
 import BaseButton from '../buttons/BaseButton';
 import _ from 'lodash';
 import { Audio } from 'expo-av';
 import { useEffect, useMemo } from 'react';
-import { useResource } from '@/services';
+import { useDesign, useFont, useResource } from '@/services';
 
 interface Props {
   heading: QuestionHeading;
@@ -18,6 +18,8 @@ interface Props {
 
 export default function PracticeHeading({ heading }: Props) {
   const theme = useTheme();
+  const { isCorporate } = useDesign();
+  const questionFontFamily = useFont('bold', 'display');
 
   console.log('Practice Heading: ', heading.headingtext);
 
@@ -78,7 +80,19 @@ export default function PracticeHeading({ heading }: Props) {
         paddingBottom={theme.layouts.large}
         paddingTop={theme.layouts.large}
         justifyContent="center">
-        <H3 fontWeight="semi">{heading.headingtext}</H3>
+        {isCorporate ? (
+          <Text
+            style={{
+              fontFamily: questionFontFamily,
+              fontSize: theme.fontSizes.subtitle,
+              color: theme.colors.onBackground,
+              textAlign: 'center',
+            }}>
+            {heading.headingtext}
+          </Text>
+        ) : (
+          <H3 fontWeight="semi">{heading.headingtext}</H3>
+        )}
       </Expanded>
     </Row>
   );

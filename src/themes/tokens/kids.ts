@@ -25,6 +25,10 @@ const colors: ThemeTokens['colors'] = {
 
   outline: '#1E293B',
   divider: '#CBD5E1',
+  // Same as divider: kids never renders ProgressBar outside the dev gallery,
+  // and the value equals `divider` so the gallery is unaffected too. The key
+  // exists for theme parity.
+  progressTrack: '#CBD5E1',
   placeholder: '#94A3B8',
   shadow: '#00000015',
   error: '#FF640D',
