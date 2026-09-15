@@ -22,7 +22,7 @@ import { router, useNavigation } from 'expo-router';
 import _ from 'lodash';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image } from 'react-native';
+import { Image, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 export default function ResultScreen() {
@@ -109,12 +109,14 @@ export default function ResultScreen() {
             </>
           )}
           <SizedBox.Large height />
-          <Row justifyContent="center">
+          {/* Full-width CTA like Level Detail's Continue button (audit U-07). */}
+          <View style={{ alignSelf: 'stretch' }}>
             <AppButton
               label={t('screen.result.finishButton')}
               onPress={handleFinishPress}
+              fullWidth
             />
-          </Row>
+          </View>
         </Container>
       </LayoutScrollView>
     );

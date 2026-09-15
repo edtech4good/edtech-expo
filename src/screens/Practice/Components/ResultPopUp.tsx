@@ -1,5 +1,12 @@
 import { Images } from '@/assets';
-import { AppButton, Column, FilledButton, H3, H4, SizedBox } from '@/components';
+import {
+  AppButton,
+  Column,
+  FilledButton,
+  H3,
+  H4,
+  SizedBox,
+} from '@/components';
 import { useDesign } from '@/services';
 import { useScreenDimension } from '@/services';
 import { Image } from 'expo-image';
@@ -77,7 +84,9 @@ export default function ResultPopUp({
     <View
       style={{
         flexDirection: 'column',
-        borderRadius: isCorporate ? theme.radii.dialog : theme.layouts.defaultRadius,
+        borderRadius: isCorporate
+          ? theme.radii.dialog
+          : theme.layouts.defaultRadius,
         padding: theme.layouts.large * 2,
         backgroundColor: theme.colors.surface,
         justifyContent: 'center',
@@ -106,7 +115,7 @@ export default function ResultPopUp({
         </>
       )}
       {isCorporate ? (
-        <AppButton label={displayButtonText} onPress={onPress} />
+        <AppButton label={displayButtonText} onPress={onPress} fullWidth />
       ) : (
         <FilledButton onPress={onPress}>{displayButtonText}</FilledButton>
       )}
