@@ -15,11 +15,11 @@ export interface EyebrowTextProps extends TextProps {
 /**
  * Mono uppercase micro-label (e.g. "LEARNING", "STEP 2 OF 4").
  *
- * Khmer has no letter case, and its script shaping (base + combining
- * marks) breaks under both `textTransform: uppercase` and non-zero letter
- * spacing/tracking — so Khmer content deliberately skips both and renders
- * a touch larger (floored at `theme.fontSizes.caption`) to stay legible at
- * micro-label sizes.
+ * All languages are floored at the caption token per the handoff's 12 pt
+ * floor (audit U-19). Khmer additionally renders 2px larger because its
+ * glyphs sit low in the em box; its script shaping (base + combining marks)
+ * also breaks under `textTransform: uppercase` and non-zero letter spacing,
+ * so Khmer deliberately skips both.
  */
 export default function EyebrowText({
   children,
@@ -36,9 +36,10 @@ export default function EyebrowText({
 
   const resolvedColor = color ?? theme.colors.onSurfaceVariant;
   const resolvedSize = size ?? theme.fontSizes.eyebrow;
-  const fontSize = isKhmer
-    ? Math.max(theme.fontSizes.caption, resolvedSize + 2)
-    : resolvedSize;
+  const fontSize = Math.max(
+    theme.fontSizes.caption,
+    isKhmer ? resolvedSize + 2 : resolvedSize,
+  );
 
   return (
     <Text
@@ -48,7 +49,7 @@ export default function EyebrowText({
           fontFamily,
           fontSize,
           color: resolvedColor,
-          letterSpacing: isKhmer ? 0 : resolvedSize * 0.16,
+          letterSpacing: isKhmer ? 0 : fontSize * 0.16,
           textTransform: isKhmer ? 'none' : 'uppercase',
         },
         style,
