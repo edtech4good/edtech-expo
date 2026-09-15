@@ -23,6 +23,10 @@ const colors: ThemeTokens['colors'] = {
 
   outline: '#CDD5E0',
   divider: '#E3E8EF',
+  // Track for the mint progress fill. #22DB8D on the #E3E8EF hairline is
+  // 1.47:1; this slate is 3.89:1 against the fill and 7.05:1 on white
+  // (WCAG UI-component floor is 3:1). The quiz variant keeps `divider`.
+  progressTrack: '#4A5A6E',
   placeholder: '#94A3B8',
   shadow: 'rgba(9,16,29,0.05)',
   error: '#FF640D',

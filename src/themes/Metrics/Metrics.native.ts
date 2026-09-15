@@ -38,6 +38,14 @@ const fontSizes = {
   h6: 20,
   button: 18,
   sh3: 14,
+  // Corporate handoff type scale (docs/design/corporate-mobile/README.md → Typography)
+  screenTitle: 28,
+  cardTitle: 20,
+  subtitle: 18,
+  emphasis: 15,
+  body: 14,
+  caption: 12,
+  eyebrow: 10,
 };
 
 const fontWeights: any = {

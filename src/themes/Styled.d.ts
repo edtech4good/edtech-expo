@@ -51,6 +51,13 @@ declare module 'styled-components/native' {
       h6: number;
       button: number;
       sh3: number;
+      screenTitle: number;
+      cardTitle: number;
+      subtitle: number;
+      emphasis: number;
+      body: number;
+      caption: number;
+      eyebrow: number;
     };
 
     fontWeights: {

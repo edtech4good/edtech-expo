@@ -46,7 +46,12 @@ export default function ProgressBar({
         height: resolvedHeight,
         width: '100%',
         borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.divider,
+        // The quiz variant keeps the hairline `divider` track because its blue
+        // fill would be ~1.4:1 against the darker `progressTrack` slate.
+        backgroundColor:
+          variant === 'quiz'
+            ? theme.colors.divider
+            : theme.colors.progressTrack,
         overflow: 'hidden',
       }}>
       <Animated.View

@@ -40,7 +40,7 @@ export default function CurriculumCard({
   onPress,
 }: CurriculumCardProps) {
   const theme = useTheme();
-  const titleFontFamily = useFont('semi', 'body');
+  const titleFontFamily = useFont('bold', 'display');
   const scale = useSharedValue(1);
 
   const hasProgress = typeof progress === 'number';
@@ -127,14 +127,16 @@ export default function CurriculumCard({
           style={{
             marginTop: category != null ? 8 : 0,
             fontFamily: titleFontFamily,
-            fontSize: 13,
+            fontSize: theme.fontSizes.cardTitle,
             color: theme.colors.onSurface,
           }}>
           {title}
         </Text>
         {meta != null && (
           <View style={{ marginTop: 6 }}>
-            <EyebrowText size={9} color={theme.colors.onSurfaceVariant}>
+            <EyebrowText
+              size={theme.fontSizes.caption}
+              color={theme.colors.onSurfaceVariant}>
               {meta}
             </EyebrowText>
           </View>

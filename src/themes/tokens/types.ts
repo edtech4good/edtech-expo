@@ -31,6 +31,7 @@ export interface ThemeColors {
 
   outline: string;
   divider: string;
+  progressTrack: string;
   placeholder: string;
   shadow: string;
 
