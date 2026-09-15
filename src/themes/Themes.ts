@@ -27,6 +27,8 @@ const kidsTheme: DefaultTheme = {
 
 const corporateTheme: DefaultTheme = {
   ...sharedMetrics,
+  // Handoff: 20 dp screen gutter on phone (kids keep the shared 16).
+  layouts: { ...layouts, pageHorizontalPadding: 20 },
   name: corporateTokens.name,
   colors: corporateTokens.colors,
   fonts: corporateTokens.fonts,

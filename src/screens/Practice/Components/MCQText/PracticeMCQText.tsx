@@ -9,7 +9,12 @@ import {
   ExpandedWithLayout,
 } from '@/components';
 import { PracticeProps } from '../../PracticeScreen';
-import { useBreakpoint, useResource, useScreenDimension } from '@/services';
+import {
+  useBreakpoint,
+  useDesign,
+  useResource,
+  useScreenDimension,
+} from '@/services';
 import { FlatList } from 'react-native';
 import {
   forwardRef,
@@ -47,6 +52,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     ref,
   ) {
     const theme = useTheme();
+    const { isCorporate } = useDesign();
     const { unblockHeightWithoutHeader } = useScreenDimension();
 
     // ROADMAP Track B (phone learner path): below 768dp the landscape
@@ -196,6 +202,12 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       );
     };
 
+    // UX audit U-15: question card, options and footer now share the
+    // corporate 20 dp gutter on phone (kids keep the shared 12 dp medium).
+    const stackedGutter = isCorporate
+      ? theme.layouts.pageHorizontalPadding
+      : theme.layouts.medium;
+
     return (
       <Container containerHeight={unblockHeightWithoutHeader}>
         <PracticeHeading
@@ -210,8 +222,8 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
         <SizedBox.Large height />
         <Expanded
           flexDirection={isStacked ? 'column' : 'row'}
-          paddingLeft={isStacked ? theme.layouts.medium : theme.layouts.large}
-          paddingRight={isStacked ? theme.layouts.medium : theme.layouts.large}>
+          paddingLeft={isStacked ? stackedGutter : theme.layouts.large}
+          paddingRight={isStacked ? stackedGutter : theme.layouts.large}>
           {!_.isEmpty(source) && (
             <ExpandedWithLayout
               flex={isStacked ? 1 : undefined}
