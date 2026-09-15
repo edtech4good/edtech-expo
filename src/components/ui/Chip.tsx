@@ -91,13 +91,15 @@ export default function Chip({
     return <View accessibilityRole="text">{content}</View>;
   }
 
+  // 44dp touch target (audit U-12/U-20): the pill stays 32/36 tall, the pressable grows.
   return (
     <Pressable
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       accessibilityRole="button"
-      accessibilityState={{ selected: active }}>
+      accessibilityState={{ selected: active }}
+      style={{ minHeight: 44, justifyContent: 'center' }}>
       {content}
     </Pressable>
   );
