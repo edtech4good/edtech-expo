@@ -59,8 +59,12 @@ export default function PracticeHeading({ heading }: Props) {
     await playbackObject.playFromPositionAsync(0);
   };
 
+  const gutter = isCorporate
+    ? theme.layouts.pageHorizontalPadding
+    : theme.layouts.large;
+
   return (
-    <Row paddingLeft={theme.layouts.large} paddingRight={theme.layouts.large}>
+    <Row paddingLeft={gutter} paddingRight={gutter}>
       {!_.isEmpty(heading.headingfile) && (
         <BaseButton
           onPress={handlePlayAudio}
