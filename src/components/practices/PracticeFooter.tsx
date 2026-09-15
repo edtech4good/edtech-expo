@@ -34,26 +34,35 @@ export default function ({
   const { isCorporate } = useDesign();
 
   if (isCorporate) {
-    // Corporate color-pass: the handoff's 4px blue question track plus
-    // pill buttons replace the kids footer. Same props, same handlers.
+    // Corporate color-pass: the footer stretches full-width so the handoff's
+    // 4px blue question track can run full-bleed above the pill buttons,
+    // which replace the kids footer. Same props, same handlers.
     const progress =
       maxQuestion > 0 ? Math.min(1, currentQuestionIndex / maxQuestion) : 0;
     return (
+      // alignSelf stretch: Container centres its children, which shrink-wrapped this bar to its buttons and collapsed the track's 100% width to 0 (audit U-04/U-05).
       <View
         style={{
+          alignSelf: 'stretch',
           backgroundColor: theme.colors.surface,
-          paddingHorizontal: theme.layouts.large,
-          paddingVertical: theme.layouts.large,
-          gap: 12,
         }}>
         <ProgressBar variant="quiz" progress={progress} />
         <View
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <AppButton
-            label={t('screen.practice.submitButton')}
-            size="md"
-            onPress={onSubmit}
-          />
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            paddingHorizontal: theme.layouts.pageHorizontalPadding,
+            paddingVertical: theme.layouts.large,
+          }}>
+          <View style={{ flex: 1 }}>
+            <AppButton
+              label={t('screen.practice.submitButton')}
+              size="md"
+              fullWidth
+              onPress={onSubmit}
+            />
+          </View>
           <AppButton
             label={t('screen.practice.retryButton')}
             variant="secondary"
@@ -61,8 +70,9 @@ export default function ({
             disabled={isShowingAnswer}
             onPress={onRetry}
           />
-          <Expanded />
-          <EyebrowText size={10} color={theme.colors.primary}>
+          <EyebrowText
+            size={theme.fontSizes.eyebrow}
+            color={theme.colors.primary}>
             {`${currentQuestionIndex} / ${maxQuestion}`}
           </EyebrowText>
         </View>
