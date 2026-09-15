@@ -52,6 +52,7 @@ interface MCQTextItemProps {
   onPress?: () => void;
   disabled?: boolean;
   isShowingAnswer?: boolean;
+  submitResult?: 'correct' | 'incorrect' | null;
   isCorrect: boolean;
 }
 
@@ -62,6 +63,7 @@ export default function MCQTextItem({
   onPress = () => undefined,
   disabled = false,
   isShowingAnswer = false,
+  submitResult = null,
   isCorrect,
 }: MCQTextItemProps) {
   const theme = useTheme();
@@ -69,11 +71,15 @@ export default function MCQTextItem({
 
   const playbackObject = new Audio.Sound();
   const audioSource = useResource({ name: audioUrl ?? '' }, [audioUrl]);
+  // The screen no longer clears selections on reveal, so once the answer
+  // is revealed the kids item must itself ignore the raw selection and
+  // highlight only the correct option — this reproduces the pre-change
+  // behaviour exactly (previously selections were emptied on reveal, so
+  // highlight == isCorrect on reveal and == isSelected otherwise). Kids
+  // does not read submitResult.
   const highlight = useMemo(() => {
-    if (isSelected) return true;
-    if (isShowingAnswer && isCorrect) return true;
-    return false;
-  }, [isSelected, isShowingAnswer]);
+    return isShowingAnswer ? isCorrect : isSelected;
+  }, [isSelected, isShowingAnswer, isCorrect]);
 
   useEffect(() => {
     if (_.isEmpty(audioSource)) return;
@@ -107,11 +113,21 @@ export default function MCQTextItem({
     // QuizOption (which adds a real incorrect state and the check/X
     // badges); the audio play button — which QuizOption has no slot
     // for — stays alongside so nothing is lost.
+    // State persists after submit and through reveal: a wrong pick keeps
+    // painting 'incorrect' while the result popup is up AND after reveal
+    // (when the correct option separately paints 'correct'), since the
+    // screen no longer wipes selections when isShowingAnswer flips true.
+    // The 'correct' paint on a not-yet-revealed pick only appears when the
+    // submission as a whole was correct (submitResult === 'correct'), so a
+    // mixed wrong submission never leaks the answer via a green option.
+    const isJudged = isShowingAnswer || submitResult !== null;
     const state: QuizOptionState =
       isShowingAnswer && isCorrect
         ? 'correct'
-        : isShowingAnswer && isSelected && !isCorrect
+        : isJudged && isSelected && !isCorrect
         ? 'incorrect'
+        : submitResult === 'correct' && isSelected && isCorrect
+        ? 'correct'
         : isSelected
         ? 'selected'
         : 'default';

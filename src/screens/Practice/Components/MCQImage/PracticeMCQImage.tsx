@@ -51,7 +51,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           },
           submit() {},
           revealAnswer() {
-            setAttempt(val => ({ ...val, selections: {} }));
             setIsShowingAnswer(true);
           },
         };
@@ -75,11 +74,20 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     );
 
     const [isShowingAnswer, setIsShowingAnswer] = useState<boolean>(false);
+    // Mirrors PracticeMCQText: records the outcome of the most recent
+    // non-reveal submit ('correct' or 'incorrect'), or null before any
+    // submit. Selections are not cleared on reveal, so the item can keep
+    // painting the learner's wrong pick as 'incorrect'. Retry and a
+    // question change are the only resets.
+    const [submitResult, setSubmitResult] = useState<
+      'correct' | 'incorrect' | null
+    >(null);
 
     useEffect(() => {
       console.log('USE EFFECT CALLED');
       setAttempt({ tries: 1, selections: {} });
       setIsShowingAnswer(false);
+      setSubmitResult(null);
     }, [currentQuestionIndex]);
 
     const handleSubmit = () => {
@@ -113,6 +121,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         },
       );
 
+      setSubmitResult(isCorrect ? 'correct' : 'incorrect');
       onSubmit(attempt.tries, isCorrect);
     };
 
@@ -122,6 +131,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         tries: chargeAttempt ? val.tries + 1 : val.tries,
         selections: {},
       }));
+      setSubmitResult(null);
       // onRetry();
     };
 
@@ -145,6 +155,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           option={item}
           isSelected={!_.isEmpty(attempt.selections[item.questionoptionid])}
           isShowingAnswer={isShowingAnswer}
+          submitResult={submitResult}
           onPress={() => handleItemPress(item)}
         />
       );

@@ -67,6 +67,15 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     });
 
     const [isShowingAnswer, setIsShowingAnswer] = useState<boolean>(false);
+    // Records the outcome of the most recent non-reveal submit ('correct'
+    // or 'incorrect'), or null before any submit. Selections are
+    // intentionally NOT cleared when isShowingAnswer flips true (reveal)
+    // so the item can still render the learner's wrong pick as 'incorrect'
+    // alongside the revealed correct answer. Retry and a question change
+    // are the only places selections (and this result) reset.
+    const [submitResult, setSubmitResult] = useState<
+      'correct' | 'incorrect' | null
+    >(null);
 
     const source = useResource(
       { name: _.get(question, 'questionobject.questionfile.filename', '') },
@@ -104,16 +113,13 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     useEffect(() => {
       setAttempt({ tries: 1, selections: {} });
       setIsShowingAnswer(false);
+      setSubmitResult(null);
     }, [currentQuestionIndex]);
 
     useEffect(() => {
       if (_.isEmpty(source)) return;
       handleLoadAudio();
     }, [source]);
-
-    useEffect(() => {
-      setAttempt(val => ({ ...val, selections: {} }));
-    }, [isShowingAnswer]);
 
     const handleLoadAudio = async () => {
       await playbackObject.unloadAsync();
@@ -148,6 +154,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
         },
       );
 
+      setSubmitResult(isCorrect ? 'correct' : 'incorrect');
       onSubmit(attempt.tries, isCorrect, isShowingAnswer);
     };
 
@@ -157,6 +164,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
         tries: chargeAttempt ? val.tries + 1 : val.tries,
         selections: {},
       }));
+      setSubmitResult(null);
       // onRetry();
     };
 
@@ -190,6 +198,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
           audioUrl={_.get(item, 'questionoptionfile.filename', '')}
           disabled={isShowingAnswer}
           isShowingAnswer={isShowingAnswer}
+          submitResult={submitResult}
           isCorrect={item.questionoptioniscorrect}
           onPress={() => handleItemPress(item)}
         />
