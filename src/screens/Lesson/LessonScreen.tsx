@@ -21,6 +21,7 @@ import {
   OfflineBannerHeightContext,
   useLearning,
   useSetting,
+  useDesign,
 } from '@/services';
 import { LessonLearning } from '@/models';
 import ResumeVideoPopUp from './components/ResumeVideoPopUp';
@@ -37,6 +38,8 @@ export default function LessonScreen() {
   // landscape so the full-window player (and its controls) doesn't drop
   // below the fold on the tablet rail when offline.
   const offlineBannerHeight = React.useContext(OfflineBannerHeightContext);
+  const theme = useTheme();
+  const { isCorporate } = useDesign();
   const controllerOpacity = React.useMemo(() => new Animated.Value(1), []);
   // Phone portrait (ROADMAP Track B, phone learner path): a full-width 16:9
   // box centred vertically. Landscape keeps the full-window player.
@@ -205,10 +208,21 @@ export default function LessonScreen() {
     );
   };
 
+  // U-11: in corporate portrait the 16:9 box sits at the top on the page
+  // background, so the tab bar reads as normal chrome rather than peeking
+  // out from under a full-screen black canvas. Landscape and kids unchanged.
+  const isCorporatePortrait = isCorporate && isPortrait;
+  const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
+  const canvasJustify = isCorporatePortrait
+    ? 'flex-start'
+    : isPortrait
+    ? 'center'
+    : 'flex-start';
+
   return (
     <LayoutScrollView
-      backgroundColor={'black'}
-      justifyContent={isPortrait ? 'center' : 'flex-start'}>
+      backgroundColor={canvasColor}
+      justifyContent={canvasJustify}>
       <FormProvider {...methods}>
         <Video
           ref={video}
