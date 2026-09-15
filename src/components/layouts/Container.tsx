@@ -1,3 +1,4 @@
+import { OfflineBannerHeightContext } from '@/services';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useContext, useMemo } from 'react';
@@ -20,7 +21,8 @@ interface Props extends ViewProps {
 }
 
 const ContainerView = styled.View<Props>`
-  width: ${props => (props.containerWidth != null ? `${props.containerWidth}px` : '100%')};
+  width: ${props =>
+    props.containerWidth != null ? `${props.containerWidth}px` : '100%'};
   height: ${props => props.containerHeight}px;
   background-color: ${props =>
     props.backgroundColor ?? props.theme.colors.background};
@@ -60,10 +62,14 @@ function Container({
   // outside a tab navigator) is undefined -> 0 under the kids drawer and
   // corporate rail shells, so this is byte-identical to today there.
   const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+  // The visible corporate OfflineBanner (OfflineBannerFrame) adds its own
+  // height above route content; subtract it the same way as tabBarHeight so
+  // fixed-height Containers don't clip under it when offline.
+  const offlineBannerHeight = useContext(OfflineBannerHeightContext);
 
   const screenHeightWithoutStatusBar = useMemo(
-    () => height - insets.bottom - tabBarHeight,
-    [insets, height, tabBarHeight],
+    () => height - insets.bottom - tabBarHeight - offlineBannerHeight,
+    [insets, height, tabBarHeight, offlineBannerHeight],
   );
   const resultHeight = useMemo(
     () =>

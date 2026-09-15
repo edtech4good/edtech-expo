@@ -7,6 +7,7 @@ export { default as useBrandingRefresh } from './hooks/useBrandingRefresh';
 export { default as useLmsAuth } from './hooks/useLmsAuth';
 export { default as useBreakpoint } from './hooks/Breakpoint/useBreakpoint';
 export { default as useCourse } from './hooks/useCourse';
+export { default as useConnectivity } from './hooks/useConnectivity';
 export { default as useDesign } from './hooks/useDesign';
 export {
   default as useDeviceClass,
@@ -30,4 +31,5 @@ export { default as useSetting } from './hooks/useSetting';
 export { default as useTeacherProfile } from './hooks/useTeacherProfile';
 export { default as useTestScore } from './hooks/useTestScore';
 export { default as useSyncContent } from './hooks/useSyncContent';
+export * from './offlineBannerHeight';
 export * from './pendingResults';

@@ -1,5 +1,10 @@
 import { CourseSelectionScreen } from '@/screens';
+import { OfflineBannerFrame } from '@/components';
 
 export default function CoursesPage() {
-  return <CourseSelectionScreen />;
+  return (
+    <OfflineBannerFrame>
+      <CourseSelectionScreen />
+    </OfflineBannerFrame>
+  );
 }

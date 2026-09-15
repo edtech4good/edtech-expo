@@ -1,5 +1,10 @@
 import { LessonScreen } from '@/screens';
+import { OfflineBannerFrame } from '@/components';
 
 export default function LessonDetailPage() {
-  return <LessonScreen />;
+  return (
+    <OfflineBannerFrame safeAreaTop>
+      <LessonScreen />
+    </OfflineBannerFrame>
+  );
 }

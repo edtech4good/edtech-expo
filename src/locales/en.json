@@ -13,6 +13,9 @@
     "teacherDownload": "Download",
     "logout": "Logout"
   },
+  "offline": {
+    "banner": "You are offline. Downloaded lessons are still available."
+  },
   "key": {},
   "screen": {
     "login": {

@@ -3,6 +3,7 @@ import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useContext, useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { OfflineBannerHeightContext } from '../offlineBannerHeight';
 
 export default function useScreenDimension() {
   const insets = useSafeAreaInsets();
@@ -15,10 +16,15 @@ export default function useScreenDimension() {
   // outside a tab navigator) is undefined -> 0 under the kids drawer and
   // corporate rail shells, so this is byte-identical to today there.
   const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+  // The visible corporate OfflineBanner (OfflineBannerFrame) adds its own
+  // height above route content; subtract it the same way as tabBarHeight so
+  // screens using unblockHeight don't clip under it when offline.
+  const offlineBannerHeight = useContext(OfflineBannerHeightContext);
 
   const unblockHeight = useMemo(
-    () => height - insets.top - insets.bottom - tabBarHeight,
-    [height, insets, headerHeight, tabBarHeight],
+    () =>
+      height - insets.top - insets.bottom - tabBarHeight - offlineBannerHeight,
+    [height, insets, headerHeight, tabBarHeight, offlineBannerHeight],
   );
 
   const unblockHeightWithoutHeader = useMemo(

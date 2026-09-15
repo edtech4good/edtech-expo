@@ -27,6 +27,7 @@ export {
   default as OfflineBanner,
   type OfflineBannerProps,
 } from './OfflineBanner';
+export { default as OfflineBannerFrame } from './OfflineBannerFrame';
 export {
   default as CurriculumCard,
   type CurriculumCardProps,
