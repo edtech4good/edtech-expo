@@ -1,7 +1,7 @@
 import { DrawerButton } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getResourcePath } from '@/redux/slices';
-import { useFont, useNavShell, useSetting } from '@/services';
+import { useDesign, useFont, useNavShell, useSetting } from '@/services';
 import { Stack } from 'expo-router';
 import _ from 'lodash';
 import { useEffect } from 'react';
@@ -11,6 +11,8 @@ import { useTheme } from 'styled-components/native';
 export default function HomeStack() {
   const theme = useTheme();
   const font = useFont('semi');
+  const { isCorporate } = useDesign();
+  const displayBold = useFont('bold', 'display');
   const { t } = useTranslation();
   const { updateResourcePath } = useSetting();
   const resourcePath = useAppSelector(getResourcePath);
@@ -27,13 +29,22 @@ export default function HomeStack() {
     updateResourcePath();
   }, []);
 
+  // Child app bar (handoff §4): 18px display-bold on corporate; kids keep the stack's h4.
+  const childHeaderTitleStyle = isCorporate
+    ? {
+        fontFamily: displayBold,
+        fontSize: theme.fontSizes.subtitle,
+        color: theme.colors.onBackground,
+      }
+    : undefined;
+
   return (
     <Stack
       initialRouteName="subjects"
       screenOptions={{
         headerShadowVisible: false,
         headerTitleStyle: {
-          fontFamily: font,
+          fontFamily: isCorporate ? displayBold : font,
           fontSize: theme.fontSizes.h4,
           color: theme.colors.onBackground,
         },
@@ -61,16 +72,27 @@ export default function HomeStack() {
           headerStyle: {
             backgroundColor: theme.colors.background,
           },
+          ...(childHeaderTitleStyle
+            ? { headerTitleStyle: childHeaderTitleStyle }
+            : {}),
         }}
       />
       <Stack.Screen
         name="quizzes/[id]"
         options={{
-          title: 'Quiz',
+          // Corporate value is only the pre-mount fallback — QuizScreen sets
+          // the real quiz name via navigation.setOptions at mount, from the
+          // selected module in redux. Kids
+          // keep the literal 'Quiz' on purpose: kids screens must not change
+          // in this pass (i18n-izing it is a one-line follow-up).
+          title: isCorporate ? t('screen.lesson.quizTitle') : 'Quiz',
           headerStyle: {
             backgroundColor: theme.colors.background,
           },
           headerRight: () => undefined,
+          ...(childHeaderTitleStyle
+            ? { headerTitleStyle: childHeaderTitleStyle }
+            : {}),
         }}
       />
       <Stack.Screen name="result" options={{ headerLeft: () => null }} />
