@@ -56,7 +56,10 @@ export default function LessonStepDots({
             }}
           />
           {showLabels && (
-            <EyebrowText size={8}>{t(STEP_I18N_KEYS[step])}</EyebrowText>
+            // Handoff: mono 8px step labels; exempt from the 12px English floor (U-19).
+            <EyebrowText size={8} floor={false}>
+              {t(STEP_I18N_KEYS[step])}
+            </EyebrowText>
           )}
         </View>
       ))}
