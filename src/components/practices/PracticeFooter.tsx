@@ -43,6 +43,7 @@ export default function ({
       // alignSelf stretch: Container centres its children, which shrink-wrapped this bar to its buttons and collapsed the track's 100% width to 0 (audit U-04/U-05).
       <View
         style={{
+          alignSelf: 'stretch',
           backgroundColor: theme.colors.surface,
         }}>
         <ProgressBar variant="quiz" progress={progress} />
