@@ -10,7 +10,7 @@ import {
   ProgressCard,
   SizedBox,
 } from '@/components';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
@@ -20,6 +20,7 @@ import { useBreakpoint, useDesign, useFont } from '@/services';
 import {
   Redirect,
   router,
+  useFocusEffect,
   useLocalSearchParams,
   useNavigation,
 } from 'expo-router';
@@ -30,6 +31,13 @@ import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
 import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
 
+// The server flags a lesson `completed` once it clears the lesson's pass
+// mark (e.g. 80/100 points) — that can happen before `progress` reaches 100.
+// Older/cached responses may lack the flag, so fall back to the previous
+// `progress >= 100` behavior when it is absent.
+const isLessonDone = (lesson: Lesson): boolean =>
+  lesson.completed === true || (lesson.progress ?? 0) >= 100;
+
 // The /level/<id> response carries one aggregate progress per lesson —
 // nothing per-step (see the Lesson model: lessonlearnings/practices/quizzes
 // carry only names and orders). Until the API exposes per-step completion,
@@ -39,8 +47,9 @@ import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
 function approximateSteps(
   progress: number,
   isNext: boolean,
+  done: boolean,
 ): LessonStepDotsProps['steps'] {
-  if (progress >= 100) return { learning: 'done', practice: 'done', quiz: 'done' };
+  if (done) return { learning: 'done', practice: 'done', quiz: 'done' };
   if (progress > 0)
     return { learning: 'done', practice: 'current', quiz: 'todo' };
   if (isNext) return { learning: 'current', practice: 'todo', quiz: 'todo' };
@@ -91,11 +100,26 @@ export default function LevelSelectionScreen() {
   useEffect(() => {
     if (!levelId) return;
     setHeroLoadFailed(false);
-    fetch();
     return () => {
       clear();
     };
   }, [levelId]);
+
+  // Reload the lesson list every time this screen regains focus (e.g.
+  // returning from a quiz), not only on first mount — otherwise a lesson
+  // just completed still shows its stale pre-quiz state. Deliberately does
+  // not clear the list on blur, which would blank the screen while the
+  // refetch is in flight when the user comes back.
+  useFocusEffect(
+    useCallback(() => {
+      if (!levelId) return;
+      let active = true;
+      fetch(() => active);
+      return () => {
+        active = false;
+      };
+    }, [levelId]),
+  );
 
   const handleItemPress = async (lesson: Lesson) => {
     await selectLesson(lesson);
@@ -115,16 +139,15 @@ export default function LevelSelectionScreen() {
     const sortedLessons = [...lessons].sort(
       (a, b) => (a.lessonorder ?? 0) - (b.lessonorder ?? 0),
     );
-    const doneCount = sortedLessons.filter(l => (l.progress ?? 0) >= 100)
-      .length;
-    const upNext = sortedLessons.find(l => (l.progress ?? 0) < 100);
+    const doneCount = sortedLessons.filter(isLessonDone).length;
+    const upNext = sortedLessons.find(l => !isLessonDone(l));
     const levelProgress = Math.min(
       100,
       Math.max(0, Math.round(headerUnit?.progress ?? 0)),
     );
 
     const statusFor = (lesson: Lesson): LessonRowStatus => {
-      if ((lesson.progress ?? 0) >= 100) return 'done';
+      if (isLessonDone(lesson)) return 'done';
       if (lesson.lessonid === upNext?.lessonid) return 'next';
       return 'todo';
     };
@@ -216,7 +239,11 @@ export default function LevelSelectionScreen() {
                   })}
                   title={item.lessonname}
                   status={status}
-                  steps={approximateSteps(item.progress ?? 0, status === 'next')}
+                  steps={approximateSteps(
+                    item.progress ?? 0,
+                    status === 'next',
+                    status === 'done',
+                  )}
                   onPress={() => handleItemPress(item)}
                 />
               );

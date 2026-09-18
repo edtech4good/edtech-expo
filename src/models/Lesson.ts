@@ -131,6 +131,10 @@ export interface LessonQuiz {
 
 export interface Lesson {
   brick_points: number;
+  // Server-computed completion, based on the lesson's pass mark (e.g. 80/100
+  // points), not on `progress` reaching 100. Optional because cached/older
+  // API responses may not include it.
+  completed?: boolean;
   isdeleted: boolean;
   learning_points: number;
   lessondescription: string;
