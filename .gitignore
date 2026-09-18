@@ -39,3 +39,9 @@ yarn-error.*
 
 # local Claude Code config
 .claude/
+
+# IDE configuration
+.vscode/
+
+# Firebase
+.firebase/
