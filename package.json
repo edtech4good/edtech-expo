@@ -1,6 +1,11 @@
 {
   "name": "expo_edtech",
   "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edtech4good/edtech-expo.git"
+  },
   "main": "./index.js",
   "scripts": {
     "start": "npx expo start -c",
