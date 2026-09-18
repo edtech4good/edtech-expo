@@ -8,6 +8,7 @@ import { Decoder } from '@/utils';
 import _ from 'lodash';
 import { router } from 'expo-router';
 import { toAuthPayload } from '@/transforms';
+import { setAccessToken } from '../secureToken';
 
 export default function useLmsAuth() {
   const dispatch = useDispatch();
@@ -22,22 +23,31 @@ export default function useLmsAuth() {
       setError('');
       const authPayload = toAuthPayload(payload, false) as LmsLoginPayload;
       const response = await api.login(authPayload);
+      const accessToken = _.get(response.data, 'data.accessToken');
       await api.setHeaders({
-        authorization: `Bearer ${_.get(response.data, 'data.accessToken')}`,
+        authorization: `Bearer ${accessToken}`,
       });
 
       console.log('HUH?');
-      const profileString = Decoder(
-        _.get(response.data, 'data.accessToken') || '',
-      );
+      const profileString = Decoder(accessToken || '');
       const profile = JSON.parse(profileString) as Profile;
 
       await dispatch(
         AuthenticationActions.updateAccessToken({
-          accessToken: _.get(response.data, 'data.accessToken'),
+          accessToken,
           profile,
         }),
       );
+      // setAccessToken() itself never rejects (secureToken.ts catches and
+      // logs internally); wrapped anyway, symmetric with useAuth.ts, so a
+      // persistence failure can never block navigation below.
+      if (accessToken) {
+        try {
+          await setAccessToken(accessToken);
+        } catch {
+          // secureToken.ts already logged this; login proceeds regardless.
+        }
+      }
       router.replace('/teacher/dashboard');
     } catch (e) {
     } finally {

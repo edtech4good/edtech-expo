@@ -120,7 +120,6 @@ export default function useSyncContent() {
       name: `syncdata`,
     });
 
-    console.log(accessToken);
     const uploadResumable = FileSystem.createUploadTask(
       `${process.env.EXPO_PUBLIC_BASE_URL}/import/master`,
       response.assets[0].uri,

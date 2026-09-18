@@ -23,6 +23,7 @@ import { isDevPillTouched } from '@/services/devThemeOverride';
 // Metro's CJS interop today, but one hoisted usage away from breaking).
 // Sibling hooks (usePractice, useQuiz) import the same module the same way.
 import { flushPendingResults } from '../pendingResults';
+import { setAccessToken, clearAccessToken } from '../secureToken';
 
 export default function useAuth() {
   const dispatch = useAppDispatch();
@@ -53,23 +54,34 @@ export default function useAuth() {
       setError('');
       const authPayload = toAuthPayload(payload, false) as EdtechLoginPayload;
       const response = await api.login(authPayload);
+      const accessToken = _.get(response.data, 'data.accessToken');
       await api.setHeaders({
-        authorization: `Bearer ${_.get(response.data, 'data.accessToken')}`,
+        authorization: `Bearer ${accessToken}`,
       });
 
-      const profileString = Decoder(
-        _.get(response.data, 'data.accessToken') || '',
-      );
+      const profileString = Decoder(accessToken || '');
       const profile = JSON.parse(profileString) as Profile;
 
       console.log('===> Profile: ', profile);
 
       await dispatch(
         AuthenticationActions.updateAccessToken({
-          accessToken: _.get(response.data, 'data.accessToken'),
+          accessToken,
           profile,
         }),
       );
+      // setAccessToken() itself never rejects (secureToken.ts catches and
+      // logs internally), but this is wrapped anyway so a persistence
+      // failure can never abort login — the user is already authenticated
+      // in redux and on the api instance by this point, and must still
+      // reach flushPendingResults/navigation below.
+      if (accessToken) {
+        try {
+          await setAccessToken(accessToken);
+        } catch {
+          // secureToken.ts already logged this; login proceeds regardless.
+        }
+      }
 
       // Drain any items parked by a previous user on this device now that
       // the api instance carries the new user's token and the store carries
@@ -107,7 +119,16 @@ export default function useAuth() {
     // after logout.
     api.clearAuthHeader();
     await dispatch(clearAllData());
-    router.replace('/login');
+    // clearAccessToken() itself never rejects (secureToken.ts catches and
+    // logs internally), but the finally is kept as a hard guarantee: the
+    // user must land back on /login even if SecureStore misbehaves —
+    // leaving them on an authenticated-looking screen after logout would
+    // be worse than a clear that silently failed.
+    try {
+      await clearAccessToken();
+    } finally {
+      router.replace('/login');
+    }
   };
 
   return { login, logout, isLogginIn, profile, error, setError };
