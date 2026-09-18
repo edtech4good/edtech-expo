@@ -1,296 +1,98 @@
-# EdTech Expo App
+# EdTech Expo app
 
-A React Native/Expo application for educational technology, designed to work in both online and offline modes.
+The student app for the LMS, built with Expo and React Native. One codebase runs on Android, iOS and the web. It is used two ways: as a kiosk on classroom tablets that read content from a Raspberry Pi on the school network, and as a phone app that talks to cloud APIs only.
 
-## In the full system
+## How it fits with the other repos
 
-Expo is the **cross-platform** student/teacher client (mobile + web). It uses **two HTTP base URLs** in code ([`src/services/api/Api.ts`](src/services/api/Api.ts)):
+The app talks to two APIs, and the split matters. In `src/services/api/Api.ts` there are two HTTP clients:
 
-| Variable | Typical use |
-|----------|-------------|
-| **`EXPO_PUBLIC_BASE_URL`** | **Raspberry Pi / classroom API** — student auth, `GET /export/log`, `PUT /import/master`, most lesson APIs. |
-| **`EXPO_PUBLIC_SYNC_URL`** | **Central LMS API** — e.g. `GET /sync/content`, `PUT /log/import`, `POST /auth/school/login`. |
+| Variable | Points at | Used for |
+|---|---|---|
+| `EXPO_PUBLIC_BASE_URL` | The classroom API, [edtech-lms-rpi-api](https://github.com/edtech4good/edtech-lms-rpi-api) | Student login (`/auth/login`), lessons, quizzes, progress, `GET /export/log`, `PUT /import/master` |
+| `EXPO_PUBLIC_SYNC_URL` | The central API, [edtech-lms-api](https://github.com/edtech4good/edtech-lms-api) | `GET /sync/content`, `PUT /log/import`, school login (`/auth/school/login`) |
 
-Full sync sequence: [**ARCHITECTURE.md**](../ARCHITECTURE.md) § Sync playbook. Legacy user flows: [**docs/**](../docs/README.md).
+Sync goes like this. The app downloads the curriculum zip from the central API and pushes it to the classroom API. Later it pulls the student log zip from the classroom API and uploads it to the central one. Both APIs issue one access token per user, so a second login anywhere, including from a test run, ends the first session.
 
-**Local dev (web first):** run central + Pi APIs, then Expo with `localhost` URLs in `.env` and press **`w`** after `npm start` — see [**LOCAL_DEVELOPMENT.md**](../LOCAL_DEVELOPMENT.md).
+The admin and teacher web app is [edtech-lms-ui](https://github.com/edtech4good/edtech-lms-ui). The Playwright smoke suite for this app also lives there, under `e2e/expo-smoke/`.
 
-## 🚀 Quick Start
+## What you need
 
-### Prerequisites
+- Node 18.19.1. That is what the EAS build profiles pin.
+- Yarn 1. There is a `yarn.lock`; please don't add a `package-lock.json`.
+- Android Studio for Android, Xcode for iOS. Neither is needed for web.
 
-- Node.js (v18.19.1 or higher; LTS recommended)
-- Yarn (Classic/v1)
-- Expo CLI
-- Android Studio (for Android development)
-- Xcode (for iOS development, macOS only)
+Expo SDK 50, React Native 0.73.
 
-### Installation
+## Running it locally
 
-1. **Get the code** — clone or copy this repo (see parent [**ARCHITECTURE.md**](../ARCHITECTURE.md) for sibling projects).
-
-2. **Install dependencies**
-   
-   This project uses **Yarn** as its package manager. Install dependencies with:
-   ```bash
-   yarn install
-   ```
-   Always use `yarn` — do not use npm for consistency.
-
-3. **Environment Setup**
-   
-   Copy the example environment file and configure it with your settings:
-   ```bash
-   cp env.example .env
-   ```
-   
-   Update the `.env` file with your actual configuration:
-   ```env
-   EXPO_PUBLIC_ENV=Staging
-   EXPO_PUBLIC_ACCESS_TYPE=online
-   EXPO_PUBLIC_BASE_URL=https://your-api-server.com
-   EXPO_PUBLIC_SYNC_URL=https://your-sync-server.com
-   EXPO_PUBLIC_RESOURCE_URL=https://your-resource-server.com
-   EXPO_PUBLIC_RESOURCE_PATH=your-resource-path%
-   ```
-
-4. **Firebase Configuration** (if using Firebase hosting)
-   
-   Copy the Firebase configuration example:
-   ```bash
-   cp .firebaserc.example .firebaserc
-   ```
-   
-   Update `.firebaserc` with your Firebase project details:
-   ```json
-   {
-     "projects": {
-       "default": "your-firebase-project-id"
-     },
-     "targets": {
-       "your-firebase-project-id": {
-         "hosting": {
-           "staging": ["your-staging-target"],
-           "prod": ["your-production-target"]
-         }
-       }
-     }
-   }
-   ```
-
-5. **EAS Configuration** (for building with Expo Application Services)
-   
-   Copy the EAS configuration example:
-   ```bash
-   cp eas.example.json eas.json
-   ```
-   
-   Update `eas.json` with your build environment URLs.
-
-6. **Update app.json**
-   
-   Replace the EAS project ID in `app.json`:
-   ```json
-   {
-     "extra": {
-       "eas": {
-         "projectId": "your-eas-project-id"
-       }
-     }
-   }
-   ```
-
-## 🏃‍♂️ Running the App
-
-### Development Mode
 ```bash
-# Start the development server
-npm start
-# or
+yarn install
+cp env.example .env
 yarn start
 ```
 
-### Platform Specific
-```bash
-# Android
-npm run android
-# or
-yarn android
+Press `w` for web, `a` for Android, `i` for iOS. `env.example` points at a local stack with the classroom API on 3001 and the central API on 3000.
 
-# iOS
-npm run ios
-# or
-yarn ios
+Expo bakes `EXPO_PUBLIC_*` values into the bundle at build time. After changing `.env`, stop Metro and start it again; `yarn start` already passes `-c` to clear the cache.
 
-# Web
-npm run web
-# or
-yarn web
-```
+### Environment variables
 
-### Environment Specific
-```bash
-# Production mode
-npm run run:prod
-# or
-yarn run:prod
+| Variable | What it does | Example |
+|---|---|---|
+| `EXPO_PUBLIC_BASE_URL` | Classroom API base URL | `http://127.0.0.1:3001` |
+| `EXPO_PUBLIC_SYNC_URL` | Central API base URL | `http://127.0.0.1:3000` |
+| `EXPO_PUBLIC_RESOURCE_URL` | Where media is served from | `https://your-cdn.example.com` |
+| `EXPO_PUBLIC_RESOURCE_PATH` | Path prefix under that host, if any | `media` |
+| `EXPO_PUBLIC_ACCESS_TYPE` | `online` for the phone app, which fetches everything over the network and never touches local storage. Unset or `offline` for the tablet kiosk, which reads content from a folder the user grants. Web always behaves as online. | `online` |
+| `EXPO_PUBLIC_DEFAULT_THEME` | `corporate` selects the corporate theme. Anything else, including unset, gives the kids theme. | `corporate` |
+| `EXPO_PUBLIC_ENV` | A label carried in the EAS build profiles. Nothing in the app reads it today. | `Staging` |
 
-# Staging mode
-npm run run:staging
-# or
-yarn run:staging
-```
+There are two themes, kids and corporate, defined as token files under `src/themes/tokens/`. `yarn test:themes` checks that the two token trees have the same shape and no empty leaves. It is a plain script run with `tsx`, not a Jest suite, and it is the only test in this repo.
 
-## 🏗️ Building
+## Building
 
-### Android APK
-```bash
-# Staging build
-npm run build:android:staging
-# or
-yarn build:android:staging
-
-# Production build
-npm run build:android:prod
-# or
-yarn build:android:prod
-```
-
-### Web Build
-```bash
-npm run build:web
-# or
-yarn build:web
-```
-
-## 🚀 Deployment
-
-### Firebase Hosting
-```bash
-# Deploy to staging
-npm run deploy:staging
-# or
-yarn deploy:staging
-
-# Deploy to production
-npm run deploy:prod
-# or
-yarn deploy:prod
-```
-
-## 📁 Project Structure
-
-```
-edtech-expo/
-├── app/                    # Expo Router app directory
-├── src/
-│   ├── components/         # Reusable React components
-│   ├── screens/           # Screen components
-│   ├── services/          # API services and hooks
-│   ├── redux/             # Redux store and slices
-│   ├── models/            # TypeScript type definitions
-│   ├── constants/         # App constants
-│   ├── themes/            # Styling themes
-│   ├── utils/             # Utility functions
-│   └── assets/            # Static assets
-├── assets/                # Expo assets (icons, fonts, etc.)
-├── .env.example           # Environment variables template
-├── .firebaserc.example    # Firebase configuration template
-├── eas.example.json       # EAS build configuration template
-└── README.md              # This file
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `EXPO_PUBLIC_ENV` | Environment type | `Staging`, `Production`, `Development` |
-| `EXPO_PUBLIC_ACCESS_TYPE` | Access mode | `online`, `offline` |
-| `EXPO_PUBLIC_BASE_URL` | **Pi / classroom** API base (lessons, Pi import/export) | `http://192.168.x.x:3000` |
-| `EXPO_PUBLIC_SYNC_URL` | **Central LMS** API base (sync content, log import, school login) | `https://your-lms-api.example.com` |
-| `EXPO_PUBLIC_RESOURCE_URL` | Static assets server URL | `https://your-resource-server.com` |
-| `EXPO_PUBLIC_RESOURCE_PATH` | Resource path for assets | `your-resource-path%` |
-
-### Firebase Configuration
-
-The app uses Firebase for hosting. Configure your Firebase project in `.firebaserc`:
-
-```json
-{
-  "projects": {
-    "default": "your-firebase-project-id"
-  },
-  "targets": {
-    "your-firebase-project-id": {
-      "hosting": {
-        "staging": ["your-staging-target"],
-        "prod": ["your-production-target"]
-      }
-    }
-  }
-}
-```
-
-### EAS Configuration
-
-For building with Expo Application Services, configure `eas.json`:
-
-```json
-{
-  "build": {
-    "preview": {
-      "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://your-staging-api-server.com",
-        "EXPO_PUBLIC_SYNC_URL": "https://your-staging-sync-server.com",
-        "EXPO_PUBLIC_RESOURCE_URL": "https://your-staging-resource-server.com"
-      }
-    },
-    "production": {
-      "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://your-production-api-server.com",
-        "EXPO_PUBLIC_SYNC_URL": "https://your-production-sync-server.com",
-        "EXPO_PUBLIC_RESOURCE_URL": "https://your-production-resource-server.com"
-      }
-    }
-  }
-}
-```
-
-## 🔒 Security Notes
-
-- Never commit `.env` files or any files containing sensitive information
-- The `.gitignore` file is configured to exclude sensitive files
-- Use environment variables for all configuration that varies between environments
-- Keep API keys and secrets secure and never expose them in client-side code
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-If you encounter any issues or have questions, use your team’s issue tracker or internal docs.
-
-## 🔄 Updates
-
-Keep your dependencies up to date:
+Android builds run through EAS, locally:
 
 ```bash
-yarn upgrade
+yarn build:android:staging   # eas build -p android --profile preview --local
+yarn build:android:prod      # eas build -p android --profile production --local
 ```
 
-Check for Expo SDK updates:
+`eas.json` is checked in. The `development` and `preview` profiles carry our own hostnames; the `production` profile still has placeholders. If you are building for another deployment, edit the profile, or start from `eas.example.json`. The EAS project ID lives in `app.json` under `extra.eas.projectId` and is tied to our EAS account, so a fork needs its own.
+
+The web build is a static export:
 
 ```bash
-npx expo install --fix
+yarn build:web    # expo export -p web, output in dist/
 ```
+
+We serve that export with nginx from a Docker image. The `deploy:staging` and `deploy:prod` scripts push it to Firebase Hosting instead, and `firebase.json` is set up for two hosting targets, but the target names in the scripts are still placeholders. Copy `.firebaserc.example` to `.firebaserc` and fix the `select:*` scripts if you want that path.
+
+## Layout
+
+```
+app/                  # Expo Router routes
+src/
+├── components/
+├── screens/
+├── services/         # API clients and hooks (sync lives in hooks/useSyncContent.ts)
+├── redux/            # Store and slices
+├── models/
+├── constants/
+├── themes/           # kids and corporate token sets, plus the parity script
+├── utils/
+└── assets/
+assets/               # Icons, fonts, splash
+public/media/         # Media the demo seeds generate, served by Metro locally
+env.example
+eas.json, eas.example.json
+firebase.json, .firebaserc.example
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Before you change a screen, check it on a phone-sized viewport and on a tablet. Most of what we ship is looked at on a cheap Android tablet in a classroom.
+
+## License and support
+
+MIT, see [LICENSE](LICENSE). Questions and bugs go to [GitHub Issues](https://github.com/edtech4good/edtech-expo/issues).
