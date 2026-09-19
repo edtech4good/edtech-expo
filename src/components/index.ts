@@ -31,6 +31,7 @@ export { default as OutlineButton } from './buttons/OutlineButton';
 export { default as IconButton } from './buttons/IconButton';
 export { default as DrawerButton } from './buttons/DrawerButton';
 export { default as BackButton } from './buttons/BackButton';
+export { default as LearnerBackButton } from './buttons/LearnerBackButton';
 
 export { default as CustomInput } from './CustomInput';
 export { default as CustomPicker } from './CustomPicker';
