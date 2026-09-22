@@ -2,6 +2,8 @@
 
 The student app for the LMS, built with Expo and React Native. One codebase runs on Android, iOS and the web. It is used two ways: as a kiosk on classroom tablets that read content from a Raspberry Pi on the school network, and as a phone app that talks to cloud APIs only.
 
+For where this project came from, see [HISTORY.md](HISTORY.md).
+
 ## How it fits with the other repos
 
 The app talks to two APIs, and the split matters. In `src/services/api/Api.ts` there are two HTTP clients:
