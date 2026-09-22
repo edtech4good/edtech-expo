@@ -33,14 +33,22 @@ import apisauce, {
 } from 'apisauce';
 import _ from 'lodash';
 
+// Header names are case-insensitive over HTTP, but plain-object keys aren't
+// — apisauce/axios store whatever casing setHeaders() was called with
+// (lowercase 'authorization' here), so a fixed-case replacement key would
+// leave the real one (and the bearer token) sitting in the spread. Redact
+// by matching case-insensitively instead.
+function redactAuthHeader(headers: Record<string, any> | undefined) {
+  const redacted = { ...headers };
+  Object.keys(redacted).forEach(key => {
+    if (key.toLowerCase() === 'authorization') {
+      redacted[key] = '[redacted]';
+    }
+  });
+  return redacted;
+}
+
 const requestTransform: AsyncRequestTransform = async request => {
-  const requestPayload = {
-    baseURL: request.baseURL,
-    url: request.url,
-    payload: request.data,
-    params: request.params,
-    header: request.headers,
-  };
   if (
     request.url?.includes('log/import') ||
     request.url?.includes('import/master')
@@ -55,11 +63,22 @@ const requestTransform: AsyncRequestTransform = async request => {
       'Content-Type': 'application/json',
     };
 
-  console.log(
-    `%cMaking API Request ${request.url}`,
-    'color: yellow;font-weight: bold;',
-  );
-  console.log('Request: ', requestPayload);
+  // Dev-only diagnostics. Even in dev, never log the Authorization header —
+  // it carries the bearer token.
+  if (__DEV__) {
+    const requestPayload = {
+      baseURL: request.baseURL,
+      url: request.url,
+      payload: request.data,
+      params: request.params,
+      header: redactAuthHeader(request.headers),
+    };
+    console.log(
+      `%cMaking API Request ${request.url}`,
+      'color: yellow;font-weight: bold;',
+    );
+    console.log('Request: ', requestPayload);
+  }
 };
 
 function resolveExpoPublicUrl(
@@ -88,11 +107,27 @@ const responseTransform: AsyncResponseTransform = async response => {
     Url: `${response.config?.baseURL}${response.config?.url}`,
   };
 
-  console.log(
-    `%cResponse from ${response.config?.url}`,
-    'color: lightgreen;font-weight: bold;',
-  );
-  console.log('Response: ', response);
+  // Dev-only diagnostics. Never spread `response` or `response.originalError`
+  // whole — apisauce's `originalError` is the underlying AxiosError, which
+  // carries its own `.config.headers` (the same Authorization header used
+  // for the request, unredacted) at a depth `console.log`'s object inspector
+  // happily expands. Log an explicit, reduced object instead.
+  if (__DEV__) {
+    const loggedResponse = {
+      ok: response.ok,
+      status: response.status,
+      problem: response.problem,
+      message: response.originalError?.message,
+      url: `${response.config?.baseURL ?? ''}${response.config?.url ?? ''}`,
+      data: response.data,
+      headers: redactAuthHeader(response.config?.headers),
+    };
+    console.log(
+      `%cResponse from ${response.config?.url}`,
+      'color: lightgreen;font-weight: bold;',
+    );
+    console.log('Response: ', loggedResponse);
+  }
 
   // if (response.status === 404 || response.status === 401)
   //   return router.replace('/login?isLoggedOut=true');
