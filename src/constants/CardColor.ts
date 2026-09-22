@@ -83,33 +83,33 @@ export const ProgressCardColors = [
 
 export const UnitCardColors = [
   {
-    background: '#EDF9F0',
-    primary: '#287D3C',
+    background: Colors.cards[0].light,
+    primary: Colors.cards[0].highlight,
     image: Images.HouseOne,
   },
   {
-    background: '#FCF4E3',
-    primary: '#FFBA33',
+    background: Colors.cards[1].light,
+    primary: Colors.cards[1].highlight,
     image: Images.HouseTwo,
   },
   {
-    background: '#FFEBDA',
-    primary: '#FF640D',
+    background: Colors.cards[2].light,
+    primary: Colors.cards[2].highlight,
     image: Images.HouseThree,
   },
   {
-    background: '#B4EBEF',
-    primary: '#047780',
+    background: Colors.cards[3].light,
+    primary: Colors.cards[3].highlight,
     image: Images.HouseFour,
   },
   {
-    background: '#E7EFFF',
-    primary: '#0843B2',
+    background: Colors.cards[4].light,
+    primary: Colors.cards[4].highlight,
     image: Images.HouseFive,
   },
   {
-    background: '#FEEFEF',
-    primary: '#FF427B',
+    background: Colors.cards[5].light,
+    primary: Colors.cards[5].highlight,
     image: Images.HouseSix,
   },
 ] as Array<CardColorProps>;

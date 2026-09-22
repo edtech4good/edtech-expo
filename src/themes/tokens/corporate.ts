@@ -12,7 +12,9 @@ const colors: ThemeTokens['colors'] = {
   secondaryDark: '#2B3A4B',
   onSecondary: '#FFFFFF',
 
-  background: '#FFF9EE',
+  // Paper. The Glean cream #FFF9EE was retired for this cool paper on
+  // 22 Sep 2026.
+  background: '#F3F5FF',
   onBackground: '#09101D',
 
   surface: '#FFFFFF',
@@ -32,7 +34,7 @@ const colors: ThemeTokens['colors'] = {
   shadow: 'rgba(9,16,29,0.05)',
   // U-24: onPrimary-on-error (white text/icons) 2.97 -> 4.99
   error: '#C7420A',
-  customAppBar: '#FFF9EE',
+  customAppBar: '#F3F5FF',
   customHeaderTitle: '#09101D',
 
   // U-23: selection ring on white 2.67 -> 4.14
@@ -63,12 +65,12 @@ const colors: ThemeTokens['colors'] = {
     },
     {
       light: '#FFFFFF',
-      primary: '#FFF6DE',
-      highlight: '#B8860B',
+      primary: '#E6DDFF',
+      highlight: '#6D5BD0',
     },
     {
       light: '#FFFFFF',
-      primary: '#FFEFE3',
+      primary: '#F3EEFF',
       highlight: '#FF640D',
     },
     {
