@@ -1,7 +1,8 @@
 import { ThemeTokens } from './types';
 
-// Colors below are the historical `src/themes/Colors.tsx` palette, kept
-// verbatim, plus the new shared keys required for corporate-theme parity.
+// Kids palette. Warm cream/peach/rose tints and the brown secondary were
+// replaced on 22 Sep 2026 by the design system's cool periwinkle/lavender/
+// violet family; every other value is the historical palette.
 const colors: ThemeTokens['colors'] = {
   primary: '#0B5FFF',
   primaryLight: '#E7EFFF',
@@ -9,9 +10,9 @@ const colors: ThemeTokens['colors'] = {
   primaryPressed: '#0843B2',
   onPrimary: '#FFFFFF',
 
-  secondary: '#685B55',
-  secondaryLight: '#867C77',
-  secondaryDark: '#867C77',
+  secondary: '#6D5BD0',
+  secondaryLight: '#8F7FE8',
+  secondaryDark: '#6D5BD0',
   onSecondary: '#FFFFFF',
 
   background: '#F1F5F9',
@@ -42,37 +43,42 @@ const colors: ThemeTokens['colors'] = {
   lessonChip: '#2AAADD',
   videoAccent: '#00A2E3',
 
-  // Card Color
+  // Card Color. Index semantics are fixed by StudentDashboardScreen.tsx:
+  // 0 = Bridge / generic dashboard tint (periwinkle), 1 = Grade 7 (lavender,
+  // orange accent), 2 = Grade 8 (blue), 3 = Grade 9 (violet); 4 and 5 are
+  // extra rotation slots (teal, slate). Tints come from the EdTech for Good
+  // design system (docs/design/design-system/tokens/colors.css in the
+  // workspace): cream/peach/rose were retired in favour of these cool tints.
   cards: [
     {
-      light: '#FFFBF2',
-      primary: '#FCF4E3',
-      highlight: '#FFBA33',
+      light: '#F5F6FF',
+      primary: '#E8ECFF',
+      highlight: '#0B5FFF',
     },
     {
-      light: '#FFF5ED',
-      primary: '#FFEBDA',
+      light: '#F3EEFF',
+      primary: '#E6DDFF',
       highlight: '#FF640D',
     },
     {
-      light: '#f3f6eb',
-      primary: '#E8EDD6',
-      highlight: '#5C6D20',
+      light: '#EAF2FF',
+      primary: '#D6E6FF',
+      highlight: '#3B82F6',
     },
     {
-      light: '#dbf5f7',
-      primary: '#B4EBEF',
-      highlight: '#1B0E08',
+      light: '#E4E1F7',
+      primary: '#B9B4E8',
+      highlight: '#6D5BD0',
     },
     {
-      light: '#FEEFEF',
-      primary: '#FFDEDE',
-      highlight: '#FF427B',
+      light: '#E4F6F8',
+      primary: '#CDEFF2',
+      highlight: '#078A95',
     },
     {
-      light: '#f0efee',
-      primary: '#E1DEDD',
-      highlight: '#1B0E08',
+      light: '#F8FAFC',
+      primary: '#E2E8F0',
+      highlight: '#475569',
     },
   ],
 };
