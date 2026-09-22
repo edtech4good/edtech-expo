@@ -64,26 +64,30 @@ export default function LessonScreen() {
   });
 
   const selectedModule = useAppSelector(getSelectedModule);
-  const { fetch, source, progress, saveProgress, learningResource, clear } =
-    useLearning((selectedModule as LessonLearning)?.lessonlearningid);
+  const lessonLearningId = (selectedModule as LessonLearning)?.lessonlearningid;
+  const {
+    fetch,
+    source,
+    progress,
+    saveProgress,
+    learningResource,
+    loaded,
+    clear,
+  } = useLearning(lessonLearningId);
   // const {retrieveFile}  = useSetting();
   const [isVisible, setIsVisible] = React.useState(false);
+  // Media-less learning items (corporate/DCRS content seeded as video items
+  // whose file does not exist) earn their learning points on open rather
+  // than on "watched to the end" — real videos keep the watched-to-end rule
+  // below unchanged. Guards a single completion POST per mount: either
+  // trigger (empty source, or the <Video> failing to load) could otherwise
+  // fire more than once. See rpi-api#42.
+  const completionPostedRef = React.useRef<boolean>(false);
   const localSource = `content://com.android.externalstorage.documents/tree/primary%3Ayour-resource-path/document/primary%3Ayour-resource-path%2Fsample.mp4`;
 
   React.useEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, []);
-
-  console.log('Source is : ', source);
-  React.useEffect(() => {
-    // retrieveFile('sample.mp4')
-    if (!selectedModule) return;
-    fetch();
-
-    return () => {
-      handleSaveProgressAndClear();
-    };
-  }, [selectedModule]);
 
   const handleSaveProgressAndClear = async () => {
     try {
@@ -96,13 +100,73 @@ export default function LessonScreen() {
     } catch (e) {
       console.log('umm: ', e);
     } finally {
-      // await clear();
+      // Re-enabled (rpi-api#42 review round 1): moduleResource is
+      // redux-persisted (Store.ts persistConfig whitelist), and this was
+      // dead code — a stale previous item's learningResource survived
+      // unmount and could satisfy the media-less-completion effect's guard
+      // on the NEXT item's mount, before that item's own fetch() resolved.
+      // `return` above still reaches this finally block, so clear() runs on
+      // every unmount, not only after a real saveProgress call.
+      await clear();
     }
   };
+
+  // Round 2 review, blocker 1: the mount effect below only re-runs when
+  // `selectedModule` changes, so its cleanup closure was pinned to the
+  // handleSaveProgressAndClear (and, through it, saveProgress/loaded) from
+  // that ONE render — at mount time, before fetch() has resolved anything.
+  // A real watched-to-end video's unmount save was silently dropped because
+  // that pinned closure's `loaded` (nee `learningResource`) was still the
+  // mount-time default. Keeping the latest closure in a ref, updated after
+  // every render, and having the cleanup call `ref.current()` instead of
+  // the closed-over function directly means the cleanup always runs with
+  // whatever state was current at the moment of unmount, not at mount.
+  const handleSaveProgressAndClearRef = React.useRef(handleSaveProgressAndClear);
+  React.useEffect(() => {
+    handleSaveProgressAndClearRef.current = handleSaveProgressAndClear;
+  });
+
+  console.log('Source is : ', source);
+  React.useEffect(() => {
+    // retrieveFile('sample.mp4')
+    if (!selectedModule) return;
+    // A mid-mount id change (selectedModule changing without a full
+    // unmount/remount) starts a new fetch() for a new lessonLearningId —
+    // the once-per-mount guard below must reset with it, or the new item's
+    // media-less completion (or the old item's onError, if the <Video> is
+    // still transitioning) could be silently skipped.
+    completionPostedRef.current = false;
+    fetch();
+
+    return () => {
+      handleSaveProgressAndClearRef.current();
+    };
+  }, [selectedModule]);
 
   React.useEffect(() => {
     handleResumeProgress();
   }, [learningResource, video.current]);
+
+  React.useEffect(() => {
+    // `loaded` (useLearning) only flips true after THIS lessonLearningId's
+    // fetch() has written both source and learningResource — without it,
+    // this effect could fire on the render where learningResource is still
+    // the previous item's (or undefined) and source is the still-default
+    // ''. The learningResource?.lessonlearningid === lessonLearningId check
+    // is a second, belt-and-suspenders guard against the same stale-data
+    // shape: moduleResource is redux-persisted, so a fresh mount can
+    // rehydrate it from a previous session's item before this one's fetch()
+    // has even started. See rpi-api#42 review round 1.
+    if (
+      !loaded ||
+      source !== '' ||
+      learningResource?.lessonlearningid !== lessonLearningId ||
+      completionPostedRef.current
+    )
+      return;
+    completionPostedRef.current = true;
+    saveProgress(0, true, 0);
+  }, [loaded, source, learningResource, lessonLearningId]);
 
   const handleResumeProgress = () => {
     if (
@@ -238,6 +302,13 @@ export default function LessonScreen() {
           progressUpdateIntervalMillis={5000}
           onError={e => {
             console.log('Video Error: ', e);
+            // Load failure is the other "no playable media" signal (a
+            // non-empty source that 404s/fails to decode) — same one-shot
+            // completion as the empty-source effect above.
+            if (!completionPostedRef.current) {
+              completionPostedRef.current = true;
+              saveProgress(0, true, 0);
+            }
           }}
           onLoadStart={() => {
             console.log('Loading Video Start');

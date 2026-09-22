@@ -29,8 +29,15 @@ export default function useLearning(lessonLearningId: string) {
   const videoSource = useResource({ name: source }, [source]);
 
   const learningResource = useAppSelector(getModuleResource);
+  // False while a fetch() is in flight (and before the first one), true once
+  // this lessonLearningId's source/progress have actually landed in state.
+  // LessonScreen's media-less-completion effect gates on this so it cannot
+  // fire against the still-default source='' before the real response comes
+  // back — see rpi-api#42 review round 1.
+  const [loaded, setLoaded] = useState(false);
 
   const fetch = async () => {
+    setLoaded(false);
     // await retrieveFile('sample.mp4')
     const response = await api.fetchVideoPath(lessonLearningId);
     if (!_.isEmpty(response.data)) {
@@ -77,7 +84,11 @@ export default function useLearning(lessonLearningId: string) {
       );
 
       const lessonInfo = _.get(response, 'data.data');
-      dispatch(SelectionActions.updateModuleResource(lessonInfo));
+      // Source lands in state BEFORE learningResource is dispatched, and
+      // `loaded` flips to true only after both — otherwise a render could
+      // observe the new learningResource against the still-empty-string
+      // default source, which is exactly the "empty source" trigger the
+      // media-less-completion effect watches for.
       await setInfo({
         source: _.get(
           response,
@@ -86,6 +97,8 @@ export default function useLearning(lessonLearningId: string) {
         ),
         progress,
       });
+      dispatch(SelectionActions.updateModuleResource(lessonInfo));
+      setLoaded(true);
     }
   };
 
@@ -94,8 +107,16 @@ export default function useLearning(lessonLearningId: string) {
     hasEnded: boolean,
     contentLength: number,
   ) => {
-    console.log('res', learningResource);
-    if (!learningResource) return;
+    // Gated on `loaded`, not `learningResource` (round 2 review): a caller
+    // that only holds a stale, closed-over reference to this function (e.g.
+    // an unmount cleanup captured at mount) would otherwise always see the
+    // mount-time `learningResource` — undefined, now that a previous
+    // screen's clear() actually runs — and silently drop the save. `loaded`
+    // means THIS hook instance's fetch() for lessonLearningId has already
+    // completed, which is the real precondition for having anything to
+    // save; lessonLearningId itself (not learningResource) is what the
+    // request below is built from either way.
+    if (!loaded) return;
     const videoProgressPayload: VideoProgressPayload = {
       content_length: contentLength,
       date: createTimeStamp(),
@@ -114,6 +135,7 @@ export default function useLearning(lessonLearningId: string) {
     source: videoSource,
     progress,
     learningResource,
+    loaded,
     saveProgress,
     clear,
   };
