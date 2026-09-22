@@ -24,6 +24,13 @@ Test data and one access token per user
 
 Each user gets one access token at a time. A second login ends the first session. Coordinate if you run multiple test suites at once.
 
-License
+## Licensing of contributions
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+By submitting a contribution you agree that it is licensed under the
+AGPL-3.0-only licence of this repository, and you grant Jesse Orndorff a
+perpetual, worldwide, non-exclusive, royalty-free licence to use,
+reproduce, modify, sublicense and distribute your contribution as part of
+this project under any licence, including commercial licences, so the
+project can be dual-licensed. You confirm you have the right to grant
+this. Sign your commits with `git commit -s` (Developer Certificate of
+Origin, https://developercertificate.org/).

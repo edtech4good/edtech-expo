@@ -97,4 +97,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Before you change a screen, check it on 
 
 ## License and support
 
-MIT, see [LICENSE](LICENSE). Questions and bugs go to [GitHub Issues](https://github.com/edtech4good/edtech-expo/issues).
+AGPL-3.0-only, see [LICENSE](LICENSE) and [NOTICE.txt](NOTICE.txt) for the copyright history. In short: you may run, study, change and share this software, and if you run a modified version for others over a network you must offer them your modified source under the same licence. It was MIT-licensed before 22 September 2026; see NOTICE.txt. Questions and bugs go to [GitHub Issues](https://github.com/edtech4good/edtech-expo/issues).
