@@ -31,9 +31,6 @@
       "env": {
         "EXPO_PUBLIC_ENV": "Staging",
         "EXPO_PUBLIC_ACCESS_TYPE": "online",
-        "EXPO_PUBLIC_BASE_URL": "https://student-api.uat.mekonginclusive.com",
-        "EXPO_PUBLIC_SYNC_URL": "https://api.uat.mekonginclusive.com",
-        "EXPO_PUBLIC_RESOURCE_URL": "https://app.uat.mekonginclusive.com",
         "EXPO_PUBLIC_RESOURCE_PATH": "media"
       }
     },
