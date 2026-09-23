@@ -13,6 +13,7 @@ import Slider from '@react-native-community/slider';
 import { AVPlaybackStatusSuccess } from 'expo-av';
 import { useEffect, useMemo, useRef } from 'react';
 import { useController, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Platform,
@@ -44,6 +45,7 @@ export default function VideoControl({
   onVolumeChanged = () => undefined,
 }: VideoControllerProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const opacityValue = useMemo(() => new Animated.Value(1), []);
   const methods = useForm<{ disabled: boolean }>({
@@ -290,6 +292,7 @@ export default function VideoControl({
       <IconButton
         onPress={onClosePress}
         icon="close"
+        accessibilityLabel={t('button.close')}
         buttonColor={`rgba(255,255,255, 0.8)`}
         iconSize={theme.fontSizes.h3}
         paddingHorizontal={theme.layouts.small}
@@ -318,6 +321,7 @@ export default function VideoControl({
       <IconButton
         onPress={onClosePress}
         icon="close"
+        accessibilityLabel={t('button.close')}
         buttonColor={`rgba(255,255,255, 0.8)`}
         iconSize={theme.fontSizes.h3}
         paddingHorizontal={theme.layouts.small}
