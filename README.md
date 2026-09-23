@@ -49,6 +49,20 @@ Expo bakes `EXPO_PUBLIC_*` values into the bundle at build time. After changing 
 | `EXPO_PUBLIC_DEFAULT_THEME` | `corporate` selects the corporate theme. Anything else, including unset, gives the kids theme. | `corporate` |
 | `EXPO_PUBLIC_ENV` | A label carried in the EAS build profiles. Nothing in the app reads it today. | `Staging` |
 
+Deployment-specific values are **not** committed here. The `preview` build
+profile in `eas.json` deliberately sets no URLs and no theme: those live as
+EAS environment variables on the `preview` environment, so that building this
+repo never points a stranger's APK at someone else's server. List them with:
+
+```bash
+eas env:list --environment preview
+```
+
+`preview` currently expects `EXPO_PUBLIC_BASE_URL`, `EXPO_PUBLIC_SYNC_URL`,
+`EXPO_PUBLIC_RESOURCE_URL` and `EXPO_PUBLIC_DEFAULT_THEME`. With none of them
+set, a `preview` build falls back to the `127.0.0.1` defaults in
+`src/services/api/Api.ts` and the kids theme — a local build, not a broken one.
+
 There are two themes, kids and corporate, defined as token files under `src/themes/tokens/`. `yarn test:themes` checks that the two token trees have the same shape and no empty leaves. It is a plain script run with `tsx`, not a Jest suite, and it is the only test in this repo.
 
 ## Building
