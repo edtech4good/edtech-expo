@@ -305,7 +305,10 @@ export default function LessonScreen() {
           source={{
             uri: source,
           }}
-          useNativeControls={isNativeDevice}
+          // F-01: expo-av's native Android controls expose nothing to the
+          // accessibility tree, so Android uses VideoControl's own bar
+          // instead. iOS keeps the native controls (unaudited, untouched).
+          useNativeControls={isNativeDevice && Platform.OS !== 'android'}
           isLooping={false}
           resizeMode={ResizeMode.CONTAIN}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}

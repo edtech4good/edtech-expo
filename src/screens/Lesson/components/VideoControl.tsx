@@ -47,6 +47,9 @@ export default function VideoControl({
   const theme = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  // F-01: Android now renders this bar instead of expo-av's native controls,
+  // which exposed nothing to the accessibility tree.
+  const isAndroid = Platform.OS === 'android';
   const opacityValue = useMemo(() => new Animated.Value(1), []);
   const methods = useForm<{ disabled: boolean }>({
     defaultValues: { disabled: false },
@@ -149,6 +152,10 @@ export default function VideoControl({
   };
 
   const hideController = async () => {
+    // On Android the bar is permanently visible, so hiding it would only set
+    // disabled=true and silently kill every control. Also the accessible
+    // behaviour: controls a screen reader can find do not vanish on a timer.
+    if (isAndroid) return;
     const currentOpacity = await stopOpacityAnimation();
     if (currentOpacity === 0) return;
     Animated.timing(opacityValue, {
@@ -193,9 +200,12 @@ export default function VideoControl({
             <Image
               source={Images.VolumeButton}
               style={{ width: 36, height: 36 }}
+              accessible={false}
+              importantForAccessibility="no"
             />
             <SizedBox.Large width />
             <Slider
+              accessibilityLabel={t('player.volume')}
               style={{ width: volumeSliderWidth, height: 40 }}
               minimumValue={0}
               maximumValue={1}
@@ -208,7 +218,10 @@ export default function VideoControl({
             />
           </Expanded>
           <Row flexDirection="row">
-            <BaseButton onPress={handleSeekRewind}>
+            <BaseButton
+              onPress={handleSeekRewind}
+              accessibilityRole="button"
+              accessibilityLabel={t('player.rewind')}>
               <Image
                 source={Images.RewindButton}
                 style={{
@@ -227,7 +240,10 @@ export default function VideoControl({
               />
             </BaseButton>
             <SizedBox.Large width />
-            <BaseButton onPress={handlePlayPause}>
+            <BaseButton
+              onPress={handlePlayPause}
+              accessibilityRole="button"
+              accessibilityLabel={t(isPlaying ? 'player.pause' : 'player.play')}>
               <Image
                 source={isPlaying ? Images.PauseButton : Images.PlayButton}
                 style={{
@@ -246,7 +262,10 @@ export default function VideoControl({
               />
             </BaseButton>
             <SizedBox.Large width />
-            <BaseButton onPress={handleSeekForward}>
+            <BaseButton
+              onPress={handleSeekForward}
+              accessibilityRole="button"
+              accessibilityLabel={t('player.forward')}>
               <Image
                 source={Images.ForwardButton}
                 style={{
@@ -271,6 +290,13 @@ export default function VideoControl({
           <H4>{readableSeekPosition}</H4>
           <SizedBox.Large width />
           <Slider
+            accessibilityLabel={t('player.seek')}
+            accessibilityValue={{
+              text: t('player.elapsedOfTotal', {
+                elapsed: readableSeekPosition,
+                total: readableDuration,
+              }),
+            }}
             style={{ width: controllerWidth * 0.65, height: 40 }}
             minimumValue={0}
             maximumValue={durationMillis}
@@ -287,36 +313,20 @@ export default function VideoControl({
     );
   };
 
-  if (Platform.OS === 'android')
-    return (
-      <IconButton
-        onPress={onClosePress}
-        icon="close"
-        accessibilityLabel={t('button.close')}
-        buttonColor={`rgba(255,255,255, 0.8)`}
-        iconSize={theme.fontSizes.h3}
-        paddingHorizontal={theme.layouts.small}
-        paddingVertical={theme.layouts.small}
-        style={{
-          position: 'absolute',
-          top: insets.top + theme.layouts.large * 2,
-          right: theme.layouts.large,
-          borderRadius: 150,
-          opacity: Platform.OS === 'android' ? 1 : opacityValue,
-        }}
-      />
-    );
-
   return (
     <Pressable
       onPress={handleControllerState}
+      // accessible={false} keeps this wrapper out of the accessibility tree so
+      // the controls inside stay individually focusable, instead of being
+      // flattened into one unlabelled "button" covering the whole player.
+      accessible={false}
       style={{
         position: 'absolute',
         top: theme.layouts.large,
         bottom: 0,
         left: 0,
         right: 0,
-        opacity: Platform.OS === 'android' ? 1 : opacityValue,
+        opacity: isAndroid ? 1 : opacityValue,
       }}>
       <IconButton
         onPress={onClosePress}
@@ -328,13 +338,17 @@ export default function VideoControl({
         paddingVertical={theme.layouts.small}
         style={{
           position: 'absolute',
-          top: theme.layouts.large,
+          // Android draws under the status bar, so the close button has to
+          // clear it (see #80); elsewhere the safe area is already applied.
+          top: isAndroid
+            ? insets.top + theme.layouts.large * 2
+            : theme.layouts.large,
           right: theme.layouts.large,
           borderRadius: 150,
-          opacity: Platform.OS === 'android' ? 1 : opacityValue,
+          opacity: isAndroid ? 1 : opacityValue,
         }}
       />
-      {Platform.OS === 'web' && renderController()}
+      {(Platform.OS === 'web' || isAndroid) && renderController()}
     </Pressable>
   );
 }
