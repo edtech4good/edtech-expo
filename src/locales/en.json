@@ -6,6 +6,15 @@
     "back": "Back",
     "close": "Close"
   },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "rewind": "Rewind 10 seconds",
+    "forward": "Forward 10 seconds",
+    "volume": "Volume",
+    "seek": "Video position",
+    "elapsedOfTotal": "{{elapsed}} of {{total}}"
+  },
   "drawer": {
     "home": "Home",
     "profile": "Profile",
