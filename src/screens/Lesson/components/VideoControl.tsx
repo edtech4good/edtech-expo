@@ -19,6 +19,7 @@ import {
   Pressable,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { Image } from 'expo-image';
 
@@ -43,6 +44,7 @@ export default function VideoControl({
   onVolumeChanged = () => undefined,
 }: VideoControllerProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const opacityValue = useMemo(() => new Animated.Value(1), []);
   const methods = useForm<{ disabled: boolean }>({
     defaultValues: { disabled: false },
@@ -294,7 +296,7 @@ export default function VideoControl({
         paddingVertical={theme.layouts.small}
         style={{
           position: 'absolute',
-          top: theme.layouts.large * 2,
+          top: insets.top + theme.layouts.large * 2,
           right: theme.layouts.large,
           borderRadius: 150,
           opacity: Platform.OS === 'android' ? 1 : opacityValue,

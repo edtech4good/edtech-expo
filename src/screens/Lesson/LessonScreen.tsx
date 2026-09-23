@@ -276,6 +276,12 @@ export default function LessonScreen() {
   // background, so the tab bar reads as normal chrome rather than peeking
   // out from under a full-screen black canvas. Landscape and kids unchanged.
   const isCorporatePortrait = isCorporate && isPortrait;
+  // LayoutScrollView still wraps screens in React Native's SafeAreaView,
+  // which is a no-op on Android, so this top-aligned box renders under the
+  // status bar and the close button lands behind it. Pad the player down by
+  // the real inset. Landscape keeps its full-window player, where the inset
+  // is 0 anyway.
+  const playerTopInset = isCorporatePortrait ? insets.top : 0;
   const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
   const canvasJustify = isCorporatePortrait
     ? 'flex-start'
@@ -290,7 +296,11 @@ export default function LessonScreen() {
       <FormProvider {...methods}>
         <Video
           ref={video}
-          style={{ width: playerWidth, height: playerHeight }}
+          style={{
+            width: playerWidth,
+            height: playerHeight,
+            marginTop: playerTopInset,
+          }}
           videoStyle={{ width: playerWidth, height: playerHeight }}
           source={{
             uri: source,
