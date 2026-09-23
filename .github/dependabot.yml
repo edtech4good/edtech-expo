@@ -26,6 +26,10 @@ updates:
       - dependency-name: "babel-preset-expo"
       # Pinned by the Expo SDK in practice (expo install --check expects 6.5.1 on SDK 50).
       - dependency-name: "lottie-react-native"
+      # typescript 5.1 -> 5.9 in a group added five type errors (FlatList item typed
+      # unknown in LevelSelectionScreen); patch bumps only, minors are a deliberate task.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
