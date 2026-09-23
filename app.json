@@ -2,7 +2,7 @@
   "expo": {
     "name": "expo_edtech",
     "slug": "expo_edtech",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "edtech",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
@@ -26,7 +26,7 @@
         "orientation": "landscape"
       },
       "package": "net.glean.edtech.dev",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android:requestLegacyExternalStorage"
       ]
