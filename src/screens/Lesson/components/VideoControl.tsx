@@ -24,6 +24,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { Image } from 'expo-image';
 
+// Shared by the compact-layout threshold math and the button/slider JSX below,
+// so resizing a control can't silently desync from the breakpoint that was
+// derived from its old size.
+const VOLUME_ICON_SIZE = 36;
+const VOLUME_SLIDER_MAX = 100;
+const SKIP_BUTTON_SIZE = 55;
+const PLAY_BUTTON_SIZE = 65;
+
 interface VideoControllerProps {
   disabled?: boolean;
   onPlayPausePress?: () => void;
@@ -65,8 +73,30 @@ export default function VideoControl({
 
   const controllerBottomLocation = useMemo(() => theme.layouts.large * 2, []);
   const volumeSliderWidth = useMemo(
-    () => Math.min(100, controllerWidth / 4),
+    () => Math.min(VOLUME_SLIDER_MAX, controllerWidth / 4),
     [controllerWidth],
+  );
+  // The top row centres the transport buttons (rewind + gap + play + gap +
+  // forward) by giving it a volume group of matching width on BOTH sides —
+  // the left one real (icon + gap + a slider of up to VOLUME_SLIDER_MAX), the
+  // right one an empty Expanded spacer of the same notional size. So the row only
+  // fits without the slider overlapping the rewind button when the full
+  // controller (including its own horizontal padding on each side) can hold
+  // 2 * volumeGroupWidth + transportWidth + 2 * theme.layouts.large. With the
+  // current sizes that's 511 + 2 * 16 = 543: a 411dp phone (411 < 543) is
+  // compact, a 720 tablet/desktop (720 >= 543) stays wide. Below that, drop
+  // to a stacked layout: transport on top, volume below.
+  const compactVolumeThreshold = useMemo(() => {
+    const volumeGroupWidth =
+      VOLUME_ICON_SIZE + theme.layouts.large + VOLUME_SLIDER_MAX;
+    const transportWidth =
+      SKIP_BUTTON_SIZE + PLAY_BUTTON_SIZE + SKIP_BUTTON_SIZE +
+      2 * theme.layouts.large;
+    return 2 * volumeGroupWidth + transportWidth + 2 * theme.layouts.large;
+  }, [theme.layouts.large]);
+  const isCompact = useMemo(
+    () => controllerWidth < compactVolumeThreshold,
+    [controllerWidth, compactVolumeThreshold],
   );
 
   const { field } = useController({ name: 'stat' });
@@ -181,6 +211,101 @@ export default function VideoControl({
 
   if (!controllerWidth) return <SizedBox.Large width />;
 
+  const renderVolume = (sliderWidth: number) => (
+    <>
+      {/* <Icons.VideoVolumebtn /> */}
+      <Image
+        source={Images.VolumeButton}
+        style={{ width: VOLUME_ICON_SIZE, height: VOLUME_ICON_SIZE }}
+        accessible={false}
+        importantForAccessibility="no"
+      />
+      <SizedBox.Large width />
+      <Slider
+        accessibilityLabel={t('player.volume')}
+        style={{ width: sliderWidth, height: 40 }}
+        minimumValue={0}
+        maximumValue={1}
+        minimumTrackTintColor={theme.colors.secondary}
+        maximumTrackTintColor={theme.colors.placeholder}
+        thumbTintColor={theme.colors.secondary}
+        value={volume}
+        onSlidingComplete={handleSetVolume}
+        //
+      />
+    </>
+  );
+
+  const renderTransport = () => (
+    <Row flexDirection="row">
+      <BaseButton
+        onPress={handleSeekRewind}
+        accessibilityRole="button"
+        accessibilityLabel={t('player.rewind')}>
+        <Image
+          source={Images.RewindButton}
+          style={{
+            borderRadius: 100,
+            width: SKIP_BUTTON_SIZE,
+            height: SKIP_BUTTON_SIZE,
+            elevation: 7,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: {
+              width: 0,
+              height: 0,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 15,
+          }}
+        />
+      </BaseButton>
+      <SizedBox.Large width />
+      <BaseButton
+        onPress={handlePlayPause}
+        accessibilityRole="button"
+        accessibilityLabel={t(isPlaying ? 'player.pause' : 'player.play')}>
+        <Image
+          source={isPlaying ? Images.PauseButton : Images.PlayButton}
+          style={{
+            borderRadius: 100,
+            width: PLAY_BUTTON_SIZE,
+            height: PLAY_BUTTON_SIZE,
+            elevation: 7,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: {
+              width: 0,
+              height: 0,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 15,
+          }}
+        />
+      </BaseButton>
+      <SizedBox.Large width />
+      <BaseButton
+        onPress={handleSeekForward}
+        accessibilityRole="button"
+        accessibilityLabel={t('player.forward')}>
+        <Image
+          source={Images.ForwardButton}
+          style={{
+            borderRadius: 100,
+            width: SKIP_BUTTON_SIZE,
+            height: SKIP_BUTTON_SIZE,
+            elevation: 7,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: {
+              width: 0,
+              height: 0,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 15,
+          }}
+        />
+      </BaseButton>
+    </Row>
+  );
+
   const renderController = () => {
     return (
       <Animated.View
@@ -194,98 +319,17 @@ export default function VideoControl({
           width: controllerWidth,
           opacity: Platform.OS === 'android' ? 1 : opacityValue,
         }}>
-        <Row>
-          <Expanded flexDirection="row">
-            {/* <Icons.VideoVolumebtn /> */}
-            <Image
-              source={Images.VolumeButton}
-              style={{ width: 36, height: 36 }}
-              accessible={false}
-              importantForAccessibility="no"
-            />
-            <SizedBox.Large width />
-            <Slider
-              accessibilityLabel={t('player.volume')}
-              style={{ width: volumeSliderWidth, height: 40 }}
-              minimumValue={0}
-              maximumValue={1}
-              minimumTrackTintColor={theme.colors.secondary}
-              maximumTrackTintColor={theme.colors.placeholder}
-              thumbTintColor={theme.colors.secondary}
-              value={volume}
-              onSlidingComplete={handleSetVolume}
-              //
-            />
-          </Expanded>
-          <Row flexDirection="row">
-            <BaseButton
-              onPress={handleSeekRewind}
-              accessibilityRole="button"
-              accessibilityLabel={t('player.rewind')}>
-              <Image
-                source={Images.RewindButton}
-                style={{
-                  borderRadius: 100,
-                  width: 55,
-                  height: 55,
-                  elevation: 7,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: {
-                    width: 0,
-                    height: 0,
-                  },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 15,
-                }}
-              />
-            </BaseButton>
-            <SizedBox.Large width />
-            <BaseButton
-              onPress={handlePlayPause}
-              accessibilityRole="button"
-              accessibilityLabel={t(isPlaying ? 'player.pause' : 'player.play')}>
-              <Image
-                source={isPlaying ? Images.PauseButton : Images.PlayButton}
-                style={{
-                  borderRadius: 100,
-                  width: 65,
-                  height: 65,
-                  elevation: 7,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: {
-                    width: 0,
-                    height: 0,
-                  },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 15,
-                }}
-              />
-            </BaseButton>
-            <SizedBox.Large width />
-            <BaseButton
-              onPress={handleSeekForward}
-              accessibilityRole="button"
-              accessibilityLabel={t('player.forward')}>
-              <Image
-                source={Images.ForwardButton}
-                style={{
-                  borderRadius: 100,
-                  width: 55,
-                  height: 55,
-                  elevation: 7,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: {
-                    width: 0,
-                    height: 0,
-                  },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 15,
-                }}
-              />
-            </BaseButton>
+        {isCompact ? (
+          <Row justifyContent="center">{renderTransport()}</Row>
+        ) : (
+          <Row>
+            <Expanded flexDirection="row">
+              {renderVolume(volumeSliderWidth)}
+            </Expanded>
+            {renderTransport()}
+            <Expanded />
           </Row>
-          <Expanded />
-        </Row>
+        )}
         <Row justifyContent="center">
           <H4>{readableSeekPosition}</H4>
           <SizedBox.Large width />
@@ -309,6 +353,14 @@ export default function VideoControl({
           <SizedBox.Large width />
           <H4>{`${readableDuration}`}</H4>
         </Row>
+        {isCompact && (
+          <>
+            <SizedBox.Medium height />
+            <Row justifyContent="center">
+              {renderVolume(Math.min(240, controllerWidth * 0.5))}
+            </Row>
+          </>
+        )}
       </Animated.View>
     );
   };

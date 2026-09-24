@@ -187,7 +187,18 @@ export default function LessonScreen() {
     if (_.isEmpty(video.current)) return;
     const isPlaying = methods.getValues('stat.isPlaying');
     if (!isPlaying) {
-      await video.current.playAsync();
+      const durationMillis = methods.getValues('stat.durationMillis');
+      const positionMillis = methods.getValues('stat.positionMillis');
+      // At the end of the clip playAsync() is a no-op; restart from 0:00.
+      if (
+        typeof durationMillis === 'number' &&
+        durationMillis > 0 &&
+        positionMillis >= durationMillis - 250
+      ) {
+        await video.current.replayAsync();
+      } else {
+        await video.current.playAsync();
+      }
       methods.setValue('stat.isPlaying', true);
     } else {
       await video.current.pauseAsync();
@@ -279,9 +290,11 @@ export default function LessonScreen() {
   // LayoutScrollView still wraps screens in React Native's SafeAreaView,
   // which is a no-op on Android, so this top-aligned box renders under the
   // status bar and the close button lands behind it. Pad the player down by
-  // the real inset. Landscape keeps its full-window player, where the inset
-  // is 0 anyway.
-  const playerTopInset = isCorporatePortrait ? insets.top : 0;
+  // the real inset. On iOS, SafeAreaView already pads, so this is excluded
+  // to avoid double inset. Landscape keeps its full-window player, where the
+  // inset is 0 anyway.
+  const playerTopInset =
+    isCorporatePortrait && Platform.OS === 'android' ? insets.top : 0;
   const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
   const canvasJustify = isCorporatePortrait
     ? 'flex-start'
@@ -312,7 +325,11 @@ export default function LessonScreen() {
           isLooping={false}
           resizeMode={ResizeMode.CONTAIN}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          progressUpdateIntervalMillis={5000}
+          // Position drives the elapsed label and the scrubber's
+          // accessibilityValue, so at 5 s a 10 s clip sat at 0:00 for most of
+          // playback. Progress is saved on unmount, not per update, so a
+          // faster interval does not save more often.
+          progressUpdateIntervalMillis={1000}
           onError={e => {
             console.log('Video Error: ', e);
             // Load failure is the other "no playable media" signal (a

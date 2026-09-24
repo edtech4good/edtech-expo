@@ -4,13 +4,13 @@ import {
   FilledButton,
   H3,
   H4,
-  IconButton,
   OutlineButton,
   Row,
   SizedBox,
 } from '@/components';
 import { View } from 'react-native';
 import { useTheme } from 'styled-components/native';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   header: string;
@@ -24,6 +24,7 @@ export default function ResumeVideoPopUp({
   onResume = () => undefined,
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -39,18 +40,18 @@ export default function ResumeVideoPopUp({
         {header}
       </H3>
       <H4 fontWeight="semi">
-        Would you like to resume from your previous session?
+        {t('resumeVideo.question')}
       </H4>
 
       <SizedBox.Large height />
       <SizedBox.Large height />
       <Row>
         <Expanded>
-          <OutlineButton onPress={onClose}>No</OutlineButton>
+          <OutlineButton onPress={onClose}>{t('button.no')}</OutlineButton>
         </Expanded>
         <SizedBox.Large width />
         <Expanded>
-          <FilledButton onPress={onResume}>Yes</FilledButton>
+          <FilledButton onPress={onResume}>{t('button.yes')}</FilledButton>
         </Expanded>
       </Row>
     </View>

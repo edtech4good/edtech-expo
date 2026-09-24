@@ -15,6 +15,9 @@
     "seek": "Video position",
     "elapsedOfTotal": "{{elapsed}} of {{total}}"
   },
+  "resumeVideo": {
+    "question": "Would you like to resume from your previous session?"
+  },
   "drawer": {
     "home": "Home",
     "profile": "Profile",
