@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Placeholder, non-secret values for a build check only — the web export
+  # does not need real backends, and these are never used to reach one.
+  EXPO_PUBLIC_ENV: CI
+  EXPO_PUBLIC_ACCESS_TYPE: online
+  EXPO_PUBLIC_BASE_URL: http://localhost:3001
+  EXPO_PUBLIC_SYNC_URL: http://localhost:3000
+  EXPO_PUBLIC_RESOURCE_URL: http://localhost:8081
+  EXPO_PUBLIC_RESOURCE_PATH: media
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Typecheck (held at baseline)
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          bash scripts/tsc-guard.sh
+
+      - name: Theme parity
+        run: yarn test:themes
+
+      - name: Web export (build check)
+        run: npx expo export -p web --output-dir /tmp/expo-web-export
+
+  audit:
+    name: audit (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: yarn audit (critical, report only)
+        run: |
+          yarn audit --level critical > audit.txt 2>&1 || true
+          cat audit.txt
+          { echo "### yarn audit (report only)"; echo '```'; tail -n 80 audit.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
