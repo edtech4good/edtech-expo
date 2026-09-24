@@ -307,7 +307,24 @@ export default function LessonScreen() {
       backgroundColor={canvasColor}
       justifyContent={canvasJustify}>
       <FormProvider {...methods}>
+        {/*
+          key={source}: one native player per source. useLearning's source
+          is '' on mount and the real URL once fetch() lands, and expo-av
+          13.10 on Android loses the progress interval when a mounted
+          <Video> changes source: VideoView.setSource (VideoView.java:338)
+          carries the old player's getStatus() into the new one, and
+          getStatus() stores progressUpdateIntervalMillis with putInt
+          (PlayerData.java:443) while setStatusWithListener reads it back
+          with getDouble (PlayerData.java:318-319). Bundle.getDouble on an
+          Integer returns 0.0, so the interval becomes 0 and ProgressLooper
+          never schedules a tick: no periodic status while playing, and the
+          elapsed label and scrubber sat at 0:00 until pause or end. The
+          `status` prop cannot repair it because React only re-sends it when
+          its contents change. A fresh native view per source starts from
+          the prop's own interval instead.
+        */}
         <Video
+          key={source}
           ref={video}
           style={{
             width: playerWidth,
@@ -326,9 +343,11 @@ export default function LessonScreen() {
           resizeMode={ResizeMode.CONTAIN}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
           // Position drives the elapsed label and the scrubber's
-          // accessibilityValue, so at 5 s a 10 s clip sat at 0:00 for most of
-          // playback. Progress is saved on unmount, not per update, so a
-          // faster interval does not save more often.
+          // accessibilityValue; at 5000 ms they moved in 5 s jumps. 1000 ms
+          // matches the label's whole-second resolution. (The 0:00-for-the-
+          // whole-clip bug on Android was the lost interval fixed by `key`
+          // above, not this value.) Progress is saved on unmount, not per
+          // update, so a faster interval does not save more often.
           progressUpdateIntervalMillis={1000}
           onError={e => {
             console.log('Video Error: ', e);
