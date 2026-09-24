@@ -76,6 +76,9 @@ export default function LessonScreen() {
   } = useLearning(lessonLearningId);
   // const {retrieveFile}  = useSetting();
   const [isVisible, setIsVisible] = React.useState(false);
+  // The learning item the resume prompt has been offered for on this mount
+  // (see handleResumeProgress).
+  const resumeOfferedForRef = React.useRef<string | null>(null);
   // Media-less learning items (corporate/DCRS content seeded as video items
   // whose file does not exist) earn their learning points on open rather
   // than on "watched to the end" — real videos keep the watched-to-end rule
@@ -176,6 +179,17 @@ export default function LessonScreen() {
       learningResource.studentlearningprogress.progress < 5000
     )
       return;
+    // Offer the prompt once per learning item. The effect above refires
+    // whenever video.current changes, and key={source} on the <Video>
+    // changes it once per open: learningResource lands (redux, its own
+    // render) while source is still '', the prompt shows against that
+    // player, then source lands and the key mounts a new one. The effect
+    // only sees the new ref on the next render, which is the one the
+    // learner's No/Yes causes, so without this guard the prompt reopened
+    // after every first tap (web, 15 of 15 opens).
+    if (resumeOfferedForRef.current === learningResource.lessonlearningid)
+      return;
+    resumeOfferedForRef.current = learningResource.lessonlearningid;
     setIsVisible(true);
   };
 
