@@ -1,4 +1,4 @@
-import { DrawerButton, LearnerBackButton } from '@/components';
+import { BackButton, DrawerButton, LearnerBackButton } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getResourcePath } from '@/redux/slices';
 import { useDesign, useFont, useNavShell, useSetting } from '@/services';
@@ -40,10 +40,9 @@ export default function HomeStack() {
     : undefined;
 
   // Web only: a reload or a direct link rebuilds the stack with one entry,
-  // and the stock header draws nothing when there's no history. Gating on
-  // web keeps the kids native screens byte-identical (handoff rule) — a
-  // native deep link into one of these screens would hit the same
-  // one-entry gap, which we accept for now.
+  // and the stock header draws nothing when there's no history. A native
+  // deep link hits the same one-entry gap (canGoBack is false, so the
+  // default headerLeft below renders nothing), which we accept for now.
   const learnerBackFor = (fallback: string) =>
     Platform.OS === 'web'
       ? { headerLeft: () => <LearnerBackButton fallback={fallback} /> }
@@ -61,6 +60,20 @@ export default function HomeStack() {
         },
         headerTitleAlign: 'center',
         headerRight: isDrawer ? () => <DrawerButton /> : undefined,
+        // F-12: on Android, react-native-screens can't relabel the stock
+        // native-stack back button (setBackTitle is a no-op there), so it
+        // keeps the OS's own English "Navigate up" even in the Khmer UI.
+        // Render our own labelled BackButton instead — only when there's
+        // somewhere to go back to, so the first screen in the stack stays
+        // headerLeft-less. Web keeps its existing per-screen behaviour
+        // (learnerBackFor's reload fallback, or the stock web back button
+        // where that isn't set) untouched.
+        ...(Platform.OS !== 'web'
+          ? {
+              headerLeft: ({ canGoBack }) =>
+                canGoBack ? <BackButton /> : null,
+            }
+          : {}),
       }}>
       <Stack.Screen
         name="subjects"
