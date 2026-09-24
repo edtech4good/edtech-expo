@@ -76,6 +76,9 @@ export default function LessonScreen() {
   } = useLearning(lessonLearningId);
   // const {retrieveFile}  = useSetting();
   const [isVisible, setIsVisible] = React.useState(false);
+  // The learning item the resume prompt has been offered for on this mount
+  // (see handleResumeProgress).
+  const resumeOfferedForRef = React.useRef<string | null>(null);
   // Media-less learning items (corporate/DCRS content seeded as video items
   // whose file does not exist) earn their learning points on open rather
   // than on "watched to the end" — real videos keep the watched-to-end rule
@@ -176,6 +179,17 @@ export default function LessonScreen() {
       learningResource.studentlearningprogress.progress < 5000
     )
       return;
+    // Offer the prompt once per learning item. The effect above refires
+    // whenever video.current changes, and key={source} on the <Video>
+    // changes it once per open: learningResource lands (redux, its own
+    // render) while source is still '', the prompt shows against that
+    // player, then source lands and the key mounts a new one. The effect
+    // only sees the new ref on the next render, which is the one the
+    // learner's No/Yes causes, so without this guard the prompt reopened
+    // after every first tap (web, 15 of 15 opens).
+    if (resumeOfferedForRef.current === learningResource.lessonlearningid)
+      return;
+    resumeOfferedForRef.current = learningResource.lessonlearningid;
     setIsVisible(true);
   };
 
@@ -187,7 +201,18 @@ export default function LessonScreen() {
     if (_.isEmpty(video.current)) return;
     const isPlaying = methods.getValues('stat.isPlaying');
     if (!isPlaying) {
-      await video.current.playAsync();
+      const durationMillis = methods.getValues('stat.durationMillis');
+      const positionMillis = methods.getValues('stat.positionMillis');
+      // At the end of the clip playAsync() is a no-op; restart from 0:00.
+      if (
+        typeof durationMillis === 'number' &&
+        durationMillis > 0 &&
+        positionMillis >= durationMillis - 250
+      ) {
+        await video.current.replayAsync();
+      } else {
+        await video.current.playAsync();
+      }
       methods.setValue('stat.isPlaying', true);
     } else {
       await video.current.pauseAsync();
@@ -279,9 +304,11 @@ export default function LessonScreen() {
   // LayoutScrollView still wraps screens in React Native's SafeAreaView,
   // which is a no-op on Android, so this top-aligned box renders under the
   // status bar and the close button lands behind it. Pad the player down by
-  // the real inset. Landscape keeps its full-window player, where the inset
-  // is 0 anyway.
-  const playerTopInset = isCorporatePortrait ? insets.top : 0;
+  // the real inset. On iOS, SafeAreaView already pads, so this is excluded
+  // to avoid double inset. Landscape keeps its full-window player, where the
+  // inset is 0 anyway.
+  const playerTopInset =
+    isCorporatePortrait && Platform.OS === 'android' ? insets.top : 0;
   const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
   const canvasJustify = isCorporatePortrait
     ? 'flex-start'
@@ -294,7 +321,24 @@ export default function LessonScreen() {
       backgroundColor={canvasColor}
       justifyContent={canvasJustify}>
       <FormProvider {...methods}>
+        {/*
+          key={source}: one native player per source. useLearning's source
+          is '' on mount and the real URL once fetch() lands, and expo-av
+          13.10 on Android loses the progress interval when a mounted
+          <Video> changes source: VideoView.setSource (VideoView.java:338)
+          carries the old player's getStatus() into the new one, and
+          getStatus() stores progressUpdateIntervalMillis with putInt
+          (PlayerData.java:443) while setStatusWithListener reads it back
+          with getDouble (PlayerData.java:318-319). Bundle.getDouble on an
+          Integer returns 0.0, so the interval becomes 0 and ProgressLooper
+          never schedules a tick: no periodic status while playing, and the
+          elapsed label and scrubber sat at 0:00 until pause or end. The
+          `status` prop cannot repair it because React only re-sends it when
+          its contents change. A fresh native view per source starts from
+          the prop's own interval instead.
+        */}
         <Video
+          key={source}
           ref={video}
           style={{
             width: playerWidth,
@@ -312,7 +356,13 @@ export default function LessonScreen() {
           isLooping={false}
           resizeMode={ResizeMode.CONTAIN}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          progressUpdateIntervalMillis={5000}
+          // Position drives the elapsed label and the scrubber's
+          // accessibilityValue; at 5000 ms they moved in 5 s jumps. 1000 ms
+          // matches the label's whole-second resolution. (The 0:00-for-the-
+          // whole-clip bug on Android was the lost interval fixed by `key`
+          // above, not this value.) Progress is saved on unmount, not per
+          // update, so a faster interval does not save more often.
+          progressUpdateIntervalMillis={1000}
           onError={e => {
             console.log('Video Error: ', e);
             // Load failure is the other "no playable media" signal (a

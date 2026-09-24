@@ -15,6 +15,9 @@
     "seek": "ទីតាំងវីដេអូ",
     "elapsedOfTotal": "{{elapsed}} ក្នុងចំណោម {{total}}"
   },
+  "resumeVideo": {
+    "question": "តើអ្នកចង់បន្តពីកន្លែងដែលបានឈប់លើកមុនទេ?"
+  },
   "drawer": {
     "home": "ទំព័រដើម",
     "profile": "ប្រវត្តិរូប",
