@@ -4,7 +4,7 @@ import { ThemeTokens } from './types';
 // replaced on 22 Sep 2026 by the design system's cool periwinkle/lavender/
 // violet family; every other value is the historical palette.
 const colors: ThemeTokens['colors'] = {
-  primary: '#0B5FFF',
+  primary: '', // TEMP: mutation-proof for the theme parity CI check (reverted immediately after)
   primaryLight: '#E7EFFF',
   primaryDark: '#0843B2',
   primaryPressed: '#0843B2',
