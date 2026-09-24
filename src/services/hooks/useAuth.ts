@@ -133,3 +133,6 @@ export default function useAuth() {
 
   return { login, logout, isLogginIn, profile, error, setError };
 }
+
+// TEMP: mutation-proof for the tsc-guard CI check (reverted immediately after)
+const __ci_mutation_type_error: number = "this is not a number";
