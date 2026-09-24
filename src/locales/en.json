@@ -76,7 +76,18 @@
       "lessonsProgress": "{{done}} of {{total}} lessons",
       "lessonCountMeta": "{{count}} lessons",
       "lessonChip": "Lesson {{n}}",
-      "continueLearning": "Continue learning"
+      "continueLearning": "Continue learning",
+      "lessonRowStatus": {
+        "done": "Completed",
+        "next": "Up next",
+        "todo": "Not started"
+      },
+      "stepState": {
+        "done": "done",
+        "current": "in progress",
+        "todo": "not started"
+      },
+      "stepFormat": "{{step}} ({{state}})"
     },
     "lesson": {
       "header": "Lessons",

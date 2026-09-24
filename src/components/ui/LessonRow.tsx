@@ -8,9 +8,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, Polygon } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
+import { useTranslation } from 'react-i18next';
 
 import EyebrowText from './EyebrowText';
-import LessonStepDots, { LessonStepDotsProps } from './LessonStepDots';
+import LessonStepDots, { LessonStepDotsProps, describeSteps } from './LessonStepDots';
 
 export type LessonRowStatus = 'done' | 'next' | 'todo';
 
@@ -77,6 +78,10 @@ function StatusDisc({ status }: { status: LessonRowStatus }) {
  * The up-next row gets the design's 2px primary border + glow. There is no
  * locked state on purpose — the product has no lesson gating today, and a
  * lock that doesn't lock would mislead.
+ *
+ * F-05: Lesson row status and step states are conveyed via accessibility labels
+ * (not color alone). The row's explicit label includes the lesson chip, title,
+ * row status, and step states formatted for screen readers.
  */
 export default function LessonRow({
   chipLabel,
@@ -87,7 +92,13 @@ export default function LessonRow({
 }: LessonRowProps) {
   const theme = useTheme();
   const titleFontFamily = useFont('semi', 'body');
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
+
+  // F-05: Build an accessible label combining row status and step states.
+  const rowStatusText = t(`screen.level.lessonRowStatus.${status}`);
+  const stepsDescription = describeSteps(steps, t);
+  const accessibilityLabel = `${chipLabel}, ${title}, ${rowStatusText}, ${stepsDescription}`;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -110,6 +121,8 @@ export default function LessonRow({
           scale.value = withTiming(1, { duration: 180, easing: PRESS_EASING });
       }}
       disabled={!onPress}
+      accessible
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole={onPress ? 'button' : undefined}
       style={[
         {
@@ -161,7 +174,7 @@ export default function LessonRow({
           {title}
         </Text>
       </View>
-      <LessonStepDots steps={steps} />
+      <LessonStepDots steps={steps} standalone={false} />
     </AnimatedPressable>
   );
 }
