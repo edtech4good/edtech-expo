@@ -1,3 +1,4 @@
+import { Insets } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styled, { useTheme } from 'styled-components/native';
 
@@ -52,6 +53,12 @@ interface Props extends ButtonProps {
 
   accessibilityLabel?: string;
 
+  // Forwarded to the underlying Pressable untouched — lets a caller (e.g.
+  // BackButton) grow the touch target past the visual icon without
+  // affecting layout. Optional and undefined by default so every other
+  // IconButton keeps today's touch target (the view's own bounds).
+  hitSlop?: Insets;
+
   onPress?: () => void;
 }
 
@@ -69,6 +76,7 @@ export default function IconButton({
   badgeCount = 0,
   style = {},
   accessibilityLabel,
+  hitSlop,
   onPress = () => undefined,
 }: Props) {
   const theme = useTheme();
@@ -84,6 +92,7 @@ export default function IconButton({
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
+      hitSlop={hitSlop}
       accessibilityRole="button">
       {/* <Icon IconAsset={icon} color={iconColor} size={iconSize} /> */}
       <MaterialCommunityIcons
