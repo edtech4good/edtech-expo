@@ -1,19 +1,12 @@
 {
-  "extends": "expo/tsconfig-does-not-exist-ci-mutation.base",
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "types/*": [
-        "./@types/*"
-      ]
+      "@/*": ["src/*"],
+      "types/*": ["./@types/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ]
+  "include": ["**/*.ts", "**/*.tsx"]
 }
