@@ -123,10 +123,10 @@ export default function ContinueLearningRow({
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text
-          numberOfLines={1}
           style={{
             fontFamily: titleFontFamily,
             fontSize: 13,
+            lineHeight: 20,
             color: theme.colors.onSurface,
           }}>
           {title}

@@ -97,7 +97,6 @@ export default function LessonItem({
         <H6
           color={theme.colors.onSurface}
           fontWeight="bold"
-          numberOfLines={1}
           style={{ width: 195 }}>
           {title}
         </H6>

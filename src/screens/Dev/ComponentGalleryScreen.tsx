@@ -436,6 +436,33 @@ export default function ComponentGalleryScreen() {
               </View>
             </Swatch>
           </Row>
+          <Row>
+            <Swatch label="continue learning row / long English title (wrap test)">
+              <View style={{ width: 320 }}>
+                <ContinueLearningRow
+                  title="Animation: No plan vs clear vision — why direction matters for a growing business"
+                  progress={0.75}
+                  meta="75% · LESSON 5 OF 12"
+                  onPress={() => {}}
+                />
+              </View>
+            </Swatch>
+          </Row>
+          {/* Khmer on purpose, unlike the rest of this gallery: Khmer has no
+              spaces between words and stacks vowels above and below the
+              line, so an ASCII title can't show clipping or a missed break. */}
+          <Row>
+            <Swatch label="continue learning row / long Khmer title (wrap test)">
+              <View style={{ width: 320 }}>
+                <ContinueLearningRow
+                  title="វីដេអូ៖ ហេតុអ្វីបានជាទិសដៅសំខាន់សម្រាប់អាជីវកម្មដែលកំពុងរីកចម្រើន"
+                  progress={0.5}
+                  meta="50% · LESSON 8 OF 14"
+                  onPress={() => {}}
+                />
+              </View>
+            </Swatch>
+          </Row>
         </Section>
 
         <Section title="Toast + offline banner">
