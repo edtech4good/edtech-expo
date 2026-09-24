@@ -57,7 +57,7 @@ elif [[ "$count" -eq 0 && "$tsc_exit" -ne 0 ]]; then
   crash_reason="tsc exited $tsc_exit but reported 0 'error TS' lines — the compiler run itself failed before it could produce diagnostics"
 elif grep -qE "error TS(5[0-9]{3}|6053)" "$tsc_output"; then
   crashed=1
-  crash_reason="tsc reported a config-level error (TS5xxx/TS6053) — this is a broken tsconfig, not a source type error, and it stops the compiler after producing only that one diagnostic"
+  crash_reason="tsc reported a config-level error (TS5xxx/TS6053); the remaining diagnostics are unreliable, so this is treated as a crash"
 fi
 
 if [[ "$crashed" -eq 1 ]]; then
@@ -73,9 +73,7 @@ if [[ "$count" -gt "$baseline" ]]; then
   echo ""
   echo "tsc-guard: FAILED — error count ($count) exceeds the baseline ($baseline)."
   echo "tsc-guard: this PR introduced new type errors, or removed a suppression"
-  echo "tsc-guard: that was hiding one. Fix the new error(s), or if this PR"
-  echo "tsc-guard: intentionally reduces the backlog, lower the number in"
-  echo "tsc-guard: scripts/tsc-baseline-count to the new (smaller) count."
+  echo "tsc-guard: that was hiding one. Fix the new error(s)."
   exit 1
 fi
 
