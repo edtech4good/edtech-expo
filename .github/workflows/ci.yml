@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Placeholder, non-secret values for a build check only — the web export
@@ -25,8 +25,8 @@ env:
 
 jobs:
   ci:
-    name: build checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +41,9 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Typecheck (held at baseline)
-        run: bash scripts/tsc-guard.sh
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          bash scripts/tsc-guard.sh
 
       - name: Theme parity
         run: yarn test:themes
@@ -52,7 +54,7 @@ jobs:
   audit:
     name: audit (report only)
     runs-on: ubuntu-latest
-    continue-on-error: true
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,5 +68,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: yarn audit (critical, non-blocking)
-        run: yarn audit --level critical
+      - name: yarn audit (critical, report only)
+        run: |
+          yarn audit --level critical > audit.txt 2>&1 || true
+          cat audit.txt
+          { echo "### yarn audit (report only)"; echo '```'; tail -n 80 audit.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
