@@ -75,7 +75,18 @@
       "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
       "lessonCountMeta": "មេរៀន {{count}}",
       "lessonChip": "មេរៀនទី {{n}}",
-      "continueLearning": "បន្តការសិក្សា"
+      "continueLearning": "បន្តការសិក្សា",
+      "lessonRowStatus": {
+        "done": "បានបញ្ចប់",
+        "next": "បន្ទាប់",
+        "todo": "មិនទាន់ចាប់ផ្ដើម"
+      },
+      "stepState": {
+        "done": "បានបញ្ចប់",
+        "current": "កំពុងសិក្សា",
+        "todo": "មិនទាន់ចាប់ផ្ដើម"
+      },
+      "stepFormat": "{{step}} ({{state}})"
     },
     "lesson": {
       "header": "លំហាត់",
