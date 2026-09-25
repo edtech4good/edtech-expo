@@ -82,7 +82,7 @@ The web build is a static export:
 yarn build:web    # expo export -p web, output in dist/
 ```
 
-We serve that export with nginx from a Docker image. The `deploy:staging` and `deploy:prod` scripts push it to Firebase Hosting instead, and `firebase.json` is set up for two hosting targets, but the target names in the scripts are still placeholders. Copy `.firebaserc.example` to `.firebaserc` and fix the `select:*` scripts if you want that path.
+The static export is served with nginx from a Docker image (see `deploy/edtech-expo-web.Dockerfile`).
 
 ## Layout
 
@@ -101,8 +101,7 @@ src/
 assets/               # Icons, fonts, splash
 public/media/         # Media the demo seeds generate, served by Metro locally
 env.example
-eas.json, eas.example.json
-firebase.json, .firebaserc.example
+eas.json
 ```
 
 ## Contributing
