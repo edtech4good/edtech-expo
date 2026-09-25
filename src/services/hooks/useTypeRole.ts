@@ -4,7 +4,7 @@ import { useTheme } from 'styled-components/native';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { FontRole } from '@/constants';
-import { TypeScaleRole } from '@/themes/tokens/types';
+import { ThemeTypeScale, TypeScaleRole } from '@/themes/tokens/types';
 
 import useFont from './useFont';
 import useNavShell from './useNavShell';
@@ -46,16 +46,15 @@ export default function useTypeRole(role: TypeScaleRole): TypeRoleResult {
   const { isRail } = useNavShell();
 
   const formFactor: 'phone' | 'tablet' = isRail ? 'tablet' : 'phone';
-  // Dropped the `as 'en' | 'km'` cast that used to sit here: it wasn't
-  // narrowing anything useful (selectedLanguage indexes theme.typeScale
-  // the same way with or without it — the pre-existing implicit-any this
-  // surfaces, TS7053, matches the same pattern already in useFont.ts and
-  // the legacy text components' language-keyed font lookups, and is on
-  // the tsc-guard baseline). The real safety net is this `?? en` runtime
-  // fallback: it covers any language theme.typeScale doesn't have an
-  // entry for (e.g. a future locale added to redux before its scale is)
-  // by falling back to English instead of indexing into undefined.
-  const languageScale = theme.typeScale[selectedLanguage] ?? theme.typeScale.en;
+  // `selectedLanguage` comes back typed `any` (RootState is inferred from a
+  // reducer typed `state: any`), so without an explicit narrowing step here
+  // `theme.typeScale[selectedLanguage]` indexes with `any` and TS can't catch
+  // a bad key — that's what surfaces as TS7053 once the old cast is removed.
+  // Narrowing to the known locales keeps the index type-safe *and* gives any
+  // locale that isn't 'km' (including a future one redux knows about before
+  // theme.typeScale does) an English fallback.
+  const lang: keyof ThemeTypeScale = selectedLanguage === 'km' ? 'km' : 'en';
+  const languageScale = theme.typeScale[lang];
   const spec = languageScale[formFactor][role];
 
   const fontFamily = useFont(spec.weight, FAMILY_ROLE_BY_TYPE_ROLE[role]);

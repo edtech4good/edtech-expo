@@ -116,8 +116,11 @@ const Label = styled.Text<{ $fontFamily: string; $isKhmer: boolean }>`
   font-family: ${p => p.$fontFamily};
   font-size: 13px;
   /* Khmer label spec (v2.1): 13/20 line height (>=1.5x). English keeps its
-     natural leading. */
-  line-height: ${p => (p.$isKhmer ? '20px' : 'normal')};
+     natural leading — omit the declaration rather than emit 'normal', which
+     css-to-react-native turns into the string lineHeight: "normal" and
+     crashes Android (old architecture, RN 0.73) with
+     UnexpectedNativeTypeException. */
+  ${p => (p.$isKhmer ? 'line-height: 20px;' : '')}
   color: ${p => p.theme.colors.onSurfaceVariant};
   margin-bottom: 6px;
 `;
@@ -160,8 +163,11 @@ const Input = styled.TextInput<{
   font-family: ${p => p.$fontFamily};
   font-size: 15px;
   /* Khmer input spec (v2.1): ~24px line height (>=1.5x fontSize). English
-     keeps its natural leading. */
-  line-height: ${p => (p.$isKhmer ? '24px' : 'normal')};
+     keeps its natural leading — omit the declaration rather than emit
+     'normal', which css-to-react-native turns into the string
+     lineHeight: "normal" and crashes Android (old architecture, RN 0.73)
+     with UnexpectedNativeTypeException. */
+  ${p => (p.$isKhmer ? 'line-height: 24px;' : '')}
   color: ${p => p.$color};
 `;
 
