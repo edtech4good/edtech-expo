@@ -154,26 +154,3 @@ export function ChevronIcon({ size = 20, color, testID }: ChevronIconProps) {
     </Svg>
   );
 }
-
-/** Left-pointing "‹" glyph for the corporate app bar's back button (handoff
- * §3: "back chevron only, no title text"). Mirror of `ChevronIcon`. */
-export function BackChevronIcon({ size = 20, color, testID }: ChevronIconProps) {
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      accessible={false}
-      importantForAccessibility="no-hide-descendants"
-      testID={testID}>
-      <Path
-        d="M15 5l-7 7 7 7"
-        stroke={color}
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </Svg>
-  );
-}
