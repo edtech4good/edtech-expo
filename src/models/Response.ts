@@ -7,6 +7,7 @@ import {
   LessonQuizResource,
 } from './Lesson';
 import { Level } from './Level';
+import { LibraryCurriculum } from './Library';
 import {
   StudentOverallProgress,
   StudentProfile,
@@ -78,6 +79,16 @@ export interface StandardResponse {
 
 export interface CurriculumResponse {
   data: Curriculum[];
+}
+
+// GET level/library — every level the learner has access to, grouped by
+// curriculum → grade. See src/models/Library.ts for the nested shapes.
+export interface LibraryResponse {
+  data: {
+    generated_at: string;
+    curricula: LibraryCurriculum[];
+  };
+  error: boolean;
 }
 
 export interface TeacherProfileResponse {

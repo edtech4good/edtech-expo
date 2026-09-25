@@ -10,6 +10,7 @@ export { default as StudentProfileScreen } from './StudentProfile/StudentProfile
 export { default as SubjectSelectionScreen } from './SubjectSelection/SubjectSelectionScreen';
 export { default as UnitSelectionScreen } from './UnitSelection/UnitSelectionScreen';
 export { default as LevelSelectionScreen } from './LevelSelection/LevelSelectionScreen';
+export { default as LibraryScreen } from './Library/LibraryScreen';
 export { default as StartScreen } from './Start/StartScreen';
 export { default as TeacherDashboardScreen } from './TeacherDashboard/TeacherDashboardScreen';
 export { default as TeacherTestScoreScreen } from './TeacherTestScore/TeacherTestScoreScreen';

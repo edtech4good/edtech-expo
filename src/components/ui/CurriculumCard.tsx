@@ -23,7 +23,14 @@ export interface CurriculumCardProps {
   meta?: string;
   /** 0–1. When present, shows a progress bar under the meta plus an overlaid "NN%" pill. */
   progress?: number;
+  /** Optional line under the progress bar, e.g. "3 of 8 lessons" (Library). Omit to skip. */
+  footer?: string;
+  /** Caps the `meta` line at this many lines (Library's meta can run long — level descriptions). Omit for Subjects/Courses/Units' unchanged, unlimited-line behavior. */
+  metaNumberOfLines?: number;
   onPress?: (event: GestureResponderEvent) => void;
+  testID?: string;
+  /** Overrides the Pressable's default accessibilityLabel (falls back to `title` alone). */
+  accessibilityLabel?: string;
 }
 
 const PRESS_EASING = Easing.bezier(0.22, 1, 0.36, 1);
@@ -37,7 +44,11 @@ export default function CurriculumCard({
   title,
   meta,
   progress,
+  footer,
+  metaNumberOfLines,
   onPress,
+  testID,
+  accessibilityLabel,
 }: CurriculumCardProps) {
   const theme = useTheme();
   const titleFontFamily = useFont('bold', 'display');
@@ -71,11 +82,13 @@ export default function CurriculumCard({
 
   return (
     <AnimatedPressable
+      testID={testID}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel ?? title}
       style={[
         {
           borderRadius: theme.radii.card,
@@ -136,7 +149,8 @@ export default function CurriculumCard({
           <View style={{ marginTop: 6 }}>
             <EyebrowText
               size={theme.fontSizes.caption}
-              color={theme.colors.onSurfaceVariant}>
+              color={theme.colors.onSurfaceVariant}
+              numberOfLines={metaNumberOfLines}>
               {meta}
             </EyebrowText>
           </View>
@@ -144,6 +158,15 @@ export default function CurriculumCard({
         {hasProgress && (
           <View style={{ marginTop: 8 }}>
             <ProgressBar progress={clampedProgress} height={5} />
+          </View>
+        )}
+        {footer != null && (
+          <View style={{ marginTop: 6 }}>
+            <EyebrowText
+              size={theme.fontSizes.caption}
+              color={theme.colors.onSurfaceVariant}>
+              {footer}
+            </EyebrowText>
           </View>
         )}
       </View>

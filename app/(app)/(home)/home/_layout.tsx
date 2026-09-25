@@ -2,7 +2,9 @@ import { BackButton, DrawerButton, LearnerBackButton } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getResourcePath } from '@/redux/slices';
 import { useDesign, useFont, useNavShell, useSetting } from '@/services';
-import { Stack } from 'expo-router';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import type { RouteProp, ParamListBase } from '@react-navigation/native';
+import { Stack, router } from 'expo-router';
 import _ from 'lodash';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -95,10 +97,47 @@ export default function HomeStack() {
       />
       <Stack.Screen
         name="levels"
-        options={{
-          title: t('screen.level.header'),
-          ...learnerBackFor('/home/units'),
-        }}
+        // expo-router's Screen typing declares `options` as a plain object
+        // (NativeStackNavigationOptions), but at runtime it forwards a
+        // function form straight through to the same underlying
+        // react-navigation Screen, which does support `options` as a
+        // function of `route`/`navigation` — see
+        // node_modules/expo-router/build/useScreens.js. Cast to bridge that
+        // typing gap without changing behavior.
+        options={(({ route }: { route: RouteProp<ParamListBase, string> }) => {
+          // Library isn't part of this drill-down Stack, so a level opened
+          // from it (LibraryScreen's `from: 'library'` param) has no
+          // back-stack entry pointing at Library — this stack's normal back
+          // handling (native default / web's LearnerBackButton fallback
+          // above) would instead pop to /home/units, the drill-down's
+          // parent, or — once the learner has actually browsed Subjects →
+          // Courses → Units — silently back into that history instead of
+          // Library, since LearnerBackButton only falls back when
+          // canGoBack() is false. So when opened `from: 'library'`,
+          // override the header back button with one that unconditionally
+          // navigates to /library — never router.back() — regardless of
+          // what's on this stack underneath, and disable the swipe-back
+          // gesture so it can't sneak past this override (LevelSelection-
+          // Screen's `beforeRemove` listener covers hardware back /
+          // swipe-back attempts that do get through). A normal drill-down
+          // visit (no `from` param) keeps the existing options untouched.
+          const fromLibrary = route.params
+            ? (route.params as { from?: string }).from === 'library'
+            : false;
+          if (fromLibrary) {
+            return {
+              title: t('screen.level.header'),
+              gestureEnabled: false,
+              headerLeft: () => (
+                <BackButton onPress={() => router.navigate('/library')} />
+              ),
+            };
+          }
+          return {
+            title: t('screen.level.header'),
+            ...learnerBackFor('/home/units'),
+          };
+        }) as unknown as NativeStackNavigationOptions}
       />
       <Stack.Screen
         name="lessons/index"

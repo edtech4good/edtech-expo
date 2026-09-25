@@ -4,6 +4,7 @@ import {
   courseSlice,
   lessonSlice,
   levelSlice,
+  librarySlice,
   selectionSlice,
   settingSlice,
   standardSlice,
@@ -25,4 +26,5 @@ export const combinedReducers = combineReducers({
   [selectionSlice.name]: selectionSlice.reducer,
   [standardSlice.name]: standardSlice.reducer,
   [pendingResultSlice.name]: pendingResultSlice.reducer,
+  [librarySlice.name]: librarySlice.reducer,
 });

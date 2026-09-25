@@ -9,3 +9,4 @@ export * from './ResultSlice';
 export * from './SelectionSlice';
 export * from './StandardSlice';
 export * from './PendingResultSlice';
+export * from './LibrarySlice';

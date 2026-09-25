@@ -13,6 +13,7 @@ import {
   LessonResponse,
   LevelIndexResponse,
   LevelResponse,
+  LibraryResponse,
   LmsLoginPayload,
   PracticeResult,
   QuizResult,
@@ -295,6 +296,14 @@ export default class Api {
     ApiResponse<CourseIndexResponse, CourseIndexResponse>
   > {
     return this.apiSauceInstance.get<CourseIndexResponse>('grade/all');
+  }
+
+  // Every level the learner has access to, grouped by curriculum → grade —
+  // powers the Library tab. responseTransform above throws on a non-ok
+  // response, so callers must catch (see useLibrary) rather than branch on
+  // response.ok the way useLevel/useUnit do.
+  async fetchLibrary(): Promise<ApiResponse<LibraryResponse, LibraryResponse>> {
+    return this.apiSauceInstance.get<LibraryResponse>('level/library');
   }
 
   // Fourth fetch Level using UnitId

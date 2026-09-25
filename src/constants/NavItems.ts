@@ -20,6 +20,34 @@ export const studentNavItems: Array<NavItem> = [
   },
 ];
 
+// Corporate-only variant of studentNavItems, adding the Library tab/rail
+// item (Jesse, 26 Sep: corporate nav = Home · Library · Profile). Kept
+// separate rather than adding Library to studentNavItems itself, because
+// that list is also read by the kids theme's CustomDrawer — the kids
+// drawer must not gain a Library entry. Only NavRail (corporate tablet)
+// reads this list; the corporate phone Tabs bar is configured directly in
+// app/(app)/(home)/_layout.tsx rather than from either list.
+export const corporateStudentNavItems: Array<NavItem> = [
+  {
+    title: 'drawer.home',
+    icon: 'home',
+    url: '/home/courses',
+    route: '/home/subjects',
+  },
+  {
+    title: 'drawer.library',
+    icon: 'local-library',
+    url: '/library',
+    route: '/library',
+  },
+  {
+    title: 'drawer.profile',
+    icon: 'account-circle',
+    url: '/profile',
+    route: '/profile',
+  },
+];
+
 export const teacherNavItems: Array<NavItem> = [
   {
     title: 'drawer.teacherDashboard',

@@ -57,6 +57,17 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
+          name="library/index"
+          options={{
+            title: t('drawer.library'),
+            tabBarTestID: 'tab-library',
+            tabBarAccessibilityLabel: t('drawer.library'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="local-library" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
             headerShown: true,
@@ -123,6 +134,26 @@ export default function Home() {
       <Drawer.Screen
         name="teacher/dashboard"
         options={{ headerShown: false }}
+      />
+      <Drawer.Screen
+        name="library/index"
+        // headerShown: false only for the corporate rail — LibraryScreen
+        // renders its own "Library" title there, and the rail itself is the
+        // permanent nav. The kids theme reaches this same Drawer branch
+        // (see useNavShell: isDrawer is the "neither rail nor tabs" case)
+        // but has no rail and no nav entry point to Library today — a kids
+        // learner who still lands here (e.g. a stale deep link) previously
+        // got a headerless dead end with no way back except an edge-swipe
+        // on the drawer. Give kids the same real header (with a DrawerButton
+        // to reopen the drawer) every other kids screen in this navigator
+        // gets, instead of hiding it just for this one route.
+        options={{
+          headerShown: !isRail,
+          headerRight: isRail ? undefined : () => <DrawerButton />,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: theme.colors.customAppBar },
+          title: t('drawer.library'),
+        }}
       />
       <Drawer.Screen
         name="profile/index"

@@ -25,7 +25,8 @@
     "teacherTestScore": "Test Scores",
     "teacherStudentList": "Students",
     "teacherDownload": "Download",
-    "logout": "Logout"
+    "logout": "Logout",
+    "library": "Library"
   },
   "offline": {
     "banner": "You are offline. Downloaded lessons are still available."
@@ -118,6 +119,12 @@
       "failedTitle": "Try Again!!",
       "scoreLabel": "Score",
       "finishButton": "Finish"
+    },
+    "library": {
+      "header": "Library",
+      "lessonsProgress": "{{done}} of {{total}} lessons",
+      "empty": "No courses yet",
+      "unavailable": "Your library will appear once you're online."
     }
   }
 }

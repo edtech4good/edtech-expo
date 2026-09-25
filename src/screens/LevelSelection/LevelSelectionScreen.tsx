@@ -64,7 +64,7 @@ export default function LevelSelectionScreen() {
   const { isCorporate } = useDesign();
   const displayFont = useFont('bold', 'display');
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ levelid?: string }>();
+  const params = useLocalSearchParams<{ levelid?: string; from?: string }>();
   const selectedUnit = useAppSelector(getSelectedUnit);
   // The URL param survives a browser reload on web; the redux selection covers
   // native, where navigate() is not always given params by older code paths.
@@ -96,6 +96,32 @@ export default function LevelSelectionScreen() {
   useEffect(() => {
     navigation.setOptions({ title: t('screen.level.header') });
   }, []);
+
+  // Library isn't part of the "home" drill-down Stack, so a level opened
+  // from it (Library card → this screen, see LibraryScreen's `from:
+  // 'library'` param) has no back-stack entry that points at Library.
+  // home/_layout.tsx's `levels` Stack.Screen options are a function of the
+  // route and handle the header back button for both cases (library vs.
+  // normal drill-down) — see that file for why. This screen only needs to
+  // handle *hardware* back / swipe-back, which bypasses the header
+  // entirely: when opened `from: 'library'`, intercept a back/pop action
+  // and redirect to /library instead of letting it pop into whatever the
+  // Home stack happens to hold underneath (see the same reasoning as the
+  // header override in home/_layout.tsx). Forward navigation (e.g. into a
+  // lesson) is a PUSH, not a removal, so it never reaches this listener.
+  useEffect(() => {
+    if (params.from !== 'library') return;
+    return navigation.addListener('beforeRemove', e => {
+      if (
+        e.data.action.type !== 'POP' &&
+        e.data.action.type !== 'GO_BACK'
+      ) {
+        return;
+      }
+      e.preventDefault();
+      router.navigate('/library');
+    });
+  }, [navigation, params.from]);
 
   useEffect(() => {
     if (!levelId) return;
