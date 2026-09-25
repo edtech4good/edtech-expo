@@ -65,6 +65,15 @@ const persistConfig = {
     levelStepsSlice.name,
   ],
   transforms: [authTransform],
+  // Wait for AsyncStorage however long it takes. redux-persist's default 5 s
+  // timeout rehydrates with EMPTY state when the read is slow (a cold start on
+  // a low-end tablet, or a dev bundle still loading), ignores the real data
+  // when it arrives, and immediately writes the empty state back over it:
+  // the session and the unsynced pendingResult queue are gone. PersistGate
+  // holds the UI until rehydration, so the cost is that a read that never
+  // returns keeps the app on the start screen; relaunching retries it.
+  // Losing a learner's offline results is the worse failure.
+  timeout: 0,
 };
 
 const reducers = (state: any, action: never) => {
