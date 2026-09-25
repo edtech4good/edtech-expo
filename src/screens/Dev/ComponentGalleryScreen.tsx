@@ -27,7 +27,7 @@ import type { ToastType } from '@/components/ui/Toast';
 import type { ProgressSummary } from '@/models';
 import MyProgressSection, {
   myProgressVariantFor,
-} from '@/screens/StudentProfile/Components/MyProgressSection';
+} from '@/screens/MyProgress/Components/MyProgressSection';
 import { ReactNode, useState } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path } from 'react-native-svg';
@@ -104,34 +104,39 @@ function Row({ children }: { children: ReactNode }) {
 }
 
 // "My progress" fixtures (the real screen needs a logged-in student).
-// Partial: 12 of 48 lessons (25%), 1 of 12 levels; the third curriculum is
-// finished (currentLevel null) so its row shows the "All levels complete"
-// line and the phone variant needs "View all" to reach it.
+// Curriculum-total semantics: each row's %, bar and "N of M lessons" are
+// lessons completed across the whole curriculum (row.lessonsCompleted /
+// row.lessonsTotal); the meta names the current grade and level only. The
+// currentLevel lesson counts are deliberately different (2 of 4) so a
+// regression back to level-scoped numbers shows up in the screenshot.
+// Partial: 18 of 44 lessons (41%), 1 of 12 levels. c3 is finished
+// (currentLevel null) -> "All levels complete"; c4 has no lessons yet
+// (lessonsTotal 0) -> the count is omitted. Phone needs "View all" past c2.
 const MP_FIXTURE_PARTIAL: ProgressSummary = {
   studentId: 'gallery',
-  lessonsCompleted: 12,
-  lessonsTotal: 48,
+  lessonsCompleted: 18,
+  lessonsTotal: 44,
   levelsCompleted: 1,
   levelsTotal: 12,
-  overallPercent: 25,
+  overallPercent: 41,
   levelsPercent: 8,
   fetchedAt: Date.UTC(2026, 8, 24, 7, 30),
   curricula: [
     {
       curriculumId: 'c1',
       name: 'Water Conservation in Building Design',
-      lessonsCompleted: 4,
-      lessonsTotal: 20,
+      lessonsCompleted: 10,
+      lessonsTotal: 16,
       levelsCompleted: 0,
-      levelsTotal: 5,
-      percent: 20,
+      levelsTotal: 4,
+      percent: 63,
       currentLevel: {
         levelId: 'l12',
         levelName: 'Level 2',
         gradeName: 'Grade 7',
-        lessonsCompleted: 10,
-        lessonsTotal: 16,
-        percent: 62,
+        lessonsCompleted: 2,
+        lessonsTotal: 4,
+        percent: 50,
       },
     },
     {
@@ -147,7 +152,7 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
         levelName: 'Level 1',
         gradeName: 'Grade 8',
         lessonsCompleted: 0,
-        lessonsTotal: 12,
+        lessonsTotal: 5,
         percent: 0,
       },
     },
@@ -161,6 +166,23 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
       percent: 100,
       currentLevel: null,
     },
+    {
+      curriculumId: 'c4',
+      name: 'Introduction to Green Building',
+      lessonsCompleted: 0,
+      lessonsTotal: 0,
+      levelsCompleted: 0,
+      levelsTotal: 1,
+      percent: 0,
+      currentLevel: {
+        levelId: 'l41',
+        levelName: 'Level 1',
+        gradeName: 'Grade 9',
+        lessonsCompleted: 0,
+        lessonsTotal: 0,
+        percent: 0,
+      },
+    },
   ],
 };
 
@@ -168,9 +190,9 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
 const MP_FIXTURE_EMPTY: ProgressSummary = {
   studentId: 'gallery-empty',
   lessonsCompleted: 0,
-  lessonsTotal: 48,
+  lessonsTotal: 36,
   levelsCompleted: 0,
-  levelsTotal: 12,
+  levelsTotal: 10,
   overallPercent: 0,
   levelsPercent: 0,
   fetchedAt: Date.UTC(2026, 8, 24, 7, 30),
@@ -345,7 +367,8 @@ export default function ComponentGalleryScreen() {
                   },
                 ]}
                 studentName={MP_NAME}
-                onProfilePress={() => setSidebarActive('progress')}
+                // In the app the profile block opens Profile, not My progress.
+                onProfilePress={() => {}}
                 onLogout={() => {}}
               />
             </View>

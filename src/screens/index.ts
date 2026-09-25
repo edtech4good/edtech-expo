@@ -1,6 +1,7 @@
 export { default as CourseSelectionScreen } from './CourseSelection/CourseSelectionScreen';
 export { default as LessonScreen } from './Lesson/LessonScreen';
 export { default as LessonSelectionScreen } from './LessonSelection/LessonSelectionScreen';
+export { default as MyProgressScreen } from './MyProgress/MyProgressScreen';
 export { default as LoginScreen } from './Login/LoginScreen';
 export { default as PracticeScreen } from './Practice/PracticeScreen';
 export { default as QuizScreen } from './Quiz/QuizScreen';

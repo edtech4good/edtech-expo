@@ -21,8 +21,8 @@ import { useTheme } from 'styled-components/native';
 // Corporate "My progress" (design handoff, "My progress (corporate)"):
 // greeting, overall card (ring + lessons/levels stats) and the per-curriculum
 // list. Certificates are deliberately not rendered until certificates exist.
-// Presentational only: StudentProfileScreen wires it to useProgressSummary,
-// and the dev gallery feeds it fixtures.
+// Presentational only: MyProgressScreen wires it to useProgressSummary, and
+// the dev gallery feeds it fixtures.
 
 export type MyProgressVariant = 'phone' | 'tablet' | 'desktop';
 
@@ -304,9 +304,17 @@ function CurriculumRow({
   const { t } = useTranslation();
   const { text, theme } = useMpText();
   const level = row.currentLevel;
-  const percent = level ? level.percent : row.percent;
-  const allDone =
-    !level && row.lessonsTotal > 0 && row.lessonsCompleted >= row.lessonsTotal;
+  // Curriculum totals everywhere (Jesse, 25 Sep 2026): the %, the bar and the
+  // "N of M lessons" count are lessons completed across the whole curriculum.
+  // The meta still names the grade and level the student is on now.
+  const percent = row.percent;
+  const lessonCount =
+    row.lessonsTotal > 0
+      ? t('screen.myProgress.lessonsOfTotal', {
+          done: row.lessonsCompleted,
+          total: row.lessonsTotal,
+        })
+      : null;
 
   let meta: ReactNode = null;
   if (level) {
@@ -316,13 +324,13 @@ function CurriculumRow({
           text('body', 'normal', 14, theme.colors.onSurfaceVariant, 18),
           { marginTop: 2 },
         ]}>
-        {`${level.gradeName} · ${level.levelName} · ${t(
-          'screen.myProgress.lessonsOfTotal',
-          { done: level.lessonsCompleted, total: level.lessonsTotal },
-        )}`}
+        {[level.gradeName, level.levelName, lessonCount]
+          .filter(Boolean)
+          .join(' · ')}
       </Text>
     );
-  } else if (allDone) {
+  } else if (row.lessonsTotal > 0) {
+    // No current level left to work on: every level is complete.
     meta = (
       <View
         style={{

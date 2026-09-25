@@ -37,6 +37,19 @@ export default function Home() {
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const insets = useSafeAreaInsets();
 
+  // Phone tab headers (My progress and Profile share one look).
+  const phoneHeaderOptions = {
+    headerShown: true,
+    headerTitleAlign: 'center' as const,
+    headerTitleStyle: {
+      fontFamily: font,
+      fontSize: theme.fontSizes.h4,
+      color: theme.colors.customHeaderTitle,
+    },
+    headerShadowVisible: false,
+    headerStyle: { backgroundColor: theme.colors.customAppBar },
+  };
+
   // Rendering <Tabs> vs <Drawer> below is a component-type swap in this
   // layout's own output (not inside a shared child slot like drawerContent),
   // so React remounts the whole subtree when isTabs flips — the hook-order
@@ -84,25 +97,26 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
+          name="progress/index"
+          options={{
+            ...phoneHeaderOptions,
+            title: t('screen.myProgress.title'),
+            tabBarTestID: 'tab-progress',
+            tabBarAccessibilityLabel: t('screen.myProgress.title'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons
+                name="insert-chart-outlined"
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
-            headerShown: true,
-            // The phone header reads "My progress" (the section at the top
-            // of this screen) while the tab keeps the "Profile" label.
-            // headerTitle wins over `title`, which StudentProfileScreen
-            // overwrites via navigation.setOptions on mount, so both are
-            // pinned explicitly here rather than derived from `title`.
+            ...phoneHeaderOptions,
             title: t('drawer.profile'),
-            headerTitle: t('screen.myProgress.title'),
-            tabBarLabel: t('drawer.profile'),
-            headerTitleAlign: 'center',
-            headerTitleStyle: {
-              fontFamily: font,
-              fontSize: theme.fontSizes.h4,
-              color: theme.colors.customHeaderTitle,
-            },
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: theme.colors.customAppBar },
             headerRight: () => <LogoutButton />,
             headerRightContainerStyle: {
               paddingRight: theme.layouts.medium,
@@ -165,11 +179,21 @@ export default function Home() {
         options={{ headerShown: false }}
       />
       <Drawer.Screen
-        name="profile/index"
+        name="progress/index"
         options={{
           // Rail and sidebar: My progress carries its own large title, so no
-          // header bar (design v2 tablet and desktop mocks have none).
+          // header bar (design v2 tablet and desktop mocks have none). The
+          // kids drawer has no entry for this route.
           headerShown: !hasPermanentNav,
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: theme.colors.customAppBar },
+          title: t('screen.myProgress.title'),
+        }}
+      />
+      <Drawer.Screen
+        name="profile/index"
+        options={{
           headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },

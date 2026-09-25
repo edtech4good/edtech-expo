@@ -1,5 +1,10 @@
 import { Images } from '@/assets';
-import { studentNavItems, teacherNavItems, NavItem } from '@/constants';
+import {
+  progressNavItem,
+  studentNavItems,
+  teacherNavItems,
+  NavItem,
+} from '@/constants';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { useAuth, useFont, useSyncContent } from '@/services';
@@ -29,9 +34,9 @@ const AVATAR_SIZE = 40;
  * block pinned to the bottom.
  *
  * The mock also shows Library, Awards and a bell; those features don't exist
- * yet, so they are omitted. The items are the same studentNavItems /
- * teacherNavItems the NavRail renders — for students the profile item is
- * labelled "My progress" (the progress section lives on that route). Logout,
+ * yet, so they are omitted. Students get Home and My progress (the
+ * /progress route); Profile is reached from the profile block pinned to the
+ * bottom rather than a list item. Teachers get teacherNavItems. Logout,
  * which the rail offers as an icon, is kept as a labelled item above the
  * profile block so nothing the rail offers is lost.
  */
@@ -41,6 +46,7 @@ const AVATAR_SIZE = 40;
 // active).
 const ROUTE_NAME_BY_ITEM_ROUTE: Record<string, string> = {
   '/home/subjects': 'home',
+  '/progress': 'progress/index',
   '/profile': 'profile/index',
   'teacher/dashboard': 'teacher/dashboard',
   'teacher/score': 'teacher/score',
@@ -259,7 +265,13 @@ export default function NavSidebar(props: DrawerContentComponentProps) {
   const isStudent = profile?.schooluserrole === 4;
 
   const navItems = useMemo(
-    () => (isStudent ? studentNavItems : teacherNavItems),
+    () =>
+      isStudent
+        ? [
+            ...studentNavItems.filter(item => item.route !== '/profile'),
+            progressNavItem,
+          ]
+        : teacherNavItems,
     [isStudent],
   );
 
@@ -271,16 +283,13 @@ export default function NavSidebar(props: DrawerContentComponentProps) {
     }
   };
 
-  const items: NavSidebarItem[] = navItems.map(item => {
-    const isProgress = isStudent && item.route === '/profile';
-    return {
-      key: item.route,
-      label: isProgress ? t('screen.myProgress.title') : t(item.title),
-      icon: isProgress ? 'insert-chart-outlined' : item.icon,
-      active: ROUTE_NAME_BY_ITEM_ROUTE[item.route] === activeRouteName,
-      onPress: () => handleItemPress(item),
-    };
-  });
+  const items: NavSidebarItem[] = navItems.map(item => ({
+    key: item.route,
+    label: t(item.title),
+    icon: item.icon,
+    active: ROUTE_NAME_BY_ITEM_ROUTE[item.route] === activeRouteName,
+    onPress: () => handleItemPress(item),
+  }));
 
   const fullName = `${profile?.studentfirstname ?? ''} ${
     profile?.studentlastname ?? ''
