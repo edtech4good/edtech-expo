@@ -449,8 +449,7 @@ export default function LessonSelectionScreen() {
               {steps.map(step => {
                 const isNext = step.id === nextStep?.id;
                 const status = statusFor(step.id);
-                const unsynced =
-                  step.type !== 'learning' && unsyncedFor(step.id);
+                const unsynced = unsyncedFor(step.id);
                 const ctaLabel = isNext
                   ? status === 'inProgress'
                     ? t('cta.continue')

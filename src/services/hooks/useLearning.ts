@@ -13,6 +13,7 @@ import {
 } from '@/redux/slices';
 import useSetting from './useSetting';
 import useResource from './useResource';
+import { queueLearningProgress } from '../pendingResults';
 
 export default function useLearning(lessonLearningId: string) {
   const dispatch = useAppDispatch();
@@ -125,9 +126,6 @@ export default function useLearning(lessonLearningId: string) {
     // call so it works offline. Mirrors the server rule: `ended` marks the
     // activity done, otherwise any watch time (time > 0) marks it in
     // progress. progress is only meaningful when we know content_length.
-    // Unlike practice/quiz results, video progress is NOT queued for retry
-    // when offline — if the saveVideoProgress call below fails, this local
-    // mark is all that survives; the server never records it.
     if (userId) {
       dispatch(
         ActivityProgressActions.markLocal({
@@ -142,13 +140,17 @@ export default function useLearning(lessonLearningId: string) {
       );
     }
 
+    // Queued, not posted directly, so it survives being offline — same
+    // offline queue as practice/quiz results (see queueLearningProgress).
+    // `date` is captured now, at watch time, and sent unchanged whenever the
+    // queue flushes.
     const videoProgressPayload: VideoProgressPayload = {
       content_length: contentLength,
       date: createTimeStamp(),
       ended: hasEnded,
       time: progress,
     };
-    await api.saveVideoProgress(lessonLearningId, videoProgressPayload);
+    queueLearningProgress(api, lessonLearningId, videoProgressPayload);
   };
 
   const clear = async () => {
