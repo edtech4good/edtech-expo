@@ -16,6 +16,7 @@ export interface QuizOptionProps {
   state: QuizOptionState;
   onPress?: () => void;
   disabled?: boolean;
+  testID?: string;
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -51,6 +52,7 @@ export default function QuizOption({
   state,
   onPress,
   disabled,
+  testID,
 }: QuizOptionProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
@@ -101,6 +103,9 @@ export default function QuizOption({
         {
           flexDirection: 'row',
           alignItems: 'center',
+          // v2.1: min-height, not a fixed height — Khmer labels wrap to
+          // more lines than English and must be able to grow the card.
+          minHeight: 56,
           padding: 16,
           borderRadius: theme.radii.card,
           backgroundColor,
@@ -150,11 +155,16 @@ export default function QuizOption({
   );
 
   if (!onPress) {
-    return <View accessibilityRole="text">{content}</View>;
+    return (
+      <View testID={testID} accessibilityRole="text">
+        {content}
+      </View>
+    );
   }
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}

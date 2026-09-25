@@ -48,12 +48,13 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
     }: PracticeProps,
     ref,
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader, windowWidth } = useScreenDimension();
+    const { windowWidth } = useScreenDimension();
     const matchingItemRefs = useRef<Record<string, DraggableHandler>>({});
     const source = useResource(
       { name: _.get(question, 'questionobject.questionfile.filename', '') },
@@ -212,7 +213,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     // };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -290,6 +291,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetry}
+          hideRetry={hideRetry}
         />
       </Container>
     );

@@ -125,6 +125,7 @@
     "practice": {
       "submitButton": "បញ្ជូន",
       "retryButton": "ព្យាយាមម្តងទៀត",
+      "progressLabel": "{{i}} ក្នុងចំណោម {{n}}",
       "correctTitle": "អបអរសាទរ!",
       "correctMessage": "ល្អណាស់!",
       "correctButton": "បន្ទាប់",

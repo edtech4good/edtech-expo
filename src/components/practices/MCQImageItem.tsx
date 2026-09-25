@@ -11,6 +11,7 @@ interface MCQImageItemProps {
   disabled?: boolean;
   onPress?: (opt: QuestionOption) => void;
   isShowingAnswer?: boolean;
+  index?: number;
 }
 
 interface MCQWrapperProps {
@@ -34,6 +35,7 @@ export default function MCQImageItem({
   disabled = false,
   onPress = () => undefined,
   isShowingAnswer = false,
+  index,
 }: MCQImageItemProps) {
   const theme = useTheme();
 
@@ -60,6 +62,7 @@ export default function MCQImageItem({
 
   return (
     <MCQImageItemWrapper
+      testID={index !== undefined ? `answer-option-${index}` : undefined}
       isSelected={isSelected || highlightItem}
       disabled={disabled || isShowingAnswer}
       onPress={handleImagePress}>

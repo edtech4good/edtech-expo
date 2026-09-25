@@ -53,6 +53,7 @@ interface MCQTextItemProps {
   disabled?: boolean;
   isShowingAnswer?: boolean;
   isCorrect: boolean;
+  index?: number;
 }
 
 export default function MCQTextItem({
@@ -63,6 +64,7 @@ export default function MCQTextItem({
   disabled = false,
   isShowingAnswer = false,
   isCorrect,
+  index,
 }: MCQTextItemProps) {
   const theme = useTheme();
   const { isCorporate } = useDesign();
@@ -127,6 +129,7 @@ export default function MCQTextItem({
         }}>
         <View style={{ flex: 1 }}>
           <QuizOption
+            testID={index !== undefined ? `answer-option-${index}` : undefined}
             label={text}
             state={state}
             disabled={disabled}

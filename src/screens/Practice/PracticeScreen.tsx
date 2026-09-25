@@ -6,6 +6,8 @@ import {
   LayoutScrollView,
   PracticeContent,
 } from '@/components';
+import EyebrowText from '@/components/ui/EyebrowText';
+import ProgressBar from '@/components/ui/ProgressBar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
@@ -13,12 +15,25 @@ import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   ActivityProgressActions,
   getProfile,
+  getSelectedLanguage,
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
-import { useDesign, usePractice, notifyResultQueued } from '@/services';
+import {
+  useDesign,
+  useFont,
+  useNavShell,
+  usePractice,
+  notifyResultQueued,
+} from '@/services';
+import { NAV_RAIL_WIDTH } from '@/components/ui/NavRail';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import _ from 'lodash';
 import {
   LessonPractice,
@@ -33,6 +48,18 @@ import ResultPopUp from './Components/ResultPopUp';
 import { toPracticeQuestionResult } from '@/transforms';
 import { useTranslation } from 'react-i18next';
 
+// Corporate header side slots (handoff §4, v2.1): the title must never
+// reach the back button on the left or the "N OF total" counter on the
+// right. Reserve the larger of the two on both sides so the centred title
+// stays centred instead of drifting toward whichever slot is smaller.
+// LEFT_SLOT ~ BackButton's 36px icon + 16px left margin + a few px of
+// native-stack left padding, rounded up. RIGHT_SLOT ~ the longest counter
+// label, "1 ក្នុងចំណោម 10" at the Khmer eyebrow's fixed 13px (~110dp),
+// plus its own right margin (pageHorizontalPadding).
+const LEFT_SLOT = 64;
+const RIGHT_SLOT = 130;
+const HEADER_SIDE_SLOT = Math.max(LEFT_SLOT, RIGHT_SLOT);
+
 export interface PracticeProps {
   question: Question;
   currentQuestionIndex: number;
@@ -43,16 +70,25 @@ export interface PracticeProps {
     isCorrect: boolean,
     isShowingAnswer?: boolean,
   ) => void;
+  // Quiz has no Retry equivalent (answers are scored, not retried), so the
+  // corporate footer hides the Retry pill and shows only Submit there.
+  // Practice (unscored) keeps Retry — this defaults to false/undefined.
+  hideRetry?: boolean;
 }
 
 export default function PracticeScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
+  const { isRail } = useNavShell();
 
   const dispatch = useAppDispatch();
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLanguage = useAppSelector(getSelectedLanguage);
+  const isKhmer = selectedLanguage === 'km';
   const selectedLesson = useAppSelector(getSelectedLesson);
   const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, questions, saveResult } = usePractice(
@@ -87,11 +123,85 @@ export default function PracticeScreen() {
   });
 
   useEffect(() => {
+    const practiceName = (selectedModule as LessonPractice)
+      ?.lessonpracticename;
     navigation.setOptions({
-      title: (selectedModule as LessonPractice)?.lessonpracticename,
+      title: practiceName,
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Android native-stack (react-native-screens) renders its own stock
+      // back chevron alongside a custom headerLeft unless headerBackVisible
+      // is explicitly turned off — that was the second, thinner arrow at
+      // the far left (the heavier Material one was our BackButton). This
+      // applies whether or not isCorporate, so it's set unconditionally.
+      headerBackVisible: false,
+      headerTitleAlign: 'center',
+      // Corporate child app bar (handoff §4, v2.1): centred title wraps to
+      // up to two lines instead of truncating (kids keeps the stock
+      // single-line header, untouched, via the stack's default options),
+      // and a mono "N OF total" eyebrow sits on the right — the
+      // current/total question count. The title is wrapped in a max-width
+      // View so it can never grow into the back button or the counter —
+      // see HEADER_SIDE_SLOT above.
+      ...(isCorporate
+        ? {
+            headerTitle: () => (
+              // On the tablet nav rail, the header is narrower than the
+              // window by the rail's fixed width, so subtract it too or the
+              // title's max-width overshoots the header's actual space.
+              <View
+                style={{
+                  maxWidth:
+                    windowWidth -
+                    (isRail ? NAV_RAIL_WIDTH : 0) -
+                    2 * HEADER_SIDE_SLOT,
+                }}>
+                <Text
+                  numberOfLines={isKhmer ? 1 : 2}
+                  ellipsizeMode="tail"
+                  style={{
+                    fontFamily: displayBold,
+                    fontSize: theme.fontSizes.subtitle,
+                    // Khmer combining marks need more vertical room than
+                    // Latin script (v2.1: 1.6-1.7x); we cap Khmer to a
+                    // single line (with an end ellipsis) rather than
+                    // stretching it to two, because the native Android
+                    // header height is fixed and two Khmer lines at that
+                    // line-height risk being clipped top/bottom — English
+                    // keeps its normal line-height and two-line wrap.
+                    lineHeight: isKhmer
+                      ? theme.fontSizes.subtitle * 1.65
+                      : undefined,
+                    color: theme.colors.onBackground,
+                    textAlign: 'center',
+                  }}>
+                  {practiceName}
+                </Text>
+              </View>
+            ),
+            headerRight: () => (
+              <EyebrowText
+                testID="practice-progress-label"
+                size={theme.fontSizes.eyebrow}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.layouts.pageHorizontalPadding }}>
+                {t('screen.practice.progressLabel', {
+                  i: question + 1,
+                  n: questions.length,
+                })}
+              </EyebrowText>
+            ),
+          }
+        : {}),
     });
-  }, []);
+  }, [
+    selectedModule,
+    isCorporate,
+    question,
+    questions.length,
+    windowWidth,
+    isRail,
+    isKhmer,
+  ]);
 
   useEffect(() => {
     if (!selectedModule) return;
@@ -245,6 +355,15 @@ export default function PracticeScreen() {
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>
+      {isCorporate && (
+        <ProgressBar
+          testID="practice-progress-track"
+          variant="quiz"
+          progress={
+            questions.length > 0 ? (question + 1) / questions.length : 0
+          }
+        />
+      )}
       <PracticeContent
         ref={practiceRef}
         key={currentQuestion.question.questionnid}

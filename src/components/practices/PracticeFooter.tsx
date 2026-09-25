@@ -7,10 +7,12 @@ import {
   SizedBox,
 } from '@/components';
 import AppButton from '../ui/AppButton';
-import EyebrowText from '../ui/EyebrowText';
-import ProgressBar from '../ui/ProgressBar';
+import RefreshIcon from '../ui/icons/RefreshIcon';
 import { useDesign } from '@/services';
-import { View } from 'react-native';
+import { useContext } from 'react';
+import { Platform, View } from 'react-native';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +22,8 @@ interface Props {
   maxQuestion: number;
   onRetry: () => void;
   onSubmit: () => void;
+  // Quiz has no Retry equivalent — hides the pill and shows only Submit.
+  hideRetry?: boolean;
 }
 
 export default function ({
@@ -28,25 +32,44 @@ export default function ({
   maxQuestion,
   onRetry = () => undefined,
   onSubmit = () => undefined,
+  hideRetry = false,
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const insets = useSafeAreaInsets();
+  // Undefined outside a bottom-tabs navigator (kids drawer, corporate rail
+  // on tablet/desktop) -> 0, same fallback used by Container/
+  // useScreenDimension elsewhere.
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
   if (isCorporate) {
-    // Corporate color-pass: the footer stretches full-width so the handoff's
-    // 4px blue question track can run full-bleed above the pill buttons,
-    // which replace the kids footer. Same props, same handlers.
-    const progress =
-      maxQuestion > 0 ? Math.min(1, currentQuestionIndex / maxQuestion) : 0;
+    // Corporate color-pass (v2.1): the "n / max" counter and the 4px
+    // progress track have moved up into the child app bar (handoff §4),
+    // so the footer is only the Submit / Retry pill row now. Submit grows
+    // to fill the space; Retry is fixed-width with a leading refresh icon.
+    // Quiz has no Retry equivalent, so it passes hideRetry and gets a
+    // Submit-only footer.
+    //
+    // Handoff §4: the footer sits above the tab bar/safe area with a top
+    // hairline. On phone the bottom tab bar already reserves the bottom
+    // safe-area inset itself, so adding insets.bottom here too would
+    // double-pad above it — only add it when there's no tab bar under us
+    // (tablet/desktop rail, or web). On iOS, the ancestor StyledSafeArea is
+    // RN's SafeAreaView, which already pads the bottom inset itself, so
+    // adding it again here would double-pad there too — Android/web's
+    // SafeAreaView is a no-op, so they still need it.
+    const safeBottomPadding =
+      tabBarHeight > 0 || Platform.OS === 'ios' ? 0 : insets.bottom;
     return (
-      // alignSelf stretch: Container centres its children, which shrink-wrapped this bar to its buttons and collapsed the track's 100% width to 0 (audit U-04/U-05).
       <View
         style={{
           alignSelf: 'stretch',
           backgroundColor: theme.colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.divider,
+          paddingBottom: safeBottomPadding,
         }}>
-        <ProgressBar variant="quiz" progress={progress} />
         <View
           style={{
             flexDirection: 'row',
@@ -57,24 +80,24 @@ export default function ({
           }}>
           <View style={{ flex: 1 }}>
             <AppButton
+              testID="footer-submit"
               label={t('screen.practice.submitButton')}
-              size="md"
+              size="lg"
               fullWidth
               onPress={onSubmit}
             />
           </View>
-          <AppButton
-            label={t('screen.practice.retryButton')}
-            variant="secondary"
-            size="md"
-            disabled={isShowingAnswer}
-            onPress={onRetry}
-          />
-          <EyebrowText
-            size={theme.fontSizes.eyebrow}
-            color={theme.colors.primary}>
-            {`${currentQuestionIndex} / ${maxQuestion}`}
-          </EyebrowText>
+          {!hideRetry && (
+            <AppButton
+              testID="footer-retry"
+              label={t('screen.practice.retryButton')}
+              variant="secondary"
+              size="lg"
+              disabled={isShowingAnswer}
+              icon={<RefreshIcon color={theme.colors.primary} />}
+              onPress={onRetry}
+            />
+          )}
         </View>
       </View>
     );

@@ -19,7 +19,7 @@ import {
   QuestionOption,
 } from '@/models';
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
-import { useResource, useScreenDimension } from '@/services';
+import { useResource } from '@/services';
 import _ from 'lodash';
 import {
   forwardRef,
@@ -40,11 +40,11 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption1(
     question,
     currentQuestionIndex,
     maxQuestion,
+    hideRetry = false,
   },
   ref,
 ) {
   const theme = useTheme();
-  const { unblockHeightWithoutHeader } = useScreenDimension();
   const exerciseImage = useResource(
     { name: _.get(question, 'questionobject.questionfile.filename', '') },
     [question],
@@ -122,7 +122,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption1(
   };
 
   return (
-    <Container containerHeight={unblockHeightWithoutHeader}>
+    <Container fill>
       <PracticeHeading
         heading={
           _.get(
@@ -191,6 +191,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption1(
         maxQuestion={maxQuestion}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        hideRetry={hideRetry}
       />
     </Container>
   );

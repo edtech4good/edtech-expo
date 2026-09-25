@@ -9,12 +9,7 @@ import {
   ExpandedWithLayout,
 } from '@/components';
 import { PracticeProps } from '../../PracticeScreen';
-import {
-  useBreakpoint,
-  useDesign,
-  useResource,
-  useScreenDimension,
-} from '@/services';
+import { useBreakpoint, useDesign, useResource } from '@/services';
 import { FlatList } from 'react-native';
 import {
   forwardRef,
@@ -47,13 +42,13 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       multipleChoice = false,
     }: MCQTextProps,
     ref,
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     // ROADMAP Track B (phone learner path): below 768dp the landscape
     // two-pane row (media | options, each crushed to ~180dp) is replaced
@@ -187,7 +182,13 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
 
     const handleSingleSelectPress = (qp: QuestionOption) => {};
 
-    const renderItem = ({ item }: { item: QuestionOption }) => {
+    const renderItem = ({
+      item,
+      index,
+    }: {
+      item: QuestionOption;
+      index: number;
+    }) => {
       return (
         <MCQTextItem
           key={item.questionoptionid}
@@ -197,6 +198,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
           disabled={isShowingAnswer}
           isShowingAnswer={isShowingAnswer}
           isCorrect={item.questionoptioniscorrect}
+          index={index}
           onPress={() => handleItemPress(item)}
         />
       );
@@ -209,7 +211,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       : theme.layouts.medium;
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -262,6 +264,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );
