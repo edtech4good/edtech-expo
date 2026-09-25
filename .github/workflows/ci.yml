@@ -51,6 +51,17 @@ jobs:
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 
+      - name: Set up Node 18.19.1 (EAS floor)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 18.19.1
+          cache: yarn
+
+      - name: Install under EAS's Node (18.19.1)
+        run: yarn install --frozen-lockfile --ignore-scripts
+        # eas.json pins Node 18.19.1 and yarn v1 enforces engines,
+        # so a too-high engines floor breaks every Android build while Node-22 CI stays green.
+
   audit:
     name: audit (report only)
     runs-on: ubuntu-latest
