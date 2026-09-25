@@ -40,6 +40,9 @@ const colors: ThemeTokens['colors'] = {
   // U-23: selection ring on white 2.67 -> 4.14
   selection: '#078A95',
   success: '#22DB8D',
+  // StatusIcon's done-check mark on the mint `success` disc: #064E32 on
+  // #22DB8D is 5.40:1 (WCAG UI-component floor is 3:1).
+  onSuccess: '#064E32',
   warning: '#FFC228',
   // U-21: warningText on 18% warning tint 2.86 -> 7.01
   warningText: '#6B4B00',

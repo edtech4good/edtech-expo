@@ -133,8 +133,8 @@ export default function LevelSelectionScreen() {
 
   if (isCorporate) {
     // Corporate Level Detail per the handoff (§3 phone / §7 tablet): hero,
-    // chip row, title, level progress, lesson rows with status disc + step
-    // dots, sticky Continue-learning footer. No locked state on purpose —
+    // chip row, title, level progress, lesson rows with status icon + step
+    // dots, sticky Start/Continue footer. No locked state on purpose —
     // the product has no lesson gating today.
     const sortedLessons = [...lessons].sort(
       (a, b) => (a.lessonorder ?? 0) - (b.lessonorder ?? 0),
@@ -148,9 +148,13 @@ export default function LevelSelectionScreen() {
 
     const statusFor = (lesson: Lesson): LessonRowStatus => {
       if (isLessonDone(lesson)) return 'done';
-      if (lesson.lessonid === upNext?.lessonid) return 'next';
+      if ((lesson.progress ?? 0) > 0) return 'inProgress';
       return 'todo';
     };
+
+    const upNextProgress = upNext?.progress ?? 0;
+    const upNextCtaLabel =
+      upNextProgress > 0 ? t('cta.continue') : t('cta.start');
 
     // A broken remote image would blank a hero that today always shows, so
     // (unlike the curriculum cards) this needs an explicit runtime
@@ -232,6 +236,7 @@ export default function LevelSelectionScreen() {
             ItemSeparatorComponent={LessonRowSpacer}
             renderItem={({ item }) => {
               const status = statusFor(item);
+              const isNext = item.lessonid === upNext?.lessonid;
               return (
                 <LessonRow
                   chipLabel={t('screen.level.lessonChip', {
@@ -239,12 +244,11 @@ export default function LevelSelectionScreen() {
                   })}
                   title={item.lessonname}
                   status={status}
-                  steps={approximateSteps(
-                    item.progress ?? 0,
-                    status === 'next',
-                    status === 'done',
-                  )}
+                  isNext={isNext}
+                  ctaLabel={isNext ? upNextCtaLabel : undefined}
+                  steps={approximateSteps(item.progress ?? 0, isNext, status === 'done')}
                   onPress={() => handleItemPress(item)}
+                  testID={`lesson-row-${item.lessonid}`}
                 />
               );
             }}
@@ -259,7 +263,11 @@ export default function LevelSelectionScreen() {
                 borderTopColor: theme.colors.divider,
               }}>
               <AppButton
-                label={t('screen.level.continueLearning')}
+                label={
+                  upNextProgress > 0
+                    ? t('screen.level.continueLearning')
+                    : t('cta.start')
+                }
                 fullWidth
                 onPress={() => handleItemPress(upNext)}
               />

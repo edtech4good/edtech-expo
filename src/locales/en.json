@@ -82,7 +82,7 @@
       "continueLearning": "Continue learning",
       "lessonRowStatus": {
         "done": "Completed",
-        "next": "Up next",
+        "inProgress": "In progress",
         "todo": "Not started"
       },
       "stepState": {
@@ -119,5 +119,10 @@
       "scoreLabel": "Score",
       "finishButton": "Finish"
     }
+  },
+  "cta": {
+    "start": "Start",
+    "continue": "Continue",
+    "review": "Review"
   }
 }

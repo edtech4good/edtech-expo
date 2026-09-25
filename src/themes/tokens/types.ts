@@ -41,6 +41,7 @@ export interface ThemeColors {
 
   selection: string;
   success: string;
+  onSuccess: string;
   warning: string;
   warningText: string;
   lessonChip: string;

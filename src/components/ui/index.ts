@@ -47,5 +47,13 @@ export {
   type LessonRowProps,
   type LessonRowStatus,
 } from './LessonRow';
+export {
+  default as StatusIcon,
+  ChevronIcon,
+  type StatusIconProps,
+  type StatusIconStatus,
+  type ChevronIconProps,
+} from './StatusIcon';
+export { default as CtaPill, type CtaPillProps } from './CtaPill';
 export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';
 export { default as LogoutButton } from './LogoutButton';

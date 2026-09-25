@@ -81,7 +81,7 @@
       "continueLearning": "បន្តការសិក្សា",
       "lessonRowStatus": {
         "done": "បានបញ្ចប់",
-        "next": "បន្ទាប់",
+        "inProgress": "កំពុងសិក្សា",
         "todo": "មិនទាន់ចាប់ផ្ដើម"
       },
       "stepState": {
@@ -118,5 +118,10 @@
       "scoreLabel": "ពិន្ទុ",
       "finishButton": "រួចរាល់"
     }
+  },
+  "cta": {
+    "start": "ចាប់ផ្ដើម",
+    "continue": "បន្ត",
+    "review": "មើលឡើងវិញ"
   }
 }

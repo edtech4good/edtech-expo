@@ -257,6 +257,7 @@ export default function LessonSelectionScreen() {
 
     const corporateSection = (
       title: string,
+      type: 'learning' | 'practice' | 'quiz',
       rows: Array<{
         key: string;
         title: string;
@@ -271,7 +272,11 @@ export default function LessonSelectionScreen() {
             {title}
           </EyebrowText>
           {rows.map(({ key, ...row }) => (
-            <ContinueLearningRow key={key} {...row} />
+            <ContinueLearningRow
+              key={key}
+              testID={`activity-row-${type}-${key}`}
+              {...row}
+            />
           ))}
         </View>
       );
@@ -295,6 +300,7 @@ export default function LessonSelectionScreen() {
             }}>
             {corporateSection(
               t('screen.lesson.learningTitle'),
+              'learning',
               _.sortBy(lesson?.lessonlearnings, 'lessonlearningorder').map(
                 ll => ({
                   key: ll.lessonlearningid,
@@ -309,6 +315,7 @@ export default function LessonSelectionScreen() {
             )}
             {corporateSection(
               t('screen.lesson.practiceTitle'),
+              'practice',
               _.sortBy(lesson?.lessonpractices, 'lessonpracticeorder').map(
                 lp => ({
                   key: lp.lessonpracticeid,
@@ -322,6 +329,7 @@ export default function LessonSelectionScreen() {
             )}
             {corporateSection(
               t('screen.lesson.quizTitle'),
+              'quiz',
               (lesson?.lessonquizzes ?? []).map(lq => ({
                 key: lq.lessonquizid,
                 title: lq.lessonquizname,

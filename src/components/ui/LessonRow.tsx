@@ -6,14 +6,15 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Path, Polygon } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
 import { useTranslation } from 'react-i18next';
 
+import CtaPill from './CtaPill';
 import EyebrowText from './EyebrowText';
 import LessonStepDots, { LessonStepDotsProps, describeSteps } from './LessonStepDots';
+import StatusIcon, { ChevronIcon } from './StatusIcon';
 
-export type LessonRowStatus = 'done' | 'next' | 'todo';
+export type LessonRowStatus = 'done' | 'inProgress' | 'todo';
 
 export interface LessonRowProps {
   /** Localized "Lesson N" label for the small chip. */
@@ -21,93 +22,64 @@ export interface LessonRowProps {
   title: string;
   status: LessonRowStatus;
   steps: LessonStepDotsProps['steps'];
+  /** Whether this is the up-next lesson: drives the primary border/glow and the CTA pill. */
+  isNext: boolean;
+  /** "Start" / "Continue" label for the up-next row's CTA pill. Only rendered when `isNext` is true. */
+  ctaLabel?: string;
   onPress?: (event: GestureResponderEvent) => void;
+  testID?: string;
 }
 
 const PRESS_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function StatusDisc({ status }: { status: LessonRowStatus }) {
-  const theme = useTheme();
-
-  const background =
-    status === 'done'
-      ? theme.colors.success
-      : status === 'next'
-      ? theme.colors.primary
-      : theme.colors.surfaceVariant;
-
-  return (
-    <View
-      style={{
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: background,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      {status === 'done' && (
-        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M5 12.5L10 17.5L19 7"
-            stroke={theme.colors.onPrimary}
-            strokeWidth={2.4}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-      )}
-      {status === 'next' && (
-        <Svg width={12} height={12} viewBox="0 0 24 24">
-          <Polygon points="7,4 21,12 7,20" fill={theme.colors.onPrimary} />
-        </Svg>
-      )}
-      {status === 'todo' && (
-        <Svg width={10} height={10} viewBox="0 0 10 10">
-          <Circle cx={5} cy={5} r={4} fill={theme.colors.outline} />
-        </Svg>
-      )}
-    </View>
-  );
-}
-
 /**
- * A lesson row on the corporate Level Detail screen: status disc,
+ * A lesson row on the corporate Level Detail screen: status icon,
  * "Lesson N" chip, title, and the three Learning/Practice/Quiz step dots.
- * The up-next row gets the design's 2px primary border + glow. There is no
- * locked state on purpose — the product has no lesson gating today, and a
- * lock that doesn't lock would mislead.
+ * The up-next row gets the design's 2px primary border + glow (driven by
+ * `isNext`, independent of `status` — a lesson can be up-next with 0 or
+ * partial progress) plus a "Start"/"Continue" CTA pill under the title.
+ * Every other row shows a trailing chevron instead. There is no locked
+ * state on purpose — the product has no lesson gating today, and a lock
+ * that doesn't lock would mislead.
  *
  * F-05: Lesson row status and step states are conveyed via accessibility labels
  * (not color alone). The row's explicit label includes the lesson chip, title,
- * row status, and step states formatted for screen readers.
+ * row status, step states, and — for the up-next row — the CTA label, all
+ * formatted for screen readers.
  */
 export default function LessonRow({
   chipLabel,
   title,
   status,
   steps,
+  isNext,
+  ctaLabel,
   onPress,
+  testID,
 }: LessonRowProps) {
   const theme = useTheme();
   const titleFontFamily = useFont('semi', 'body');
   const { t } = useTranslation();
   const scale = useSharedValue(1);
 
-  // F-05: Build an accessible label combining row status and step states.
+  const showCta = isNext && !!ctaLabel;
+
+  // F-05: Build an accessible label combining row status, step states, and
+  // (for the up-next row) the CTA label.
   const rowStatusText = t(`screen.level.lessonRowStatus.${status}`);
   const stepsDescription = describeSteps(steps, t);
-  const accessibilityLabel = `${chipLabel}, ${title}, ${rowStatusText}, ${stepsDescription}`;
+  const accessibilityLabel = `${chipLabel}, ${title}, ${rowStatusText}, ${stepsDescription}${
+    showCta ? `, ${ctaLabel}` : ''
+  }`;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const isNext = status === 'next';
-
   return (
     <AnimatedPressable
+      testID={testID}
       onPress={onPress}
       onPressIn={() => {
         if (onPress)
@@ -147,7 +119,7 @@ export default function LessonRow({
         },
         animatedStyle,
       ]}>
-      <StatusDisc status={status} />
+      <StatusIcon status={status} />
       <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: 'row' }}>
           <View
@@ -173,8 +145,16 @@ export default function LessonRow({
           }}>
           {title}
         </Text>
+        {showCta && ctaLabel && (
+          <View style={{ marginTop: 2 }}>
+            <CtaPill label={ctaLabel} />
+          </View>
+        )}
       </View>
       <LessonStepDots steps={steps} standalone={false} />
+      {!showCta && (
+        <ChevronIcon size={20} color={theme.colors.onSurfaceVariant} />
+      )}
     </AnimatedPressable>
   );
 }

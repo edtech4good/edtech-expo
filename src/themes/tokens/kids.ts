@@ -38,6 +38,8 @@ const colors: ThemeTokens['colors'] = {
 
   selection: '#06AFBC',
   success: '#22DB8D',
+  // Same value and same rationale as corporate: #064E32 on #22DB8D is 5.40:1.
+  onSuccess: '#064E32',
   warning: '#FFC228',
   warningText: '#B8860B',
   lessonChip: '#2AAADD',
