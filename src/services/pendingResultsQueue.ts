@@ -164,3 +164,45 @@ export function isFlushableBy(
 ): boolean {
   return item.ownerId === null || item.ownerId === currentOwnerId;
 }
+
+/**
+ * What the reconnect listener in app/(app)/_layout.tsx does with one
+ * connectivity report (a NetInfo event, or on web a window 'online' /
+ * 'offline' event):
+ * - 'cancel': the report says offline (isConnected === false) and a
+ *   debounced flush is pending — the link dropped again before it settled.
+ * - 'schedule': the report says online (true, or null/unknown), nothing is
+ *   pending yet, and there is something queued to send.
+ * - 'none': otherwise. A report while a flush is already pending does not
+ *   restart it, so a chatty listener cannot postpone the flush forever.
+ *
+ * There is deliberately no "previous state" here. The listener hears two
+ * sources that disagree: on web in Chromium, netinfo never sees the window
+ * going offline (it listens to navigator.connection 'change', which
+ * Playwright's setOffline and some real transitions don't fire), and its
+ * reachability poll re-emits its STALE `isConnected: true` when the probe
+ * fails offline. With a single shared "was connected" flag, that stale
+ * report flipped the flag back to online, so the real 'online' event that
+ * followed was read as online -> online and ignored: the queue sat until
+ * the next launch. Acting on every online report instead is safe because
+ * flushPendingResults serialises on flushChain, and a flush that runs
+ * while still offline stops without counting an attempt
+ * (classifyFlushError -> 'stop').
+ *
+ * `isInternetReachable` is ignored on purpose, as in useConnectivity: the
+ * Pi kiosk's LAN has no internet, so the reachability probe reads false
+ * there permanently.
+ */
+export type ReconnectFlushAction = 'schedule' | 'cancel' | 'none';
+
+export function reconnectFlushAction(input: {
+  isConnected: boolean | null | undefined;
+  flushScheduled: boolean;
+  hasPendingItems: boolean;
+}): ReconnectFlushAction {
+  if (input.isConnected === false) {
+    return input.flushScheduled ? 'cancel' : 'none';
+  }
+  if (input.flushScheduled || !input.hasPendingItems) return 'none';
+  return 'schedule';
+}
