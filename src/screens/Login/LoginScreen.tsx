@@ -29,7 +29,8 @@ import _ from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 
 // Corporate branch's language-switch face for "ភាសាខ្មែរ" — the corporate
@@ -135,6 +136,7 @@ interface Props {
 
 export default function LoginScreen({ devPassword, devUsername }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
@@ -337,7 +339,9 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
         footer={
           <Row
             justifyContent="center"
-            paddingBottom={20}
+            paddingBottom={
+              Platform.OS === 'android' ? 20 + insets.bottom : 20
+            }
             paddingLeft={28}
             paddingRight={28}>
             <EyebrowText size={9} style={{ textAlign: 'center' }}>
@@ -347,7 +351,13 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
         }>
         <FormProvider {...methods}>
           <View style={{ flex: 1, width: '100%', paddingHorizontal: 28 }}>
-            <Row justifyContent="flex-end" paddingTop={8}>
+            <Row
+              justifyContent="flex-end"
+              // SafeAreaView (LayoutScrollView) only applies top insets on
+              // iOS; on Android the status bar overlaps this row unless we
+              // add insets.top ourselves (uiautomator showed the switch's
+              // bounds at y 44-113px, under the status bar, untappable).
+              paddingTop={Platform.OS === 'android' ? 8 + insets.top : 8}>
               <LoginLanguageSwitch
                 selectedLanguage={selectedLanguage}
                 onChangeLanguage={handleChangeLanguage}
