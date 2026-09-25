@@ -20,13 +20,13 @@
   },
   "drawer": {
     "home": "Home",
-    "progress": "My progress",
     "profile": "Profile",
     "teacherDashboard": "Dashboard",
     "teacherTestScore": "Test Scores",
     "teacherStudentList": "Students",
     "teacherDownload": "Download",
-    "logout": "Logout"
+    "logout": "Logout",
+    "profileAndSettings": "Profile & settings"
   },
   "offline": {
     "banner": "You are offline. Downloaded lessons are still available."
@@ -62,16 +62,25 @@
       "avgTimeSpentLabel": "Average Time Spent",
       "lastLoginLabel": "Last Login"
     },
-    "dashboard": {
+    "myProgress": {
+      "title": "My progress",
       "greeting": "Hello",
-      "totalPoints": "Total points",
-      "levelsCompleted": "{{done}} of {{total}} levels completed",
-      "pointsLabel": "Points",
-      "completedLevelsLabel": "Completed levels",
+      "greetingWithName": "Hello, {{name}}",
+      "overall": "overall",
+      "lessonsCompleted": "Lessons completed",
+      "levelsCompleted": "Levels completed",
+      "ofTotal": "of {{total}}",
+      "byCurriculum": "By curriculum",
+      "viewAll": "View all",
+      "showLess": "Show less",
+      "lessonsOfTotal": "{{done}} of {{total}} lessons",
+      "allLevelsComplete": "All levels complete",
+      "noCurricula": "You are not enrolled in any curriculum yet.",
+      "loading": "Loading your progress",
       "loadError": "We couldn't load your progress.",
       "retry": "Retry",
-      "emptyGrades": "No grades yet.",
-      "staleNote": "Showing saved progress from {{date}}"
+      "staleNote": "Showing saved progress from {{date}}",
+      "overallProgress": "Overall progress"
     },
     "subject": {
       "header": "Subjects",

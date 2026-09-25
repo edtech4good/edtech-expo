@@ -3,7 +3,7 @@ import {
   CourseIndexResponse,
   CourseResponse,
   CurriculumResponse,
-  GradeProgressResponse,
+  ProgressSummaryResponse,
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
@@ -286,14 +286,15 @@ export default class Api {
     );
   }
 
-  // Per-grade progress for one curriculum (grade/progress/curriculum/:id) —
-  // used by the student dashboard. Same envelope as fetchCourses; scores and
-  // level counts still need normalising on the way into the store.
-  async fetchCurriculumProgress(
-    curriculumId: string,
-  ): Promise<ApiResponse<GradeProgressResponse, GradeProgressResponse>> {
-    return this.apiSauceInstance.get<GradeProgressResponse>(
-      `grade/progress/curriculum/${curriculumId}`,
+  // Cross-curriculum progress summary (student/progress/summary) -- used
+  // by the "My progress" screen. Envelope is { data, error }; numbers may
+  // arrive as strings/null and still need normalising on the way into the
+  // store.
+  async fetchProgressSummary(): Promise<
+    ApiResponse<ProgressSummaryResponse, ProgressSummaryResponse>
+  > {
+    return this.apiSauceInstance.get<ProgressSummaryResponse>(
+      'student/progress/summary',
     );
   }
 

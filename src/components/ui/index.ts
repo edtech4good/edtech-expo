@@ -66,4 +66,11 @@ export {
   type LessonStepRowStatus,
 } from './LessonStepRow';
 export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';
+export {
+  default as NavSidebar,
+  NavSidebarView,
+  NAV_SIDEBAR_WIDTH,
+  type NavSidebarItem,
+  type NavSidebarViewProps,
+} from './NavSidebar';
 export { default as LogoutButton } from './LogoutButton';

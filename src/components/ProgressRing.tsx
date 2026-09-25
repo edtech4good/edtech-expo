@@ -1,15 +1,25 @@
 import { ReactNode } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useTheme } from 'styled-components/native';
 
 interface ProgressRingProps {
   size: number;
   strokeWidth: number;
   /** 0..1. Values outside that range are clamped; NaN is treated as 0. */
   progress: number;
-  trackColor: string;
-  color: string;
+  /** Defaults to the theme's hairline `divider` (#E3E8EF corporate). */
+  trackColor?: string;
+  /** Defaults to the theme's `primary` (#0B5FFF corporate). */
+  color?: string;
+  /** Rendered centred inside the ring (e.g. the % label). */
   children?: ReactNode;
+  /**
+   * What the ring measures (e.g. "Overall progress"), so screen readers
+   * announce context alongside the progressbar value instead of a bare
+   * percentage.
+   */
+  accessibilityLabel?: string;
 }
 
 // Native replacement for the web-only DOM-<svg> circular progress bar
@@ -25,7 +35,11 @@ export default function ProgressRing({
   trackColor,
   color,
   children,
+  accessibilityLabel,
 }: ProgressRingProps) {
+  const theme = useTheme();
+  const resolvedTrackColor = trackColor ?? theme.colors.divider;
+  const resolvedColor = color ?? theme.colors.primary;
   const safeProgress = Number.isFinite(progress)
     ? Math.min(1, Math.max(0, progress))
     : 0;
@@ -38,14 +52,22 @@ export default function ProgressRing({
   return (
     <View
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(safeProgress * 100) }}
+      // With a label, make the ring one accessible element (label + value)
+      // rather than letting the reader also stop on the centred % text.
+      accessible={accessibilityLabel != null ? true : undefined}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityValue={{
+        min: 0,
+        max: 100,
+        now: Math.round(safeProgress * 100),
+      }}
       style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Circle
           cx={center}
           cy={center}
           r={radius}
-          stroke={trackColor}
+          stroke={resolvedTrackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -53,7 +75,7 @@ export default function ProgressRing({
           cx={center}
           cy={center}
           r={radius}
-          stroke={color}
+          stroke={resolvedColor}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"

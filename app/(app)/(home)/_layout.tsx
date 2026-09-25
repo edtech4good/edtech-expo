@@ -3,7 +3,9 @@ import {
   DrawerButton,
   LogoutButton,
   NavRail,
+  NavSidebar,
   NAV_RAIL_WIDTH,
+  NAV_SIDEBAR_WIDTH,
 } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
@@ -31,7 +33,7 @@ export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
   const font = useFont('semi');
-  const { isRail, isTabs } = useNavShell();
+  const { isRail, isSidebar, isTabs, hasPermanentNav } = useNavShell();
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const insets = useSafeAreaInsets();
 
@@ -82,30 +84,17 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
-          name="dashboard/index"
-          options={{
-            headerShown: true,
-            title: t('drawer.progress'),
-            headerTitleAlign: 'center',
-            headerTitleStyle: {
-              fontFamily: font,
-              fontSize: theme.fontSizes.h4,
-              color: theme.colors.customHeaderTitle,
-            },
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: theme.colors.customAppBar },
-            tabBarTestID: 'tab-progress',
-            tabBarAccessibilityLabel: t('drawer.progress'),
-            tabBarIcon: ({ color, size }) => (
-              <MaterialIcons name="insights" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="profile/index"
           options={{
             headerShown: true,
+            // The phone header reads "My progress" (the section at the top
+            // of this screen) while the tab keeps the "Profile" label.
+            // headerTitle wins over `title`, which StudentProfileScreen
+            // overwrites via navigation.setOptions on mount, so both are
+            // pinned explicitly here rather than derived from `title`.
             title: t('drawer.profile'),
+            headerTitle: t('screen.myProgress.title'),
+            tabBarLabel: t('drawer.profile'),
             headerTitleAlign: 'center',
             headerTitleStyle: {
               fontFamily: font,
@@ -133,14 +122,21 @@ export default function Home() {
     <Drawer
       // Swap elements, not components, in drawerContent: expo-router/drawer
       // calls this as a plain function inside the Drawer's own fiber, and
-      // NavRail calls one more hook (useSafeAreaInsets) than CustomDrawer.
+      // NavRail / NavSidebar call different hooks than CustomDrawer.
       // Passing `isRail ? NavRail : CustomDrawer` would swap which function
-      // fills that hook slot without remounting, which is a hook-order
-      // violation the moment isRail flips at runtime (dev theme toggle, web
-      // resize across the 768 breakpoint). Rendering elements lets React
-      // key off the differing component type and remount cleanly instead.
+      // fills those hook slots without remounting, which is a hook-order
+      // violation the moment the shell flips at runtime (dev theme toggle,
+      // web resize across the 768 or 1280 breakpoint). Rendering elements
+      // lets React key off the differing component type and remount cleanly
+      // instead.
       drawerContent={props =>
-        isRail ? <NavRail {...props} /> : <CustomDrawer {...props} />
+        isSidebar ? (
+          <NavSidebar {...props} />
+        ) : isRail ? (
+          <NavRail {...props} />
+        ) : (
+          <CustomDrawer {...props} />
+        )
       }
       initialRouteName="profile/index"
       screenOptions={{
@@ -150,13 +146,13 @@ export default function Home() {
           fontSize: theme.fontSizes.h4,
           color: theme.colors.customHeaderTitle,
         },
-        drawerPosition: isRail ? 'left' : 'right',
+        drawerPosition: hasPermanentNav ? 'left' : 'right',
         headerLeft: () => null,
-        ...(isRail
+        ...(hasPermanentNav
           ? {
               drawerType: 'permanent' as const,
               drawerStyle: {
-                width: NAV_RAIL_WIDTH,
+                width: isSidebar ? NAV_SIDEBAR_WIDTH : NAV_RAIL_WIDTH,
                 borderRightWidth: 0,
                 backgroundColor: theme.colors.surface,
               },
@@ -171,19 +167,13 @@ export default function Home() {
       <Drawer.Screen
         name="profile/index"
         options={{
-          headerRight: isRail ? undefined : () => <DrawerButton />,
+          // Rail and sidebar: My progress carries its own large title, so no
+          // header bar (design v2 tablet and desktop mocks have none).
+          headerShown: !hasPermanentNav,
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
           title: t('drawer.profile'),
-        }}
-      />
-      <Drawer.Screen
-        name="dashboard/index"
-        options={{
-          headerRight: isRail ? undefined : () => <DrawerButton />,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: theme.colors.customAppBar },
-          title: t('drawer.progress'),
         }}
       />
     </Drawer>

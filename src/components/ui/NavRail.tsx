@@ -36,7 +36,6 @@ const ICON_SIZE = 24;
 // is the 'home' screen).
 const ROUTE_NAME_BY_ITEM_ROUTE: Record<string, string> = {
   '/home/subjects': 'home',
-  '/dashboard': 'dashboard/index',
   '/profile': 'profile/index',
   'teacher/dashboard': 'teacher/dashboard',
   // 'teacher/score' has no backing route in this navigator today — it never

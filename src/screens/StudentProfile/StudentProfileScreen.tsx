@@ -13,12 +13,42 @@ import {
   SizedBox,
   StudentProfileCard,
 } from '@/components';
-import { useAuth, useDesign, useFont } from '@/services';
+import { useAuth, useDesign, useFont, useProgressSummary } from '@/services';
 import { useNavigation } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
+import MyProgressSection, {
+  myProgressVariantFor,
+} from './Components/MyProgressSection';
+
+// Desktop content padding (handoff Desktop 1440x900: 36 vertical / 48
+// horizontal).
+const DESKTOP_PADDING_V = 36;
+const DESKTOP_PADDING_H = 48;
+
+// Container for the corporate "My progress" block at the top of the
+// profile. Its own component so useProgressSummary (which fetches on mount)
+// only runs for the corporate branch, and so its hooks stay outside the
+// parent's corporate/kids branch.
+function MyProgressContainer({ studentName }: { studentName: string }) {
+  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const { summary, loading, error, isStale, refresh } = useProgressSummary();
+
+  return (
+    <MyProgressSection
+      summary={summary}
+      loading={loading}
+      error={error}
+      isStale={isStale}
+      onRetry={refresh}
+      studentName={studentName}
+      variant={myProgressVariantFor(width, theme.breakpoints)}
+    />
+  );
+}
 
 // Corporate detail-card row: label (muted eyebrow) + value (body text).
 // A standalone component (not inline JSX) so its own useTheme/useFont calls
@@ -52,8 +82,9 @@ export default function StudentProfileScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
-  const displayFont = useFont('bold', 'display');
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= theme.breakpoints.SIDEBAR_MIN_WIDTH;
 
   const { profile } = useAuth();
 
@@ -65,51 +96,28 @@ export default function StudentProfileScreen() {
     const firstName = profile?.studentfirstname ?? '';
     const lastName = profile?.studentlastname ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
-    // Code-point safe (not charAt) so a surrogate-pair character in a name
-    // doesn't get split into a mangled half-character initial.
-    const firstInitial = firstName ? Array.from(firstName)[0] : '';
-    const lastInitial = lastName ? Array.from(lastName)[0] : '';
-    const initials = `${firstInitial}${lastInitial}`;
+    const padH = isDesktop
+      ? DESKTOP_PADDING_H
+      : theme.layouts.pageHorizontalPadding;
+    const padV = isDesktop
+      ? DESKTOP_PADDING_V
+      : theme.layouts.pageVerticalPadding;
 
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
         <Container
           backgroundColor="transparent"
           alignItems="stretch"
-          paddingLeft={theme.layouts.pageHorizontalPadding}
-          paddingRight={theme.layouts.pageHorizontalPadding}
-          paddingTop={theme.layouts.pageVerticalPadding}
-          paddingBottom={theme.layouts.pageVerticalPadding}>
+          paddingLeft={padH}
+          paddingRight={padH}
+          paddingTop={padV}
+          paddingBottom={padV}>
+          <MyProgressContainer studentName={fullName} />
+          <SizedBox height={32} />
+          {/* The My progress greeting above already shows the avatar and
+              name, so the profile block starts straight at its details. */}
           <EyebrowText>{t('screen.profile.header')}</EyebrowText>
           <SizedBox.Medium height />
-          <Text
-            style={{
-              fontFamily: displayFont,
-              fontSize: 28,
-              color: theme.colors.onBackground,
-            }}>
-            {fullName}
-          </Text>
-          <SizedBox.Large height />
-          <View
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: theme.radii.pill,
-              backgroundColor: theme.colors.primaryLight,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-            <Text
-              style={{
-                fontFamily: displayFont,
-                fontSize: 32,
-                color: theme.colors.primary,
-              }}>
-              {initials}
-            </Text>
-          </View>
-          <SizedBox.Large height />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Chip label={profile?.schoolusername ?? ''} />
             <EyebrowText>

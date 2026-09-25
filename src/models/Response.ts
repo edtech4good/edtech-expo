@@ -1,6 +1,6 @@
 import { Course } from './Course';
 import { Curriculum } from './Curriculum';
-import { RawCurriculumProgress } from './GradeProgress';
+import { RawProgressSummary } from './ProgressSummary';
 import {
   Lesson,
   LessonActivityProgress,
@@ -93,8 +93,8 @@ export interface CurriculumResponse {
   data: Curriculum[];
 }
 
-export interface GradeProgressResponse {
-  data: RawCurriculumProgress;
+export interface ProgressSummaryResponse {
+  data: RawProgressSummary;
   error: boolean;
 }
 

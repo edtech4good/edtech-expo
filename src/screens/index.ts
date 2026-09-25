@@ -5,7 +5,6 @@ export { default as LoginScreen } from './Login/LoginScreen';
 export { default as PracticeScreen } from './Practice/PracticeScreen';
 export { default as QuizScreen } from './Quiz/QuizScreen';
 export { default as ResultScreen } from './Result/ResultScreen';
-export { default as StudentDashboardScreen } from './StudentDashboard/StudentDashboardScreen';
 export { default as StudentProfileScreen } from './StudentProfile/StudentProfileScreen';
 export { default as SubjectSelectionScreen } from './SubjectSelection/SubjectSelectionScreen';
 export { default as UnitSelectionScreen } from './UnitSelection/UnitSelectionScreen';

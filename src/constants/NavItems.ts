@@ -13,12 +13,6 @@ export const studentNavItems: Array<NavItem> = [
     route: '/home/subjects',
   },
   {
-    title: 'drawer.progress',
-    icon: 'insights',
-    url: '/dashboard',
-    route: '/dashboard',
-  },
-  {
     title: 'drawer.profile',
     icon: 'account-circle',
     url: '/profile',
