@@ -19,6 +19,7 @@ import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   ActivityProgressActions,
   getProfile,
+  getSelectedLanguage,
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
@@ -30,7 +31,12 @@ import {
   notifyResultQueued,
 } from '@/services';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -48,16 +54,26 @@ import PracticeArrangeImage from '../Practice/Components/ArrangeImage/PracticeAr
 import PracticeDragDrop from '../Practice/Components/DragDrop/PracticeDragDrop';
 import { useTranslation } from 'react-i18next';
 
+// Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
+// for the full rationale; kept identical here so both screens' headers
+// constrain the title the same way.
+const LEFT_SLOT = 64;
+const RIGHT_SLOT = 130;
+const HEADER_SIDE_SLOT = Math.max(LEFT_SLOT, RIGHT_SLOT);
+
 export default function QuizScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
 
   const dispatch = useAppDispatch();
   const { calculateResult } = useResult();
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLanguage = useAppSelector(getSelectedLanguage);
+  const isKhmer = selectedLanguage === 'km';
   const selectedLesson = useAppSelector(getSelectedLesson);
   const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, saveResult, questions } = useQuiz(
@@ -95,22 +111,41 @@ export default function QuizScreen() {
     navigation.setOptions({
       ...(isCorporate && quizName ? { title: quizName } : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Android native-stack (react-native-screens) renders its own stock
+      // back chevron alongside a custom headerLeft unless headerBackVisible
+      // is explicitly turned off — see PracticeScreen.tsx for the full
+      // root cause. Unconditional, same as there.
+      headerBackVisible: false,
+      headerTitleAlign: 'center',
       // Corporate child app bar (handoff §4, v2.1): centred title wraps to
       // up to two lines instead of truncating (kids keeps the stock header
-      // untouched), plus a mono "N OF total" eyebrow on the right.
+      // untouched), plus a mono "N OF total" eyebrow on the right. The
+      // title is wrapped in a max-width View so it can never grow into the
+      // back button or the counter — see HEADER_SIDE_SLOT above.
       ...(isCorporate
         ? {
             headerTitle: () => (
-              <Text
-                numberOfLines={2}
-                style={{
-                  fontFamily: displayBold,
-                  fontSize: theme.fontSizes.subtitle,
-                  color: theme.colors.onBackground,
-                  textAlign: 'center',
-                }}>
-                {quizName}
-              </Text>
+              <View style={{ maxWidth: windowWidth - 2 * HEADER_SIDE_SLOT }}>
+                <Text
+                  numberOfLines={isKhmer ? 1 : 2}
+                  ellipsizeMode="tail"
+                  style={{
+                    fontFamily: displayBold,
+                    fontSize: theme.fontSizes.subtitle,
+                    // See PracticeScreen.tsx: Khmer is capped to one line
+                    // (with an end ellipsis) at a taller line-height rather
+                    // than stretched to two, since the native Android
+                    // header height is fixed and two Khmer lines risk
+                    // clipping there.
+                    lineHeight: isKhmer
+                      ? theme.fontSizes.subtitle * 1.65
+                      : undefined,
+                    color: theme.colors.onBackground,
+                    textAlign: 'center',
+                  }}>
+                  {quizName}
+                </Text>
+              </View>
             ),
             headerRight: () => (
               <EyebrowText
@@ -127,7 +162,15 @@ export default function QuizScreen() {
           }
         : {}),
     });
-  }, [navigation, selectedModule, isCorporate, question, questions.length]);
+  }, [
+    navigation,
+    selectedModule,
+    isCorporate,
+    question,
+    questions.length,
+    windowWidth,
+    isKhmer,
+  ]);
 
   useEffect(() => {
     if (!selectedModule) return;

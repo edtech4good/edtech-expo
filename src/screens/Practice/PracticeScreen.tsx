@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   ActivityProgressActions,
   getProfile,
+  getSelectedLanguage,
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
@@ -25,7 +26,12 @@ import {
   notifyResultQueued,
 } from '@/services';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import _ from 'lodash';
 import {
   LessonPractice,
@@ -39,6 +45,18 @@ import { Modal } from 'react-native';
 import ResultPopUp from './Components/ResultPopUp';
 import { toPracticeQuestionResult } from '@/transforms';
 import { useTranslation } from 'react-i18next';
+
+// Corporate header side slots (handoff §4, v2.1): the title must never
+// reach the back button on the left or the "N OF total" counter on the
+// right. Reserve the larger of the two on both sides so the centred title
+// stays centred instead of drifting toward whichever slot is smaller.
+// LEFT_SLOT ~ BackButton's 36px icon + 16px left margin + a few px of
+// native-stack left padding, rounded up. RIGHT_SLOT ~ the longest counter
+// label, "1 ក្នុងចំណោម 10" at the Khmer eyebrow's fixed 13px (~110dp),
+// plus its own right margin (pageHorizontalPadding).
+const LEFT_SLOT = 64;
+const RIGHT_SLOT = 130;
+const HEADER_SIDE_SLOT = Math.max(LEFT_SLOT, RIGHT_SLOT);
 
 export interface PracticeProps {
   question: Question;
@@ -62,9 +80,12 @@ export default function PracticeScreen() {
   const { isCorporate } = useDesign();
   const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
 
   const dispatch = useAppDispatch();
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLanguage = useAppSelector(getSelectedLanguage);
+  const isKhmer = selectedLanguage === 'km';
   const selectedLesson = useAppSelector(getSelectedLesson);
   const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, questions, saveResult } = usePractice(
@@ -104,24 +125,46 @@ export default function PracticeScreen() {
     navigation.setOptions({
       title: practiceName,
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Android native-stack (react-native-screens) renders its own stock
+      // back chevron alongside a custom headerLeft unless headerBackVisible
+      // is explicitly turned off — that was the second, thinner arrow at
+      // the far left (the heavier Material one was our BackButton). This
+      // applies whether or not isCorporate, so it's set unconditionally.
+      headerBackVisible: false,
+      headerTitleAlign: 'center',
       // Corporate child app bar (handoff §4, v2.1): centred title wraps to
       // up to two lines instead of truncating (kids keeps the stock
       // single-line header, untouched, via the stack's default options),
       // and a mono "N OF total" eyebrow sits on the right — the
-      // current/total question count.
+      // current/total question count. The title is wrapped in a max-width
+      // View so it can never grow into the back button or the counter —
+      // see HEADER_SIDE_SLOT above.
       ...(isCorporate
         ? {
             headerTitle: () => (
-              <Text
-                numberOfLines={2}
-                style={{
-                  fontFamily: displayBold,
-                  fontSize: theme.fontSizes.subtitle,
-                  color: theme.colors.onBackground,
-                  textAlign: 'center',
-                }}>
-                {practiceName}
-              </Text>
+              <View style={{ maxWidth: windowWidth - 2 * HEADER_SIDE_SLOT }}>
+                <Text
+                  numberOfLines={isKhmer ? 1 : 2}
+                  ellipsizeMode="tail"
+                  style={{
+                    fontFamily: displayBold,
+                    fontSize: theme.fontSizes.subtitle,
+                    // Khmer combining marks need more vertical room than
+                    // Latin script (v2.1: 1.6-1.7x); we cap Khmer to a
+                    // single line (with an end ellipsis) rather than
+                    // stretching it to two, because the native Android
+                    // header height is fixed and two Khmer lines at that
+                    // line-height risk being clipped top/bottom — English
+                    // keeps its normal line-height and two-line wrap.
+                    lineHeight: isKhmer
+                      ? theme.fontSizes.subtitle * 1.65
+                      : undefined,
+                    color: theme.colors.onBackground,
+                    textAlign: 'center',
+                  }}>
+                  {practiceName}
+                </Text>
+              </View>
             ),
             headerRight: () => (
               <EyebrowText
@@ -138,7 +181,14 @@ export default function PracticeScreen() {
           }
         : {}),
     });
-  }, [selectedModule, isCorporate, question, questions.length]);
+  }, [
+    selectedModule,
+    isCorporate,
+    question,
+    questions.length,
+    windowWidth,
+    isKhmer,
+  ]);
 
   useEffect(() => {
     if (!selectedModule) return;
