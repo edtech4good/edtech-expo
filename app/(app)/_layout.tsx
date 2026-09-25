@@ -14,7 +14,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 // Wait for a reconnect to settle before flushing: links flap (captive
-// portals, a Wi-Fi hand-off), and each event restarts the wait.
+// portals, a Wi-Fi hand-off); only an offline→online transition restarts
+// the wait.
 const RECONNECT_FLUSH_DELAY_MS = 2000;
 
 export default function InitialStack() {
@@ -56,8 +57,8 @@ export default function InitialStack() {
       if (cancelled) return;
       const previous = wasConnectedRef.current;
       wasConnectedRef.current = isConnected;
-      // Going offline cancels a pending flush; each offline -> online
-      // transition restarts the wait. An online -> online event must NOT
+      // Going offline cancels a pending flush; only an offline -> online
+      // transition starts a new wait. An online -> online event must NOT
       // clear it: on web, netinfo and window 'online' both report the same
       // reconnect, and the second would otherwise cancel the first's flush.
       if (!isConnected) {
@@ -66,7 +67,6 @@ export default function InitialStack() {
         return;
       }
       if (previous) return;
-      if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = undefined;
         if (cancelled || !profileRef.current) return;

@@ -52,7 +52,7 @@ async function doFlush(api: Api): Promise<void> {
         }
         store.dispatch(PendingResultActions.dequeueResult(item.id));
       } catch (err) {
-        if (classifyFlushError(err, item.kind) === 'poison') {
+        if (classifyFlushError(err) === 'poison') {
           const status = (err as any)?.status;
           store.dispatch(PendingResultActions.bumpAttempts(item.id));
           const refreshed = getPendingResults(store.getState()).find(
@@ -62,7 +62,7 @@ async function doFlush(api: Api): Promise<void> {
           if (shouldDropPoison(attempts, item.queuedAt, Date.now())) {
             store.dispatch(PendingResultActions.dequeueResult(item.id));
             console.warn(
-              `[pendingResults] dropping poison item id=${item.id} kind=${item.kind} lessonId=${item.lessonId} status=${status} attempts=${attempts}`,
+              `[pendingResults] dropping poison item id=${item.id} kind=${item.kind} lessonId=${item.lessonId} status=${status} attempts=${attempts} serverMessage=${(err as any)?.serverMessage ?? ''}`,
             );
           }
           continue;
