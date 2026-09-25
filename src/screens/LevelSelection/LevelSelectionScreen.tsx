@@ -14,7 +14,7 @@ import { UnitCardColors } from '@/constants';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
-import { useBreakpoint, useDesign, useFont } from '@/services';
+import { useBreakpoint, useDesign, useFont, useTypeRole } from '@/services';
 import {
   Redirect,
   router,
@@ -24,7 +24,7 @@ import {
 } from 'expo-router';
 import { useLevel, useLevelHeader, useLevelSteps } from '@/services';
 import { useAppSelector } from '@/redux';
-import { getSelectedUnit } from '@/redux/slices';
+import { getSelectedLanguage, getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
 import { toStepInfo } from '@/components/ui';
@@ -105,9 +105,15 @@ export default function LevelSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
-  const displayFont = useFont('bold', 'display');
   const bodyFont = useFont('normal', 'body');
   const bodyFontSemi = useFont('semi', 'body');
+  // design v2.1 Khmer type scale roles.
+  const screenTitleType = useTypeRole('screenTitle');
+  const bodyType = useTypeRole('body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Chip/progress micro-labels: Khmer floor — never below 13px.
+  const microFontSize = isKhmer ? 13 : 12;
+  const microLineHeight = isKhmer ? 20 : undefined;
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ levelid?: string }>();
   const selectedUnit = useAppSelector(getSelectedUnit);
@@ -264,7 +270,8 @@ export default function LevelSelectionScreen() {
               <Text
                 style={{
                   fontFamily: bodyFont,
-                  fontSize: 12,
+                  fontSize: microFontSize,
+                  lineHeight: microLineHeight,
                   color: theme.colors.onSurface,
                 }}>
                 {headerGradeName}
@@ -285,7 +292,8 @@ export default function LevelSelectionScreen() {
               <Text
                 style={{
                   fontFamily: bodyFont,
-                  fontSize: 12,
+                  fontSize: microFontSize,
+                  lineHeight: microLineHeight,
                   color: theme.colors.onPrimary,
                 }}>
                 {headerUnit.levelname}
@@ -300,8 +308,9 @@ export default function LevelSelectionScreen() {
         <View style={{ height: 14 }} />
         <Text
           style={{
-            fontFamily: displayFont,
-            fontSize: theme.fontSizes.screenTitle,
+            fontFamily: screenTitleType.fontFamily,
+            fontSize: screenTitleType.fontSize,
+            lineHeight: screenTitleType.lineHeight,
             color: theme.colors.onBackground,
           }}>
           {headerUnit?.levelname ?? ''}
@@ -311,7 +320,8 @@ export default function LevelSelectionScreen() {
             <Text
               style={{
                 fontFamily: bodyFont,
-                fontSize: theme.fontSizes.body,
+                fontSize: bodyType.fontSize,
+                lineHeight: bodyType.lineHeight,
                 color: theme.colors.onSurface,
               }}>
               {headerUnit.leveldescription}
@@ -340,7 +350,8 @@ export default function LevelSelectionScreen() {
           <Text
             style={{
               fontFamily: bodyFontSemi,
-              fontSize: 12,
+              fontSize: microFontSize,
+              lineHeight: microLineHeight,
               color: theme.colors.onSurface,
             }}>
             {t('screen.level.progressWithCertificate', {
@@ -351,7 +362,8 @@ export default function LevelSelectionScreen() {
           <Text
             style={{
               fontFamily: bodyFontSemi,
-              fontSize: 12,
+              fontSize: microFontSize,
+              lineHeight: microLineHeight,
               color: theme.colors.onSurface,
             }}>
             {`${levelProgress}%`}

@@ -113,12 +113,55 @@ const shadows: ThemeTokens['shadows'] = {
   card: '#00000015',
 };
 
+// Kids has no design-v2.1 Khmer type scale of its own (that work is
+// corporate-only) — mirrors corporate's values so theme parity holds and a
+// future kids consumer of useTypeRole gets sane numbers rather than none.
+const typeScale: ThemeTokens['typeScale'] = {
+  en: {
+    phone: {
+      screenTitle: { fontSize: 28, lineHeight: 34, weight: 'bold' },
+      cardTitle: { fontSize: 20, lineHeight: 26, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+    tablet: {
+      screenTitle: { fontSize: 34, lineHeight: 40, weight: 'bold' },
+      cardTitle: { fontSize: 24, lineHeight: 30, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+  },
+  km: {
+    phone: {
+      screenTitle: { fontSize: 26, lineHeight: 44, weight: 'bold' },
+      cardTitle: { fontSize: 19, lineHeight: 32, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+    tablet: {
+      screenTitle: { fontSize: 32, lineHeight: 52, weight: 'bold' },
+      cardTitle: { fontSize: 22, lineHeight: 36, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+  },
+};
+
 const kidsTokens: ThemeTokens = {
   name: 'kids',
   colors,
   fonts,
   radii,
   shadows,
+  typeScale,
 };
 
 export default kidsTokens;

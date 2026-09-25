@@ -1,8 +1,10 @@
 import { useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import hexAlpha from '@/utils/hexAlpha';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { LayoutChangeEvent, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -18,6 +20,11 @@ export interface OfflineBannerProps {
   // addition to its own height, for routes that render it at y=0 under a
   // translucent status bar (see OfflineBannerFrame's safeAreaTop prop).
   topInset?: number;
+  // Reports the banner's current measured height (content + topInset, 0
+  // while hidden is NOT reported here — OfflineBannerFrame handles the
+  // hidden case itself) so OfflineBannerHeightContext can stay accurate
+  // when Khmer copy wraps onto a second line and grows past BANNER_HEIGHT.
+  onHeightChange?: (height: number) => void;
 }
 
 // Default copy comes from the offline.banner i18n key (src/locales/en.json
@@ -51,12 +58,30 @@ export default function OfflineBanner({
   visible,
   message,
   topInset = 0,
+  onHeightChange,
 }: OfflineBannerProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Khmer floor: never below 13px, line height per the v2.1 type scale's
+  // caption role (13/20) — English keeps its own natural (undefined)
+  // line height, which is what already produces the one-line 36pt look.
+  const fontSize = isKhmer ? 13 : 12;
+  const lineHeight = isKhmer ? 20 : undefined;
   const { t } = useTranslation();
   const text = message ?? t('offline.banner');
-  const totalHeight = BANNER_HEIGHT + topInset;
+
+  // The banner sizes to its content instead of a fixed 36pt: the content
+  // row (icon + text, with its own padding/topInset baked in) is measured
+  // via onLayout, and the outer Animated.View's height target tracks that
+  // measurement so a wrapped two-line Khmer string isn't clipped by
+  // `overflow: hidden`. Seed with BANNER_HEIGHT + topInset so the very
+  // first (English-shaped) frame renders at the same height as before,
+  // before the first onLayout measurement lands.
+  const [contentHeight, setContentHeight] = useState(
+    () => BANNER_HEIGHT + topInset,
+  );
+  const totalHeight = contentHeight;
 
   const height = useSharedValue(visible ? totalHeight : 0);
   const opacity = useSharedValue(visible ? 1 : 0);
@@ -65,6 +90,15 @@ export default function OfflineBanner({
     height.value = withTiming(visible ? totalHeight : 0, { duration: 200 });
     opacity.value = withTiming(visible ? 1 : 0, { duration: 200 });
   }, [visible, height, opacity, totalHeight]);
+
+  useEffect(() => {
+    onHeightChange?.(totalHeight);
+  }, [totalHeight, onHeightChange]);
+
+  const handleContentLayout = (event: LayoutChangeEvent) => {
+    const measured = Math.round(event.nativeEvent.layout.height);
+    setContentHeight(prev => (measured !== prev ? measured : prev));
+  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     height: height.value,
@@ -78,12 +112,12 @@ export default function OfflineBanner({
       importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
       style={[{ width: '100%', overflow: 'hidden' }, animatedStyle]}>
       <View
+        onLayout={handleContentLayout}
         accessibilityRole="alert"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           width: '100%',
-          minHeight: totalHeight,
           paddingTop: 10 + topInset,
           paddingBottom: 10,
           paddingHorizontal: 16,
@@ -95,7 +129,8 @@ export default function OfflineBanner({
             flex: 1,
             marginLeft: 8,
             fontFamily,
-            fontSize: 12,
+            fontSize,
+            lineHeight,
             color: theme.colors.warningText,
           }}>
           {text}

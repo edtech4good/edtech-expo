@@ -51,6 +51,9 @@ export default function EyebrowText({
     : floor
     ? Math.max(theme.fontSizes.caption, resolvedSize)
     : resolvedSize;
+  // Khmer eyebrow spec (v2.1): flat 13/20 line height (>=1.5x fontSize).
+  // English keeps its natural (undefined) line height.
+  const lineHeight = isKhmer ? 20 : undefined;
 
   return (
     <Text
@@ -59,6 +62,7 @@ export default function EyebrowText({
         {
           fontFamily,
           fontSize,
+          lineHeight,
           color: resolvedColor,
           letterSpacing: isKhmer ? 0 : fontSize * 0.1,
           textTransform: isKhmer ? 'none' : 'uppercase',

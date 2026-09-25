@@ -23,6 +23,7 @@ const kidsTheme: DefaultTheme = {
   fonts: kidsTokens.fonts,
   radii: kidsTokens.radii,
   shadows: kidsTokens.shadows,
+  typeScale: kidsTokens.typeScale,
 };
 
 const corporateTheme: DefaultTheme = {
@@ -34,6 +35,7 @@ const corporateTheme: DefaultTheme = {
   fonts: corporateTokens.fonts,
   radii: corporateTokens.radii,
   shadows: corporateTokens.shadows,
+  typeScale: corporateTokens.typeScale,
 };
 
 const themes = { kids: kidsTheme, corporate: corporateTheme };

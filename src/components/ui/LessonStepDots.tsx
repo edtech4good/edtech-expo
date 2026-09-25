@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import { useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 
 export type StepState = 'done' | 'current' | 'todo';
 
@@ -94,6 +96,11 @@ export default function LessonStepDots({
   const { t } = useTranslation();
   const labelFontFamily = useFont('normal', 'body');
   const labelFontFamilySemi = useFont('semi', 'body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Khmer floor: never below 13px (the Latin labels stay at their 12pt
+  // floor per the handoff's U-19 audit item).
+  const labelFontSize = isKhmer ? 13 : 12;
+  const labelLineHeight = isKhmer ? 20 : undefined;
 
   const dotStyleFor = (state: StepState) => {
     if (state === 'done')
@@ -167,7 +174,8 @@ export default function LessonStepDots({
               <Text
                 style={{
                   fontFamily: labelFontFamilyFor(state),
-                  fontSize: 12,
+                  fontSize: labelFontSize,
+                  lineHeight: labelLineHeight,
                   color: labelColorFor(state),
                 }}>
                 {label}
