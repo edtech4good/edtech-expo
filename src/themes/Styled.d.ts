@@ -5,6 +5,7 @@ import type {
   ThemeFonts,
   ThemeRadii,
   ThemeShadows,
+  ThemeTypeScale,
 } from './tokens/types';
 
 export interface FontWeight {
@@ -34,6 +35,7 @@ declare module 'styled-components/native' {
     fonts: ThemeFonts;
     radii: ThemeRadii;
     shadows: ThemeShadows;
+    typeScale: ThemeTypeScale;
 
     fontSizes: {
       // header: number;

@@ -18,7 +18,7 @@ import {
   PracticeHeading,
   SizedBox,
 } from '@/components';
-import { useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
 import FractionItem from './Components/FractionItem';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -40,13 +40,14 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       onRetry = () => undefined,
       onSubmit = () => undefined,
     }: PracticeProps,
     ref,
   ) {
     const theme = useTheme();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
+    const { isCorporate } = useDesign();
 
     const questionOptions = useMemo(
       () =>
@@ -166,7 +167,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -181,7 +182,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           justifyContent="center"
           borderRadius={theme.layouts.defaultRadius}
           backgroundColor={theme.colors.surface}
-          style={{ margin: theme.layouts.large }}>
+          style={{
+            margin: theme.layouts.large,
+            ...(isCorporate
+              ? { borderWidth: 1, borderColor: theme.colors.divider }
+              : null),
+          }}>
           {!_.isEmpty(exerciseImage) && (
             <ExpandedWithLayout justifyContent="center" alignItems="center">
               <ChildImage source={exerciseImage} />
@@ -199,6 +205,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={methods.handleSubmit(handleSubmit)}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );

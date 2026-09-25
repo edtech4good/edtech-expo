@@ -19,7 +19,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource, useScreenDimension } from '@/services';
 import {
   ArrangeItem,
   Container,
@@ -48,11 +48,13 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
     }: PracticeProps,
     ref,
   ) {
     const theme = useTheme();
-    const { unblockHeightWithoutHeader, windowWidth } = useScreenDimension();
+    const { isCorporate } = useDesign();
+    const { windowWidth } = useScreenDimension();
     const matchingItemRefs = useRef<Record<string, DraggableHandler>>({});
     const source = useResource(
       { name: _.get(question, 'questionobject.questionfile.filename', '') },
@@ -211,7 +213,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     // };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -230,7 +232,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             borderRadius={theme.layouts.defaultRadius}
             backgroundColor={theme.colors.surface}
             paddingLeft={theme.layouts.large}
-            paddingRight={theme.layouts.large}>
+            paddingRight={theme.layouts.large}
+            style={
+              isCorporate
+                ? { borderWidth: 1, borderColor: theme.colors.divider }
+                : undefined
+            }>
             {!_.isEmpty(source) && (
               <ExpandedWithLayout justifyContent="center">
                 <ChildImage
@@ -284,6 +291,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetry}
+          hideRetry={hideRetry}
         />
       </Container>
     );

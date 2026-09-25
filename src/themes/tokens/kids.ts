@@ -38,6 +38,13 @@ const colors: ThemeTokens['colors'] = {
 
   selection: '#06AFBC',
   success: '#22DB8D',
+  // Same value and same rationale as corporate: #064E32 on #22DB8D is 5.40:1.
+  onSuccess: '#064E32',
+  // Parity only — kids has no lesson-row "Done" status word today. Kept
+  // identical to corporate's `successText` (#0F7A4F) rather than inventing
+  // a kids-specific dark green, since kids never renders it outside the
+  // theme-parity check.
+  successText: '#0F7A4F',
   warning: '#FFC228',
   warningText: '#B8860B',
   lessonChip: '#2AAADD',
@@ -106,12 +113,55 @@ const shadows: ThemeTokens['shadows'] = {
   card: '#00000015',
 };
 
+// Kids has no design-v2.1 Khmer type scale of its own (that work is
+// corporate-only) — mirrors corporate's values so theme parity holds and a
+// future kids consumer of useTypeRole gets sane numbers rather than none.
+const typeScale: ThemeTokens['typeScale'] = {
+  en: {
+    phone: {
+      screenTitle: { fontSize: 28, lineHeight: 34, weight: 'bold' },
+      cardTitle: { fontSize: 20, lineHeight: 26, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+    tablet: {
+      screenTitle: { fontSize: 34, lineHeight: 40, weight: 'bold' },
+      cardTitle: { fontSize: 24, lineHeight: 30, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+  },
+  km: {
+    phone: {
+      screenTitle: { fontSize: 26, lineHeight: 44, weight: 'bold' },
+      cardTitle: { fontSize: 19, lineHeight: 32, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+    tablet: {
+      screenTitle: { fontSize: 32, lineHeight: 52, weight: 'bold' },
+      cardTitle: { fontSize: 22, lineHeight: 36, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+  },
+};
+
 const kidsTokens: ThemeTokens = {
   name: 'kids',
   colors,
   fonts,
   radii,
   shadows,
+  typeScale,
 };
 
 export default kidsTokens;

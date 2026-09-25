@@ -15,13 +15,14 @@ const MIN_HIT_TARGET = 48;
 export default function BackButton({ onPress = undefined }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const iconSize = theme.fontSizes.h3;
-  const slop = Math.max(0, (MIN_HIT_TARGET - iconSize) / 2);
 
   const handleBackPress = () => {
     if (onPress) onPress();
     else router.back();
   };
+
+  const iconSize = theme.fontSizes.h3;
+  const slop = Math.max(0, (MIN_HIT_TARGET - iconSize) / 2);
 
   return (
     <IconButton

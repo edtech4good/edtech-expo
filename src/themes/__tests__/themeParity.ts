@@ -13,6 +13,7 @@
  */
 import kidsTokens from '../tokens/kids';
 import corporateTokens from '../tokens/corporate';
+import { ThemeTokens, TypeScaleRole } from '../tokens/types';
 
 type Json = Record<string, unknown>;
 
@@ -52,6 +53,60 @@ function isEmptyLeaf(value: unknown): boolean {
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
   return false;
+}
+
+const TYPE_SCALE_ROLES: TypeScaleRole[] = [
+  'screenTitle',
+  'cardTitle',
+  'button',
+  'body',
+  'caption',
+  'eyebrow',
+];
+
+/**
+ * Design v2.1 "Khmer type scale" assertions, run against every theme token
+ * module (kids and corporate both carry a full typeScale — see
+ * themeParity's own key-set check above). Catches the two ways this scale
+ * has actually broken before: a Khmer role sized below the 13px floor, and
+ * a Khmer line height that doesn't clear the spec's 1.5x-1.9x leading
+ * range (too tight clips descenders/combining marks; too loose looks like
+ * a bug). Also checks tablet promotion holds for both locales.
+ */
+function checkTypeScale(tokens: ThemeTokens, errors: string[]) {
+  const { typeScale, name } = tokens;
+
+  for (const role of TYPE_SCALE_ROLES) {
+    for (const formFactor of ['phone', 'tablet'] as const) {
+      const spec = typeScale.km[formFactor][role];
+      const label = `${name}.typeScale.km.${formFactor}.${role}`;
+
+      if (spec.fontSize < 13) {
+        errors.push(
+          `${label}: fontSize ${spec.fontSize} is below the Khmer 13px floor`,
+        );
+      }
+
+      const ratio = spec.lineHeight / spec.fontSize;
+      if (ratio < 1.5 || ratio > 1.9) {
+        errors.push(
+          `${label}: lineHeight/fontSize ratio ${ratio.toFixed(2)} (${spec.lineHeight}/${spec.fontSize}) is outside the Khmer 1.5x-1.9x range`,
+        );
+      }
+    }
+  }
+
+  for (const language of ['en', 'km'] as const) {
+    for (const role of ['screenTitle', 'cardTitle'] as const) {
+      const phoneSize = typeScale[language].phone[role].fontSize;
+      const tabletSize = typeScale[language].tablet[role].fontSize;
+      if (tabletSize < phoneSize) {
+        errors.push(
+          `${name}.typeScale.${language}.tablet.${role}: fontSize ${tabletSize} is smaller than phone's ${phoneSize} — tablet should promote, never shrink`,
+        );
+      }
+    }
+  }
 }
 
 function main() {
@@ -99,6 +154,18 @@ function main() {
     emptyLeaves.sort().forEach(k => console.error(`  - ${k}`));
   }
 
+  const typeScaleErrors: string[] = [];
+  checkTypeScale(kidsTokens, typeScaleErrors);
+  checkTypeScale(corporateTokens, typeScaleErrors);
+
+  if (typeScaleErrors.length > 0) {
+    ok = false;
+    console.error(
+      `\nKhmer type scale (design v2.1) violations (${typeScaleErrors.length}):`,
+    );
+    typeScaleErrors.sort().forEach(e => console.error(`  - ${e}`));
+  }
+
   if (!ok) {
     console.error('\nTheme parity check FAILED.\n');
     process.exit(1);
@@ -106,7 +173,9 @@ function main() {
 
   console.log(
     `OK: kids and corporate theme tokens have matching key sets, ` +
-      `${kidsKeys.size} leaf keys each, no empty values.`,
+      `${kidsKeys.size} leaf keys each, no empty values, and the Khmer ` +
+      `type scale (design v2.1) holds its floor/leading/tablet-promotion ` +
+      `invariants.`,
   );
   process.exit(0);
 }

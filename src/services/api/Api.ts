@@ -6,6 +6,7 @@ import {
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
+  LessonActivityProgressResponse,
   LessonLearningResponse,
   LessonListResponse,
   LessonPracticeResponse,
@@ -13,6 +14,7 @@ import {
   LessonResponse,
   LevelIndexResponse,
   LevelResponse,
+  LevelStepsResponse,
   LibraryResponse,
   LmsLoginPayload,
   PracticeResult,
@@ -158,6 +160,15 @@ const responseTransform: AsyncResponseTransform = async response => {
     const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     (err as any).status = response.status;
     (err as any).problem = response.problem;
+    // The APIs' error body is { error, errormessage, data } (their
+    // GlobalExceptionFilter); `msg` above is almost always axios' generic
+    // "Request failed with status code N", so expose the server's own
+    // message separately. Used by the offline queue to tell a permanent
+    // learning-progress 400 from a transient one (pendingResultsQueue.ts).
+    const serverMessage = _.get(response.data, 'errormessage');
+    if (typeof serverMessage === 'string') {
+      (err as any).serverMessage = serverMessage;
+    }
     throw err;
   }
 };
@@ -319,6 +330,30 @@ export default class Api {
   ): Promise<ApiResponse<LessonResponse, LessonResponse>> {
     return this.apiSauceInstance.get<LessonResponse>(
       `lesson/${lessonId}/learning`,
+    );
+  }
+
+  // Per-activity status/progress for a lesson (learnings/practices/quizzes),
+  // used to render status icons and the "next activity" CTA. See
+  // src/models/Lesson.ts LessonActivityProgress for the shape.
+  async fetchActivityProgress(
+    lessonId: string,
+  ): Promise<
+    ApiResponse<LessonActivityProgressResponse, LessonActivityProgressResponse>
+  > {
+    return this.apiSauceInstance.get<LessonActivityProgressResponse>(
+      `lesson/${lessonId}/activities/progress`,
+    );
+  }
+
+  // Per-lesson step structure + status for every lesson in a level, in one
+  // call — the level-screen sibling of fetchActivityProgress above. See
+  // src/models/Lesson.ts LevelSteps for the shape.
+  async fetchLevelSteps(
+    levelId: string,
+  ): Promise<ApiResponse<LevelStepsResponse, LevelStepsResponse>> {
+    return this.apiSauceInstance.get<LevelStepsResponse>(
+      `lesson/level/${levelId}/steps`,
     );
   }
 

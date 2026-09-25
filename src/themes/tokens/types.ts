@@ -41,6 +41,9 @@ export interface ThemeColors {
 
   selection: string;
   success: string;
+  onSuccess: string;
+  /** Text-only "Done" color for status words (lesson row status, step-dot labels) — a darker green than the `success` disc fill so 14/12px text stays readable on white. Also used as the done step dot's fill (LessonStepDots), not just the "Done" label text. */
+  successText: string;
   warning: string;
   warningText: string;
   lessonChip: string;
@@ -60,6 +63,43 @@ export interface ThemeFontsForLanguage {
 export interface ThemeFonts {
   en: ThemeFontsForLanguage;
   km: ThemeFontsForLanguage;
+}
+
+// Locale- (and form-factor-) aware type scale — design v2.1 "Khmer type
+// scale" (docs handoff §v2.1 additions). Kept local rather than importing
+// FontWeight from @/constants: that barrel re-exports CardColor.ts, which
+// imports react-native, and this module (like the rest of tokens/) must stay
+// loadable by plain node/tsx (see themeParity.ts).
+export type TypeScaleWeight = 'normal' | 'semi' | 'bold';
+
+export interface TypeRoleSpec {
+  fontSize: number;
+  lineHeight: number;
+  weight: TypeScaleWeight;
+}
+
+/** screenTitle/cardTitle/button/body/caption/eyebrow — the six roles the
+ * v2.1 Khmer type scale spec calls out. */
+export type TypeScaleRole =
+  | 'screenTitle'
+  | 'cardTitle'
+  | 'button'
+  | 'body'
+  | 'caption'
+  | 'eyebrow';
+
+export type TypeScaleForFormFactor = Record<TypeScaleRole, TypeRoleSpec>;
+
+export interface TypeScaleForLanguage {
+  phone: TypeScaleForFormFactor;
+  /** Titles promote one step on tablet; other roles are unchanged from
+   * phone per the handoff (only screenTitle/cardTitle get tablet values). */
+  tablet: TypeScaleForFormFactor;
+}
+
+export interface ThemeTypeScale {
+  en: TypeScaleForLanguage;
+  km: TypeScaleForLanguage;
 }
 
 export interface ThemeRadii {
@@ -82,4 +122,5 @@ export interface ThemeTokens {
   fonts: ThemeFonts;
   radii: ThemeRadii;
   shadows: ThemeShadows;
+  typeScale: ThemeTypeScale;
 }

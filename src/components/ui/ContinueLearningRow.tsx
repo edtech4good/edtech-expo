@@ -1,4 +1,4 @@
-import { useFont } from '@/services';
+import { useFont, useTypeRole } from '@/services';
 import { Image, ImageProps } from 'expo-image';
 import { GestureResponderEvent, Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -7,11 +7,20 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
+import { useTranslation } from 'react-i18next';
 
+import CtaPill from './CtaPill';
 import EyebrowText from './EyebrowText';
 import ProgressBar from './ProgressBar';
+import StatusIcon, { ChevronIcon, StatusIconStatus } from './StatusIcon';
+
+export interface ContinueLearningRowTrailing {
+  /** Status icon to show before the chevron. Omit when there's no per-item status data. */
+  status?: StatusIconStatus;
+  /** When set, replaces the status icon + chevron with a "Start"/"Continue" pill. */
+  ctaLabel?: string;
+}
 
 export interface ContinueLearningRowProps {
   /** Anything expo-image's `source` prop accepts; omit to show the surfaceVariant fallback. */
@@ -21,42 +30,53 @@ export interface ContinueLearningRowProps {
   progress?: number;
   /** e.g. "62% · LESSON 10 OF 16"; omit to skip the meta row. */
   meta?: string;
+  /** Trailing affordance: a CTA pill, a status icon + chevron, or (default) just a chevron. */
+  trailing?: ContinueLearningRowTrailing;
   onPress?: (event: GestureResponderEvent) => void;
+  accessibilityLabel?: string;
+  testID?: string;
 }
 
 const PRESS_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 const PRESS_DURATION = 180;
 const THUMB_WIDTH = 88;
 const THUMB_HEIGHT = 66;
-const DISC_SIZE = 28;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-function PlayIcon({ color }: { color: string }) {
-  return (
-    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 4.5v15l14-7.5-14-7.5z"
-        fill={color}
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
 
 export default function ContinueLearningRow({
   imageSource,
   title,
   progress,
   meta,
+  trailing,
   onPress,
+  accessibilityLabel,
+  testID,
 }: ContinueLearningRowProps) {
   const theme = useTheme();
   const titleFontFamily = useFont('semi', 'body');
+  // Title keeps its own 13px/semi weight but borrows the 'caption' role's
+  // line height (22 for Khmer, 16 for English) for locale-correct leading —
+  // 'body' (26/22) is sized for 14px text and was oversized for this 13px
+  // title.
+  const titleLineHeight = useTypeRole('caption').lineHeight;
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
+
+  // Status and CTA are conveyed visually via StatusIcon/CtaPill, both hidden
+  // from screen readers — fold them into the row's accessible label so status
+  // is never conveyed by colour alone. An explicit accessibilityLabel prop
+  // still wins.
+  const defaultAccessibilityLabel = [
+    title,
+    meta,
+    trailing?.status &&
+      t(`screen.level.lessonRowStatus.${trailing.status}`),
+    trailing?.ctaLabel,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   const hasProgress = typeof progress === 'number';
   const clampedProgress = hasProgress
@@ -85,17 +105,24 @@ export default function ContinueLearningRow({
 
   return (
     <AnimatedPressable
+      testID={testID}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel ?? defaultAccessibilityLabel}
       style={[
         {
           flexDirection: 'row',
           alignItems: 'center',
           borderRadius: theme.radii.card,
           backgroundColor: theme.colors.surface,
+          // v2: page background is now white, same as this row's surface —
+          // add the handoff's 1px hairline border so the row stays visible
+          // now that the shadow alone can't separate it from the page.
+          borderWidth: 1,
+          borderColor: theme.colors.divider,
           padding: 10,
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: 6 },
@@ -126,7 +153,7 @@ export default function ContinueLearningRow({
           style={{
             fontFamily: titleFontFamily,
             fontSize: 13,
-            lineHeight: 20,
+            lineHeight: titleLineHeight,
             color: theme.colors.onSurface,
           }}>
           {title}
@@ -146,15 +173,19 @@ export default function ContinueLearningRow({
       </View>
       <View
         style={{
-          width: DISC_SIZE,
-          height: DISC_SIZE,
-          borderRadius: DISC_SIZE / 2,
-          marginLeft: 12,
-          backgroundColor: theme.colors.primary,
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: 8,
+          marginLeft: 12,
         }}>
-        <PlayIcon color={theme.colors.onPrimary} />
+        {trailing?.ctaLabel ? (
+          <CtaPill label={trailing.ctaLabel} />
+        ) : (
+          <>
+            {trailing?.status && <StatusIcon status={trailing.status} size={24} />}
+            <ChevronIcon size={20} color={theme.colors.onSurfaceVariant} />
+          </>
+        )}
       </View>
     </AnimatedPressable>
   );

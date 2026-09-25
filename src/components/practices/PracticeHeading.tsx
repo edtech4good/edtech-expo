@@ -79,11 +79,21 @@ export default function PracticeHeading({ heading }: Props) {
       )}
       {!_.isEmpty(heading.headingfile) && <SizedBox.Large width />}
       <Expanded
+        testID={isCorporate ? 'question-card' : undefined}
         backgroundColor={theme.colors.surface}
-        borderRadius={theme.layouts.defaultRadius}
+        // Corporate: r16 per the handoff's question card spec (kids keeps
+        // the shared defaultRadius). The page background is white now, so
+        // this white card needs its own edge — a 1px divider hairline,
+        // corporate only (kids pages aren't white).
+        borderRadius={isCorporate ? theme.radii.card : theme.layouts.defaultRadius}
         paddingBottom={theme.layouts.large}
         paddingTop={theme.layouts.large}
-        justifyContent="center">
+        justifyContent="center"
+        style={
+          isCorporate
+            ? { borderWidth: 1, borderColor: theme.colors.divider }
+            : undefined
+        }>
         {isCorporate ? (
           <Text
             style={{

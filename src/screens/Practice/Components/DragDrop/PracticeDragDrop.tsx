@@ -15,7 +15,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useScreenDimension } from '@/services';
+import { useDesign } from '@/services';
 import {
   Container,
   DragItem,
@@ -38,11 +38,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
     },
     ref,
   ) {
     const theme = useTheme();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
+    const { isCorporate } = useDesign();
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions', []),
       [question],
@@ -237,6 +238,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             borderRadius: theme.layouts.defaultRadius,
             backgroundColor: theme.colors.surface,
             alignSelf: 'stretch',
+            ...(isCorporate
+              ? { borderWidth: 1, borderColor: theme.colors.divider }
+              : null),
           }}
           contentContainerStyle={{
             padding: theme.layouts.large,
@@ -251,7 +255,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -278,6 +282,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetry}
+          hideRetry={hideRetry}
         />
       </Container>
     );

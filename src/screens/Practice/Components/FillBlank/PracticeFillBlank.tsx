@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
 import {
   ChildImage,
@@ -43,11 +43,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
     }: PracticeProps,
     ref,
   ) {
     const theme = useTheme();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
+    const { isCorporate } = useDesign();
 
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions'),
@@ -202,7 +203,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -228,7 +229,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             <Expanded
               backgroundColor={theme.colors.surface}
               borderRadius={theme.layouts.defaultRadius}
-              justifyContent="center">
+              justifyContent="center"
+              style={
+                isCorporate
+                  ? { borderWidth: 1, borderColor: theme.colors.divider }
+                  : undefined
+              }>
               <H3>{displayText}</H3>
             </Expanded>
             <SizedBox.Large height />
@@ -248,6 +254,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetry}
+          hideRetry={hideRetry}
         />
       </Container>
     );

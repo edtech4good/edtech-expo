@@ -5,18 +5,22 @@ import { VideoProgressPayload } from '@/models';
 import { createTimeStamp } from '@/utils';
 import { useAppDispatch, useAppSelector } from '@/redux';
 import {
+  ActivityProgressActions,
   getModuleResource,
+  getProfile,
   getResourcePath,
   SelectionActions,
 } from '@/redux/slices';
 import useSetting from './useSetting';
 import useResource from './useResource';
+import { queueLearningProgress } from '../pendingResults';
 
 export default function useLearning(lessonLearningId: string) {
   const dispatch = useAppDispatch();
   const api = useApi();
   const { retrieveFile } = useSetting();
   const grantedDirectory = useAppSelector(getResourcePath);
+  const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   // const [source, setSource] = useState('');
   const [{ progress, source }, setInfo] = useState<{
     source: string;
@@ -117,13 +121,36 @@ export default function useLearning(lessonLearningId: string) {
     // save; lessonLearningId itself (not learningResource) is what the
     // request below is built from either way.
     if (!loaded) return;
+
+    // Optimistic local status write — done before/independent of the network
+    // call so it works offline. Mirrors the server rule: `ended` marks the
+    // activity done, otherwise any watch time (time > 0) marks it in
+    // progress. progress is only meaningful when we know content_length.
+    if (userId) {
+      dispatch(
+        ActivityProgressActions.markLocal({
+          userId,
+          activityId: lessonLearningId,
+          status: hasEnded ? 'done' : progress > 0 ? 'inProgress' : 'todo',
+          progress:
+            contentLength > 0
+              ? Math.round((progress * 100) / contentLength)
+              : undefined,
+        }),
+      );
+    }
+
+    // Queued, not posted directly, so it survives being offline — same
+    // offline queue as practice/quiz results (see queueLearningProgress).
+    // `date` is captured now, at watch time, and sent unchanged whenever the
+    // queue flushes.
     const videoProgressPayload: VideoProgressPayload = {
       content_length: contentLength,
       date: createTimeStamp(),
       ended: hasEnded,
       time: progress,
     };
-    await api.saveVideoProgress(lessonLearningId, videoProgressPayload);
+    queueLearningProgress(api, lessonLearningId, videoProgressPayload);
   };
 
   const clear = async () => {

@@ -76,13 +76,12 @@
     "level": {
       "header": "ចំណងជើងរង",
       "progressLabel": "វឌ្ឍនភាព",
-      "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
       "lessonCountMeta": "មេរៀន {{count}}",
       "lessonChip": "មេរៀនទី {{n}}",
-      "continueLearning": "បន្តការសិក្សា",
+      "upNextHint": "មេរៀនបន្ទាប់",
       "lessonRowStatus": {
         "done": "បានបញ្ចប់",
-        "next": "បន្ទាប់",
+        "inProgress": "កំពុងសិក្សា",
         "todo": "មិនទាន់ចាប់ផ្ដើម"
       },
       "stepState": {
@@ -90,17 +89,44 @@
         "current": "កំពុងសិក្សា",
         "todo": "មិនទាន់ចាប់ផ្ដើម"
       },
-      "stepFormat": "{{step}} ({{state}})"
+      "stepFormat": "{{step}} ({{state}})",
+      "stepFormatWithCount": "{{step}} ({{state}}, {{done}} ក្នុងចំណោម {{total}})",
+      "progressWithCertificate": "មេរៀន {{done}} ក្នុងចំណោម {{total}} · ទទួលវិញ្ញាបនបត្រពេលបញ្ចប់"
     },
     "lesson": {
       "header": "លំហាត់",
       "learningTitle": "សិក្សា",
       "practiceTitle": "អនុវត្ត",
-      "quizTitle": "តេស្ត"
+      "quizTitle": "តេស្ត",
+      "inThisLesson": "នៅក្នុងមេរៀននេះ",
+      "metaVideos": "វីដេអូ {{count}}",
+      "metaPractices": "លំហាត់ {{count}}",
+      "metaQuizzes": "តេស្ត {{count}}",
+      "stepType": {
+        "learning": "សិក្សា",
+        "practice": "អនុវត្ត",
+        "quiz": "តេស្ត"
+      },
+      "stepEyebrowWithCount": "{{type}} · {{i}} ក្នុងចំណោម {{n}}",
+      "practiceQuestions": "សំណួរ {{count}} · មិនដាក់ពិន្ទុ",
+      "quizQuestions": "សំណួរ {{count}} · ដាក់ពិន្ទុ",
+      "status": {
+        "learningDone": "បានបញ្ចប់ · អាចមើលឡើងវិញបានគ្រប់ពេល",
+        "done": "បានបញ្ចប់",
+        "inProgress": "កំពុងដំណើរការ",
+        "todo": "មិនទាន់ចាប់ផ្តើម",
+        "quizTodo": "មិនទាន់ចាប់ផ្តើម · ត្រូវប្រលងជាប់ដើម្បីបញ្ចប់មេរៀន",
+        "unsynced": "បានបញ្ចប់ · បានរក្សាទុកក្នុងឧបករណ៍ មិនទាន់ធ្វើសមកាលកម្ម"
+      },
+      "stepA11yLabel": "{{type}} {{i}} ក្នុងចំណោម {{n}}, {{title}}, {{status}}",
+      "stepA11yLabelSingle": "{{type}}, {{title}}, {{status}}",
+      "footerCta": "{{verb}} {{type}}",
+      "footerCtaWithIndex": "{{verb}} {{type}} {{i}}"
     },
     "practice": {
       "submitButton": "បញ្ជូន",
       "retryButton": "ព្យាយាមម្តងទៀត",
+      "progressLabel": "{{i}} ក្នុងចំណោម {{n}}",
       "correctTitle": "អបអរសាទរ!",
       "correctMessage": "ល្អណាស់!",
       "correctButton": "បន្ទាប់",
@@ -125,5 +151,12 @@
       "empty": "មិនទាន់មានវគ្គសិក្សានៅឡើយ",
       "unavailable": "បណ្ណាល័យរបស់អ្នកនឹងបង្ហាញនៅពេលអ្នកភ្ជាប់អ៊ីនធឺណិត។"
     }
+  },
+  "cta": {
+    "start": "ចាប់ផ្ដើម",
+    "continue": "បន្ត",
+    "review": "មើលឡើងវិញ",
+    "continueLesson": "បន្តមេរៀនទី {{n}}",
+    "startLesson": "ចាប់ផ្ដើមមេរៀនទី {{n}}"
   }
 }
