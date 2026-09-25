@@ -27,14 +27,75 @@ import { useAppSelector } from '@/redux';
 import { getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
-import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
+import type {
+  LessonRowStatus,
+  LessonStepDotsProps,
+  StepInfo,
+  StepState,
+} from '@/components/ui';
 
 // The server flags a lesson `completed` once it clears the lesson's pass
 // mark (e.g. 80/100 points) — that can happen before `progress` reaches 100.
 // Older/cached responses may lack the flag, so fall back to the previous
-// `progress >= 100` behavior when it is absent.
+// `progress >= 100` behavior when it is absent. This is now only the
+// fallback rule (see `lessonStatusFor` below) — used when the real step
+// structure for a lesson hasn't been cached yet, or when a lesson has no
+// items in any of the three types.
 const isLessonDone = (lesson: Lesson): boolean =>
   lesson.completed === true || (lesson.progress ?? 0) >= 100;
+
+// `stepsFor` values are typed as the shared `StepInput` union (a bare
+// `StepState` or a full `StepInfo` with counts) because that type is also
+// used by the coarse `approximateSteps` estimate below. `useLevelSteps`
+// itself always returns full `StepInfo` objects; normalize here so this
+// helper works either way.
+const toStepInfo = (
+  input: StepState | StepInfo,
+): Required<StepInfo> =>
+  typeof input === 'string'
+    ? { state: input, done: 0, total: 1 }
+    : { state: input.state, done: input.done ?? 0, total: input.total ?? 1 };
+
+// Jesse, 26 Sep: a lesson row's status must follow its step dots, not the
+// server's lesson-level rule — a row could say "Done" with a hollow dot, or
+// show three green dots and not be "done", because `isLessonDone` (points
+// >= 80%) and the per-step dots were computed independently. This is the
+// single source of truth for a lesson's derived status; every consumer on
+// this screen (row status, the up-next pick, the header count/%, and the
+// footer CTA) must go through it so they can't disagree with each other.
+//
+// - When the real step structure is known (`stepsFor` returns something):
+//   only types with at least one item count. `done` when every such type is
+//   `done`; `inProgress` when any item has been started (state `current` or
+//   `done`) but not all types are done; `todo` otherwise. A lesson with zero
+//   items in all three types falls back to the server rule below — there's
+//   nothing to derive a status from.
+// - When the structure isn't cached yet (offline first load, before any
+//   `lesson/level/:levelid/steps` fetch has succeeded): fall back to the
+//   server rule (`isLessonDone` / `progress > 0`).
+//
+// Because the dots read the same `activityProgress` store that offline
+// practice/quiz/video writes land in, a lesson finished offline shows
+// "Done" here immediately, without waiting for a server round-trip.
+function lessonStatusFor(
+  lesson: Lesson,
+  steps: LessonStepDotsProps['steps'] | undefined,
+): LessonRowStatus {
+  if (steps) {
+    const withItems = (Object.keys(steps) as Array<keyof typeof steps>)
+      .map(key => toStepInfo(steps[key]))
+      .filter(info => info.total > 0);
+    if (withItems.length > 0) {
+      if (withItems.every(info => info.state === 'done')) return 'done';
+      if (withItems.some(info => info.state === 'current' || info.state === 'done'))
+        return 'inProgress';
+      return 'todo';
+    }
+  }
+  if (isLessonDone(lesson)) return 'done';
+  if ((lesson.progress ?? 0) > 0) return 'inProgress';
+  return 'todo';
+}
 
 // The /level/<id> response carries one aggregate progress per lesson —
 // nothing per-step (see the Lesson model: lessonlearnings/practices/quizzes
@@ -144,8 +205,20 @@ export default function LevelSelectionScreen() {
     const sortedLessons = [...lessons].sort(
       (a, b) => (a.lessonorder ?? 0) - (b.lessonorder ?? 0),
     );
-    const doneCount = sortedLessons.filter(isLessonDone).length;
-    const upNext = sortedLessons.find(l => !isLessonDone(l));
+    // Derive every lesson's status once, from its real step structure when
+    // it's cached (falling back to the server rule otherwise) — see
+    // `lessonStatusFor` above. Row status, the up-next pick, the header
+    // count/%, and the footer CTA all read off this same array so they
+    // can't disagree with each other.
+    const statusedLessons = sortedLessons.map(lesson => ({
+      lesson,
+      status: lessonStatusFor(lesson, stepsFor(lesson.lessonid)),
+    }));
+    const doneCount = statusedLessons.filter(
+      ({ status }) => status === 'done',
+    ).length;
+    const upNextEntry = statusedLessons.find(({ status }) => status !== 'done');
+    const upNext = upNextEntry?.lesson;
     // The server's level `progress` is points-based and can disagree with
     // the "N of M lessons" count above it (e.g. "1 of 4 lessons · 100%"
     // when only one of four lessons is actually done) — per the design
@@ -158,21 +231,18 @@ export default function LevelSelectionScreen() {
         ? Math.min(100, Math.round((doneCount / sortedLessons.length) * 100))
         : 0;
 
-    const statusFor = (lesson: Lesson): LessonRowStatus => {
-      if (isLessonDone(lesson)) return 'done';
-      if ((lesson.progress ?? 0) > 0) return 'inProgress';
-      return 'todo';
-    };
-
-    const upNextProgress = upNext?.progress ?? 0;
-    const upNextCtaLabel =
-      upNextProgress > 0 ? t('cta.continue') : t('cta.start');
+    // Footer CTA per Jesse's rule: "Start" only when the up-next lesson's
+    // derived status is `todo`; any started work (`inProgress`) reads
+    // "Continue". `upNextEntry` is undefined once every lesson is done, so
+    // this only matters while the footer is actually shown below.
+    const upNextIsStarted = upNextEntry?.status === 'inProgress';
+    const upNextCtaLabel = upNextIsStarted ? t('cta.continue') : t('cta.start');
     const upNextOrder = upNext?.lessonorder;
     // Fall back to the plain "Continue"/"Start" CTA when the lesson number
     // is missing — "Continue Lesson " with a blank number reads as broken.
     const footerCtaLabel =
       upNextOrder != null
-        ? upNextProgress > 0
+        ? upNextIsStarted
           ? t('cta.continueLesson', { n: upNextOrder })
           : t('cta.startLesson', { n: upNextOrder })
         : upNextCtaLabel;
@@ -317,16 +387,15 @@ export default function LevelSelectionScreen() {
               paddingTop: theme.layouts.pageVerticalPadding,
               paddingBottom: theme.layouts.pageVerticalPadding,
             }}
-            data={sortedLessons}
+            data={statusedLessons}
             ListHeaderComponent={detailHeader}
             ItemSeparatorComponent={LessonRowSpacer}
-            renderItem={({ item }) => {
-              const status = statusFor(item);
+            renderItem={({ item: { lesson: item, status } }) => {
               const isNext = item.lessonid === upNext?.lessonid;
-              // Row status (done/inProgress/todo) stays on the existing
-              // lesson-level `completed || progress >= 100` rule above —
-              // only the step dots switch to the real per-step data once
-              // it's known for this lesson.
+              // The dots themselves still need the raw per-step data (or
+              // the coarse estimate) to render — `status` above is already
+              // derived from this same lookup via `lessonStatusFor`, so the
+              // two can never disagree.
               const steps =
                 stepsFor(item.lessonid) ??
                 approximateSteps(item.progress ?? 0, isNext, status === 'done');
