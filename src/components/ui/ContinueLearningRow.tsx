@@ -1,4 +1,4 @@
-import { useFont } from '@/services';
+import { useFont, useTypeRole } from '@/services';
 import { Image, ImageProps } from 'expo-image';
 import { GestureResponderEvent, Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -56,6 +56,11 @@ export default function ContinueLearningRow({
 }: ContinueLearningRowProps) {
   const theme = useTheme();
   const titleFontFamily = useFont('semi', 'body');
+  // Title keeps its own 13px/semi weight but borrows the 'caption' role's
+  // line height (22 for Khmer, 16 for English) for locale-correct leading —
+  // 'body' (26/22) is sized for 14px text and was oversized for this 13px
+  // title.
+  const titleLineHeight = useTypeRole('caption').lineHeight;
   const { t } = useTranslation();
   const scale = useSharedValue(1);
 
@@ -148,7 +153,7 @@ export default function ContinueLearningRow({
           style={{
             fontFamily: titleFontFamily,
             fontSize: 13,
-            lineHeight: 20,
+            lineHeight: titleLineHeight,
             color: theme.colors.onSurface,
           }}>
           {title}

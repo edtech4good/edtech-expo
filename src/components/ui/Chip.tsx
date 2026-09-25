@@ -1,4 +1,6 @@
 import { useBreakpoint, useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -31,9 +33,15 @@ export default function Chip({
   const theme = useTheme();
   const themeFontFamily = useFont('semi', 'body');
   const fontFamily = fontFamilyOverride ?? themeFontFamily;
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Khmer floor: never below 13px (the Latin pill's 12px label sits under it).
+  const fontSize = isKhmer ? 13 : 12;
+  const lineHeight = isKhmer ? 20 : undefined;
   const scale = useSharedValue(1);
 
-  const height =
+  // Design v2.1: "chips ... use min-height and grow" — Khmer labels can be
+  // taller than the Latin 32/36pt pill, so this is a floor, not a fixed box.
+  const minHeight =
     useBreakpoint({
       desktop: 36,
       tablet: 36,
@@ -62,7 +70,7 @@ export default function Chip({
     <Animated.View
       style={[
         {
-          height,
+          minHeight,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
@@ -78,7 +86,8 @@ export default function Chip({
       <Text
         style={{
           fontFamily,
-          fontSize: 12,
+          fontSize,
+          lineHeight,
           color: labelColor,
           marginLeft: icon ? 6 : 0,
         }}>

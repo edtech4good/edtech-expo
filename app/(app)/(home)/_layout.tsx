@@ -5,18 +5,35 @@ import {
   NavRail,
   NAV_RAIL_WIDTH,
 } from '@/components';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import { useFont, useNavShell } from '@/services';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
+
+// Khmer tab bar labels (design v2.1 Khmer type scale): 13px/lineHeight 18
+// instead of the English 10px — Khmer text is illegible at that size.
+// English is left on the navigator's default tabBarStyle/label sizing
+// entirely (no height/padding override) so its look is unchanged; Khmer
+// gets an explicit taller bar (base height + extra padding) so the bigger
+// label doesn't clip against the bar's bottom edge.
+const TAB_BAR_LABEL_FONT_SIZE_KM = 13;
+const TAB_BAR_LABEL_LINE_HEIGHT_KM = 18;
+const TAB_BAR_BASE_HEIGHT_KM = 64;
+const TAB_BAR_PADDING_TOP_KM = 8;
+const TAB_BAR_PADDING_BOTTOM_KM = 6;
 
 export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
   const font = useFont('semi');
   const { isRail, isTabs } = useNavShell();
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  const insets = useSafeAreaInsets();
 
   // Rendering <Tabs> vs <Drawer> below is a component-type swap in this
   // layout's own output (not inside a shared child slot like drawerContent),
@@ -39,10 +56,18 @@ export default function Home() {
             backgroundColor: theme.colors.surface,
             borderTopWidth: 1,
             borderTopColor: theme.colors.divider,
+            ...(isKhmer
+              ? {
+                  height: TAB_BAR_BASE_HEIGHT_KM + insets.bottom,
+                  paddingTop: TAB_BAR_PADDING_TOP_KM,
+                  paddingBottom: TAB_BAR_PADDING_BOTTOM_KM + insets.bottom,
+                }
+              : {}),
           },
           tabBarLabelStyle: {
             fontFamily: font,
-            fontSize: 10,
+            fontSize: isKhmer ? TAB_BAR_LABEL_FONT_SIZE_KM : 10,
+            ...(isKhmer ? { lineHeight: TAB_BAR_LABEL_LINE_HEIGHT_KM } : {}),
           },
         }}>
         <Tabs.Screen

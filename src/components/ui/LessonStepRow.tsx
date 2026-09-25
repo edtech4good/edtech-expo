@@ -1,4 +1,6 @@
-import { useFont } from '@/services';
+import { useFont, useTypeRole } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import { Image, ImageProps } from 'expo-image';
 import { GestureResponderEvent, Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -195,6 +197,15 @@ export default function LessonStepRow({
   const theme = useTheme();
   const titleFontFamily = useFont('semi', 'body');
   const statusFontFamily = useFont('semi', 'body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Title keeps its own 14px/semi weight (matches LessonRow's "title 600
+  // 14") but borrows 'body' role for locale-correct leading.
+  const titleLineHeight = useTypeRole('body').lineHeight;
+  // Status line: Khmer floor — never below 13px, line height per the v2.1
+  // caption role (13/20) — aligned with EyebrowText/AppTextField's label,
+  // not the 22px used elsewhere for 13px Khmer body copy.
+  const statusFontSize = isKhmer ? 13 : 12;
+  const statusLineHeight = isKhmer ? 20 : undefined;
   const scale = useSharedValue(1);
 
   const showCta = isNext && !!ctaLabel;
@@ -298,7 +309,7 @@ export default function LessonStepRow({
           style={{
             fontFamily: titleFontFamily,
             fontSize: 14,
-            lineHeight: 20,
+            lineHeight: titleLineHeight,
             color: theme.colors.onSurface,
           }}>
           {title}
@@ -310,7 +321,8 @@ export default function LessonStepRow({
           <Text
             style={{
               fontFamily: statusFontFamily,
-              fontSize: 12,
+              fontSize: statusFontSize,
+              lineHeight: statusLineHeight,
               color: statusColor,
             }}>
             {statusText}
