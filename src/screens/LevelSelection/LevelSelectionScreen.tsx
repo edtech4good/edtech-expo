@@ -27,12 +27,8 @@ import { useAppSelector } from '@/redux';
 import { getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
-import type {
-  LessonRowStatus,
-  LessonStepDotsProps,
-  StepInfo,
-  StepState,
-} from '@/components/ui';
+import { toStepInfo } from '@/components/ui';
+import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
 
 // The server flags a lesson `completed` once it clears the lesson's pass
 // mark (e.g. 80/100 points) — that can happen before `progress` reaches 100.
@@ -43,18 +39,6 @@ import type {
 // items in any of the three types.
 const isLessonDone = (lesson: Lesson): boolean =>
   lesson.completed === true || (lesson.progress ?? 0) >= 100;
-
-// `stepsFor` values are typed as the shared `StepInput` union (a bare
-// `StepState` or a full `StepInfo` with counts) because that type is also
-// used by the coarse `approximateSteps` estimate below. `useLevelSteps`
-// itself always returns full `StepInfo` objects; normalize here so this
-// helper works either way.
-const toStepInfo = (
-  input: StepState | StepInfo,
-): Required<StepInfo> =>
-  typeof input === 'string'
-    ? { state: input, done: 0, total: 1 }
-    : { state: input.state, done: input.done ?? 0, total: input.total ?? 1 };
 
 // Jesse, 26 Sep: a lesson row's status must follow its step dots, not the
 // server's lesson-level rule — a row could say "Done" with a hollow dot, or
@@ -210,10 +194,10 @@ export default function LevelSelectionScreen() {
     // `lessonStatusFor` above. Row status, the up-next pick, the header
     // count/%, and the footer CTA all read off this same array so they
     // can't disagree with each other.
-    const statusedLessons = sortedLessons.map(lesson => ({
-      lesson,
-      status: lessonStatusFor(lesson, stepsFor(lesson.lessonid)),
-    }));
+    const statusedLessons = sortedLessons.map(lesson => {
+      const steps = stepsFor(lesson.lessonid);
+      return { lesson, steps, status: lessonStatusFor(lesson, steps) };
+    });
     const doneCount = statusedLessons.filter(
       ({ status }) => status === 'done',
     ).length;
@@ -390,14 +374,16 @@ export default function LevelSelectionScreen() {
             data={statusedLessons}
             ListHeaderComponent={detailHeader}
             ItemSeparatorComponent={LessonRowSpacer}
-            renderItem={({ item: { lesson: item, status } }) => {
+            renderItem={({ item: { lesson: item, steps: cachedSteps, status } }) => {
               const isNext = item.lessonid === upNext?.lessonid;
               // The dots themselves still need the raw per-step data (or
               // the coarse estimate) to render — `status` above is already
               // derived from this same lookup via `lessonStatusFor`, so the
-              // two can never disagree.
+              // two can never disagree. `cachedSteps` was already fetched
+              // once per lesson above (in `statusedLessons`); reuse it here
+              // instead of calling `stepsFor` again.
               const steps =
-                stepsFor(item.lessonid) ??
+                cachedSteps ??
                 approximateSteps(item.progress ?? 0, isNext, status === 'done');
               return (
                 <LessonRow

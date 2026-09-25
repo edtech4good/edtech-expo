@@ -19,6 +19,7 @@ export {
 } from './CircularProgress';
 export {
   default as LessonStepDots,
+  toStepInfo,
   type LessonStepDotsProps,
   type StepInfo,
   type StepState,
