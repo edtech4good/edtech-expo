@@ -64,6 +64,10 @@ async function doFlush(api: Api): Promise<void> {
             console.warn(
               `[pendingResults] dropping poison item id=${item.id} kind=${item.kind} lessonId=${item.lessonId} status=${status} attempts=${attempts} serverMessage=${(err as any)?.serverMessage ?? ''}`,
             );
+          } else {
+            console.warn(
+              `[pendingResults] poison skip id=${item.id} kind=${item.kind} status=${status} attempts=${attempts} serverMessage=${(err as any)?.serverMessage ?? ''}`,
+            );
           }
           continue;
         }
