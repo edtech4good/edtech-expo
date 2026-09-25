@@ -8,6 +8,8 @@ export interface ActivityProgressEntry {
   status: ActivityStatus;
   /** 0-100. Only meaningful for learning (video) activities today. */
   progress?: number;
+  /** Practice/quiz only: question count from the progress endpoint. */
+  questionCount?: number;
 }
 
 interface ActivityProgressState {
@@ -30,15 +32,25 @@ const STATUS_RANK: Record<ActivityStatus, number> = {
   done: 2,
 };
 
+interface MergeEntryOptions {
+  questionCount?: number;
+}
+
 function mergeEntry(
   existing: ActivityProgressEntry | undefined,
   status: ActivityStatus,
   progress: number | undefined,
+  options?: MergeEntryOptions,
 ): ActivityProgressEntry {
   const roundedProgress =
     progress !== undefined ? Math.round(progress) : undefined;
+  const questionCount_ = options?.questionCount ?? existing?.questionCount;
   if (!existing) {
-    return { status, progress: roundedProgress };
+    return {
+      status,
+      progress: roundedProgress,
+      questionCount: questionCount_,
+    };
   }
   const status_ =
     STATUS_RANK[status] > STATUS_RANK[existing.status]
@@ -50,6 +62,7 @@ function mergeEntry(
   return {
     status: status_,
     progress: progress_ > 0 ? progress_ : undefined,
+    questionCount: questionCount_,
   };
 }
 
@@ -81,6 +94,7 @@ export const activityProgressSlice = createSlice({
           userEntries[item.lessonpracticeid],
           item.status,
           undefined,
+          { questionCount: item.question_count },
         );
       });
       response.quizzes?.forEach(item => {
@@ -88,6 +102,7 @@ export const activityProgressSlice = createSlice({
           userEntries[item.lessonquizid],
           item.status,
           undefined,
+          { questionCount: item.question_count },
         );
       });
 

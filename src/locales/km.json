@@ -97,9 +97,30 @@
       "learningTitle": "សិក្សា",
       "practiceTitle": "អនុវត្ត",
       "quizTitle": "តេស្ត",
-      "sectionCount": "{{done}}/{{total}}",
-      "sectionCountA11y": "បានបញ្ចប់ {{done}} ក្នុងចំណោម {{total}}",
-      "activitiesDone": "បានបញ្ចប់សកម្មភាព {{done}} ក្នុងចំណោម {{total}}"
+      "inThisLesson": "នៅក្នុងមេរៀននេះ",
+      "metaVideos": "វីដេអូ {{count}}",
+      "metaPractices": "លំហាត់ {{count}}",
+      "metaQuizzes": "តេស្ត {{count}}",
+      "stepType": {
+        "learning": "សិក្សា",
+        "practice": "អនុវត្ត",
+        "quiz": "តេស្ត"
+      },
+      "stepEyebrowWithCount": "{{type}} · {{i}} ក្នុងចំណោម {{n}}",
+      "practiceQuestions": "សំណួរ {{count}} · មិនដាក់ពិន្ទុ",
+      "quizQuestions": "សំណួរ {{count}} · ដាក់ពិន្ទុ",
+      "status": {
+        "learningDone": "បានបញ្ចប់ · អាចមើលឡើងវិញបានគ្រប់ពេល",
+        "done": "បានបញ្ចប់",
+        "inProgress": "កំពុងដំណើរការ",
+        "todo": "មិនទាន់ចាប់ផ្តើម",
+        "quizTodo": "មិនទាន់ចាប់ផ្តើម · ត្រូវប្រលងជាប់ដើម្បីបញ្ចប់មេរៀន",
+        "unsynced": "បានបញ្ចប់ · បានរក្សាទុកក្នុងឧបករណ៍ មិនទាន់ធ្វើសមកាលកម្ម"
+      },
+      "stepA11yLabel": "{{type}} {{i}} ក្នុងចំណោម {{n}}, {{title}}, {{status}}",
+      "stepA11yLabelSingle": "{{type}}, {{title}}, {{status}}",
+      "footerCta": "{{verb}} {{type}}",
+      "footerCtaWithIndex": "{{verb}} {{type}} {{i}}"
     },
     "practice": {
       "submitButton": "បញ្ជូន",

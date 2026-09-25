@@ -127,7 +127,30 @@ export default function HomeStack() {
       />
       <Stack.Screen
         name="lessons/index"
-        options={learnerBackFor('/home/levels')}
+        options={{
+          ...learnerBackFor('/home/levels'),
+          // Corporate Lesson screen (handoff, matching Level Detail above):
+          // back chevron only, no title text in the bar. Kids keeps the
+          // stock centered title + Material back arrow untouched.
+          ...(isCorporate
+            ? {
+                headerTitle: () => null,
+                ...(Platform.OS !== 'web'
+                  ? {
+                      headerLeft: ({ canGoBack }) =>
+                        canGoBack ? <BackButton variant="chevron" /> : null,
+                    }
+                  : {
+                      headerLeft: () => (
+                        <LearnerBackButton
+                          fallback="/home/levels"
+                          variant="chevron"
+                        />
+                      ),
+                    }),
+              }
+            : {}),
+        }}
       />
       <Stack.Screen name="lessons/[id]" />
       <Stack.Screen

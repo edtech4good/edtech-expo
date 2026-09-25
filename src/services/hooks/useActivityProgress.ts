@@ -5,8 +5,10 @@ import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   ActivityProgressActions,
   getActivityProgressByUser,
+  getPendingResults,
   getProfile,
 } from '@/redux/slices';
+import type { PendingResultItem } from '@/redux/slices';
 import { ActivityStatus } from '@/models';
 
 /**
@@ -24,6 +26,7 @@ export default function useActivityProgress(lessonId: string) {
   const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const byUser = useAppSelector(getActivityProgressByUser);
   const entries = (userId && byUser[userId]) || {};
+  const pendingResults = useAppSelector(getPendingResults);
 
   const fetchActivityProgress = useCallback(async () => {
     if (!lessonId || !userId) return;
@@ -48,8 +51,32 @@ export default function useActivityProgress(lessonId: string) {
   const statusFor = (activityId: string | undefined): ActivityStatus =>
     (activityId && entries[activityId]?.status) || 'todo';
 
-  const progressFor = (activityId: string | undefined): number | undefined =>
-    (activityId && entries[activityId]?.progress) || undefined;
+  const questionCountFor = (
+    activityId: string | undefined,
+  ): number | undefined =>
+    (activityId && entries[activityId]?.questionCount) || undefined;
 
-  return { fetchActivityProgress, statusFor, progressFor };
+  // A practice/quiz counts as "not yet synced" only once it's done AND the
+  // offline queue still holds a result for it — checking the queue directly
+  // (instead of a stored flag) means this clears the instant
+  // flushPendingResults succeeds, without waiting on the next server fetch,
+  // and it can never get stuck: there's nothing to clear because nothing is
+  // stored. Never true for learnings: the queue only ever holds practice/quiz
+  // results, and never true before status is 'done' — a failed/incomplete
+  // offline attempt is not "unsynced", it's just not done yet.
+  const unsyncedFor = (activityId: string | undefined): boolean => {
+    if (!activityId) return false;
+    if (entries[activityId]?.status !== 'done') return false;
+    return pendingResults.some(
+      (item: PendingResultItem) =>
+        item.lessonId === activityId && item.ownerId === userId,
+    );
+  };
+
+  return {
+    fetchActivityProgress,
+    statusFor,
+    questionCountFor,
+    unsyncedFor,
+  };
 }

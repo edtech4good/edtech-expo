@@ -136,11 +136,15 @@ export default function QuizScreen() {
         const total = quizResult.result.length;
         const correct = quizResult.result.filter(r => r.iscorrect).length;
         const percentage = total ? (correct * 100) / total : 0;
+        const isDone = percentage >= PASS_PERCENTAGE;
         dispatch(
           ActivityProgressActions.markLocal({
             userId,
             activityId: lessonquizid,
-            status: percentage >= PASS_PERCENTAGE ? 'done' : 'inProgress',
+            status: isDone ? 'done' : 'inProgress',
+            // "Unsynced" (pending-results badge/styling) is derived purely
+            // from status === 'done' plus the offline queue still holding a
+            // result for this activity — see useActivityProgress.unsyncedFor.
           }),
         );
       }

@@ -142,6 +142,8 @@ export interface PracticeActivityProgress {
   status: ActivityStatus;
   attempts: number;
   best_percentage: number | null;
+  /** Number of questions in the practice. Added alongside in-lesson status; optional because older/cached responses may not include it. */
+  question_count?: number;
 }
 
 export interface QuizActivityProgress {
@@ -149,6 +151,8 @@ export interface QuizActivityProgress {
   status: ActivityStatus;
   attempts: number;
   best_percentage: number | null;
+  /** Number of questions in the quiz. Added alongside in-lesson status; optional because older/cached responses may not include it. */
+  question_count?: number;
 }
 
 export interface LessonActivityProgress {

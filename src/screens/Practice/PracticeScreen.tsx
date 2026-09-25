@@ -115,11 +115,15 @@ export default function PracticeScreen() {
     const total = questions.length;
     const correct = result.length;
     const percentage = total === 0 ? 100 : (correct * 100) / total;
+    const isDone = percentage >= PASS_PERCENTAGE;
     dispatch(
       ActivityProgressActions.markLocal({
         userId,
         activityId: lessonpracticeid,
-        status: percentage >= PASS_PERCENTAGE ? 'done' : 'inProgress',
+        status: isDone ? 'done' : 'inProgress',
+        // "Unsynced" (pending-results badge/styling) is derived purely from
+        // status === 'done' plus the offline queue still holding a result
+        // for this activity — see useActivityProgress.unsyncedFor.
       }),
     );
   };
