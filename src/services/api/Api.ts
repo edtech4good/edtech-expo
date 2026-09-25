@@ -14,6 +14,7 @@ import {
   LessonResponse,
   LevelIndexResponse,
   LevelResponse,
+  LevelStepsResponse,
   LmsLoginPayload,
   PracticeResult,
   QuizResult,
@@ -324,6 +325,17 @@ export default class Api {
   > {
     return this.apiSauceInstance.get<LessonActivityProgressResponse>(
       `lesson/${lessonId}/activities/progress`,
+    );
+  }
+
+  // Per-lesson step structure + status for every lesson in a level, in one
+  // call — the level-screen sibling of fetchActivityProgress above. See
+  // src/models/Lesson.ts LevelSteps for the shape.
+  async fetchLevelSteps(
+    levelId: string,
+  ): Promise<ApiResponse<LevelStepsResponse, LevelStepsResponse>> {
+    return this.apiSauceInstance.get<LevelStepsResponse>(
+      `lesson/level/${levelId}/steps`,
     );
   }
 

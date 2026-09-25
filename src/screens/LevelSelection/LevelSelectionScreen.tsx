@@ -22,7 +22,7 @@ import {
   useLocalSearchParams,
   useNavigation,
 } from 'expo-router';
-import { useLevel, useLevelHeader } from '@/services';
+import { useLevel, useLevelHeader, useLevelSteps } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
@@ -77,6 +77,11 @@ export default function LevelSelectionScreen() {
     levelId,
     isCorporate,
   );
+  // Real per-step dots (§ new lesson/level/:levelid/steps endpoint), with a
+  // per-lesson fallback to the coarse `approximateSteps` guess below when
+  // that lesson's structure hasn't been cached yet (first load offline,
+  // before any fetch has succeeded).
+  const { stepsFor } = useLevelSteps(isCorporate ? levelId : '');
 
   const { width } = useWindowDimensions();
   const numOfColumn = useBreakpoint({
@@ -141,10 +146,17 @@ export default function LevelSelectionScreen() {
     );
     const doneCount = sortedLessons.filter(isLessonDone).length;
     const upNext = sortedLessons.find(l => !isLessonDone(l));
-    const levelProgress = Math.min(
-      100,
-      Math.max(0, Math.round(headerUnit?.progress ?? 0)),
-    );
+    // The server's level `progress` is points-based and can disagree with
+    // the "N of M lessons" count above it (e.g. "1 of 4 lessons · 100%"
+    // when only one of four lessons is actually done) — per the design
+    // (spec shows "10 of 16 lessons · 62%"), derive the header % (and its
+    // bar) from the same doneCount/total lesson-count rule as the list
+    // instead, so the two numbers can never disagree. Kids theme is
+    // untouched — it still reads `progress` off each ProgressCard below.
+    const levelProgress =
+      sortedLessons.length > 0
+        ? Math.min(100, Math.round((doneCount / sortedLessons.length) * 100))
+        : 0;
 
     const statusFor = (lesson: Lesson): LessonRowStatus => {
       if (isLessonDone(lesson)) return 'done';
@@ -311,6 +323,13 @@ export default function LevelSelectionScreen() {
             renderItem={({ item }) => {
               const status = statusFor(item);
               const isNext = item.lessonid === upNext?.lessonid;
+              // Row status (done/inProgress/todo) stays on the existing
+              // lesson-level `completed || progress >= 100` rule above —
+              // only the step dots switch to the real per-step data once
+              // it's known for this lesson.
+              const steps =
+                stepsFor(item.lessonid) ??
+                approximateSteps(item.progress ?? 0, isNext, status === 'done');
               return (
                 <LessonRow
                   chipLabel={t('screen.level.lessonChip', {
@@ -320,7 +339,7 @@ export default function LevelSelectionScreen() {
                   status={status}
                   isNext={isNext}
                   ctaLabel={isNext ? upNextCtaLabel : undefined}
-                  steps={approximateSteps(item.progress ?? 0, isNext, status === 'done')}
+                  steps={steps}
                   onPress={() => handleItemPress(item)}
                   testID={`lesson-row-${item.lessonid}`}
                 />
