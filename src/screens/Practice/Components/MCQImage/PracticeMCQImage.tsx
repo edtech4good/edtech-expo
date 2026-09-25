@@ -34,6 +34,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       onRetry = () => undefined,
       onSubmit = () => undefined,
     }: PracticeProps,
@@ -140,12 +141,19 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       }
     };
 
-    const renderQuestionOption = ({ item }: { item: QuestionOption }) => {
+    const renderQuestionOption = ({
+      item,
+      index,
+    }: {
+      item: QuestionOption;
+      index: number;
+    }) => {
       return (
         <MCQImageItem
           option={item}
           isSelected={!_.isEmpty(attempt.selections[item.questionoptionid])}
           isShowingAnswer={isShowingAnswer}
+          index={index}
           onPress={() => handleItemPress(item)}
         />
       );
@@ -202,6 +210,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );

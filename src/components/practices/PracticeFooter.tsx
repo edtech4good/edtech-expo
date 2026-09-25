@@ -7,8 +7,7 @@ import {
   SizedBox,
 } from '@/components';
 import AppButton from '../ui/AppButton';
-import EyebrowText from '../ui/EyebrowText';
-import ProgressBar from '../ui/ProgressBar';
+import RefreshIcon from '../ui/icons/RefreshIcon';
 import { useDesign } from '@/services';
 import { View } from 'react-native';
 import { useTheme } from 'styled-components/native';
@@ -20,6 +19,8 @@ interface Props {
   maxQuestion: number;
   onRetry: () => void;
   onSubmit: () => void;
+  // Quiz has no Retry equivalent — hides the pill and shows only Submit.
+  hideRetry?: boolean;
 }
 
 export default function ({
@@ -28,25 +29,25 @@ export default function ({
   maxQuestion,
   onRetry = () => undefined,
   onSubmit = () => undefined,
+  hideRetry = false,
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
 
   if (isCorporate) {
-    // Corporate color-pass: the footer stretches full-width so the handoff's
-    // 4px blue question track can run full-bleed above the pill buttons,
-    // which replace the kids footer. Same props, same handlers.
-    const progress =
-      maxQuestion > 0 ? Math.min(1, currentQuestionIndex / maxQuestion) : 0;
+    // Corporate color-pass (v2.1): the "n / max" counter and the 4px
+    // progress track have moved up into the child app bar (handoff §4),
+    // so the footer is only the Submit / Retry pill row now. Submit grows
+    // to fill the space; Retry is fixed-width with a leading refresh icon.
+    // Quiz has no Retry equivalent, so it passes hideRetry and gets a
+    // Submit-only footer.
     return (
-      // alignSelf stretch: Container centres its children, which shrink-wrapped this bar to its buttons and collapsed the track's 100% width to 0 (audit U-04/U-05).
       <View
         style={{
           alignSelf: 'stretch',
           backgroundColor: theme.colors.surface,
         }}>
-        <ProgressBar variant="quiz" progress={progress} />
         <View
           style={{
             flexDirection: 'row',
@@ -57,24 +58,24 @@ export default function ({
           }}>
           <View style={{ flex: 1 }}>
             <AppButton
+              testID="footer-submit"
               label={t('screen.practice.submitButton')}
-              size="md"
+              size="lg"
               fullWidth
               onPress={onSubmit}
             />
           </View>
-          <AppButton
-            label={t('screen.practice.retryButton')}
-            variant="secondary"
-            size="md"
-            disabled={isShowingAnswer}
-            onPress={onRetry}
-          />
-          <EyebrowText
-            size={theme.fontSizes.eyebrow}
-            color={theme.colors.primary}>
-            {`${currentQuestionIndex} / ${maxQuestion}`}
-          </EyebrowText>
+          {!hideRetry && (
+            <AppButton
+              testID="footer-retry"
+              label={t('screen.practice.retryButton')}
+              variant="secondary"
+              size="lg"
+              disabled={isShowingAnswer}
+              icon={<RefreshIcon color={theme.colors.primary} />}
+              onPress={onRetry}
+            />
+          )}
         </View>
       </View>
     );

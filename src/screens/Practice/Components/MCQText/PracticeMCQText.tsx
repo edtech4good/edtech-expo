@@ -47,6 +47,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       multipleChoice = false,
     }: MCQTextProps,
     ref,
@@ -187,7 +188,13 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
 
     const handleSingleSelectPress = (qp: QuestionOption) => {};
 
-    const renderItem = ({ item }: { item: QuestionOption }) => {
+    const renderItem = ({
+      item,
+      index,
+    }: {
+      item: QuestionOption;
+      index: number;
+    }) => {
       return (
         <MCQTextItem
           key={item.questionoptionid}
@@ -197,6 +204,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
           disabled={isShowingAnswer}
           isShowingAnswer={isShowingAnswer}
           isCorrect={item.questionoptioniscorrect}
+          index={index}
           onPress={() => handleItemPress(item)}
         />
       );
@@ -262,6 +270,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );

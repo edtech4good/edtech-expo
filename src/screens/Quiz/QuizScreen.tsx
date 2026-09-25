@@ -7,6 +7,8 @@ import {
   LayoutScrollView,
   PracticeContent,
 } from '@/components';
+import EyebrowText from '@/components/ui/EyebrowText';
+import ProgressBar from '@/components/ui/ProgressBar';
 import {
   LessonQuiz,
   ModalHandler,
@@ -20,9 +22,15 @@ import {
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
-import { useDesign, useQuiz, useResult, notifyResultQueued } from '@/services';
+import {
+  useDesign,
+  useFont,
+  useQuiz,
+  useResult,
+  notifyResultQueued,
+} from '@/services';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -44,6 +52,7 @@ export default function QuizScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
 
   const dispatch = useAppDispatch();
@@ -82,13 +91,43 @@ export default function QuizScreen() {
   });
 
   useEffect(() => {
+    const quizName = (selectedModule as LessonQuiz)?.lessonquizname;
     navigation.setOptions({
-      ...(isCorporate && (selectedModule as LessonQuiz)?.lessonquizname
-        ? { title: (selectedModule as LessonQuiz).lessonquizname }
-        : {}),
+      ...(isCorporate && quizName ? { title: quizName } : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Corporate child app bar (handoff §4, v2.1): centred title wraps to
+      // up to two lines instead of truncating (kids keeps the stock header
+      // untouched), plus a mono "N OF total" eyebrow on the right.
+      ...(isCorporate
+        ? {
+            headerTitle: () => (
+              <Text
+                numberOfLines={2}
+                style={{
+                  fontFamily: displayBold,
+                  fontSize: theme.fontSizes.subtitle,
+                  color: theme.colors.onBackground,
+                  textAlign: 'center',
+                }}>
+                {quizName}
+              </Text>
+            ),
+            headerRight: () => (
+              <EyebrowText
+                testID="practice-progress-label"
+                size={theme.fontSizes.eyebrow}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.layouts.pageHorizontalPadding }}>
+                {t('screen.practice.progressLabel', {
+                  i: question + 1,
+                  n: questions.length,
+                })}
+              </EyebrowText>
+            ),
+          }
+        : {}),
     });
-  }, [navigation]);
+  }, [navigation, selectedModule, isCorporate, question, questions.length]);
 
   useEffect(() => {
     if (!selectedModule) return;
@@ -203,6 +242,15 @@ export default function QuizScreen() {
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>
+      {isCorporate && (
+        <ProgressBar
+          testID="practice-progress-track"
+          variant="quiz"
+          progress={
+            questions.length > 0 ? (question + 1) / questions.length : 0
+          }
+        />
+      )}
       <PracticeContent
         ref={practiceRef}
         key={currentQuestion.question.questionnid}
@@ -211,6 +259,9 @@ export default function QuizScreen() {
         maxQuestion={questions.length}
         onSubmit={handleSubmitPress}
         onRetry={handleRetryPress}
+        // Quiz is scored, not retried — no Retry equivalent exists here
+        // (handleRetryPress above is a no-op stub), so hide the pill.
+        hideRetry
       />
       {/* {currentQuestion.question.templatetypeid === 7 && (
         <PracticeDragDrop

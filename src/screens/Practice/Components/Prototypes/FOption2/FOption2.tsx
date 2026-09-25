@@ -33,6 +33,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption2(
     question,
     currentQuestionIndex,
     maxQuestion,
+    hideRetry = false,
   },
   ref,
 ) {
@@ -181,6 +182,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption2(
         maxQuestion={maxQuestion}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        hideRetry={hideRetry}
       />
     </Container>
   );

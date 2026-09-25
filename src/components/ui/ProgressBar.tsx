@@ -12,12 +12,14 @@ export interface ProgressBarProps {
   progress: number;
   variant?: 'default' | 'quiz';
   height?: number;
+  testID?: string;
 }
 
 export default function ProgressBar({
   progress,
   variant = 'default',
   height,
+  testID,
 }: ProgressBarProps) {
   const theme = useTheme();
   const clamped = Math.min(1, Math.max(0, progress));
@@ -40,6 +42,7 @@ export default function ProgressBar({
 
   return (
     <View
+      testID={testID}
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped * 100) }}
       style={{

@@ -35,6 +35,7 @@ export interface AppButtonProps {
   icon?: ReactNode;
   fullWidth?: boolean;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 const HEIGHTS: Record<AppButtonSize, number> = { lg: 52, md: 44, sm: 36 };
@@ -116,6 +117,7 @@ export default function AppButton({
   icon,
   fullWidth = false,
   accessibilityLabel,
+  testID,
 }: AppButtonProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
@@ -220,6 +222,7 @@ export default function AppButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !isInteractive, busy: loading }}
+      testID={testID}
       $height={height}
       $paddingHorizontal={paddingHorizontal}
       $backgroundColor={backgroundColor}

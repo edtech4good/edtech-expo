@@ -40,6 +40,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       onRetry = () => undefined,
       onSubmit = () => undefined,
     }: PracticeProps,
@@ -205,6 +206,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={methods.handleSubmit(handleSubmit)}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );

@@ -6,6 +6,8 @@ import {
   LayoutScrollView,
   PracticeContent,
 } from '@/components';
+import EyebrowText from '@/components/ui/EyebrowText';
+import ProgressBar from '@/components/ui/ProgressBar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
@@ -16,9 +18,14 @@ import {
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
-import { useDesign, usePractice, notifyResultQueued } from '@/services';
+import {
+  useDesign,
+  useFont,
+  usePractice,
+  notifyResultQueued,
+} from '@/services';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import _ from 'lodash';
 import {
   LessonPractice,
@@ -43,12 +50,17 @@ export interface PracticeProps {
     isCorrect: boolean,
     isShowingAnswer?: boolean,
   ) => void;
+  // Quiz has no Retry equivalent (answers are scored, not retried), so the
+  // corporate footer hides the Retry pill and shows only Submit there.
+  // Practice (unscored) keeps Retry — this defaults to false/undefined.
+  hideRetry?: boolean;
 }
 
 export default function PracticeScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
 
   const dispatch = useAppDispatch();
@@ -87,11 +99,46 @@ export default function PracticeScreen() {
   });
 
   useEffect(() => {
+    const practiceName = (selectedModule as LessonPractice)
+      ?.lessonpracticename;
     navigation.setOptions({
-      title: (selectedModule as LessonPractice)?.lessonpracticename,
+      title: practiceName,
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Corporate child app bar (handoff §4, v2.1): centred title wraps to
+      // up to two lines instead of truncating (kids keeps the stock
+      // single-line header, untouched, via the stack's default options),
+      // and a mono "N OF total" eyebrow sits on the right — the
+      // current/total question count.
+      ...(isCorporate
+        ? {
+            headerTitle: () => (
+              <Text
+                numberOfLines={2}
+                style={{
+                  fontFamily: displayBold,
+                  fontSize: theme.fontSizes.subtitle,
+                  color: theme.colors.onBackground,
+                  textAlign: 'center',
+                }}>
+                {practiceName}
+              </Text>
+            ),
+            headerRight: () => (
+              <EyebrowText
+                testID="practice-progress-label"
+                size={theme.fontSizes.eyebrow}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.layouts.pageHorizontalPadding }}>
+                {t('screen.practice.progressLabel', {
+                  i: question + 1,
+                  n: questions.length,
+                })}
+              </EyebrowText>
+            ),
+          }
+        : {}),
     });
-  }, []);
+  }, [selectedModule, isCorporate, question, questions.length]);
 
   useEffect(() => {
     if (!selectedModule) return;
@@ -245,6 +292,15 @@ export default function PracticeScreen() {
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>
+      {isCorporate && (
+        <ProgressBar
+          testID="practice-progress-track"
+          variant="quiz"
+          progress={
+            questions.length > 0 ? (question + 1) / questions.length : 0
+          }
+        />
+      )}
       <PracticeContent
         ref={practiceRef}
         key={currentQuestion.question.questionnid}

@@ -79,6 +79,7 @@ export default function PracticeHeading({ heading }: Props) {
       )}
       {!_.isEmpty(heading.headingfile) && <SizedBox.Large width />}
       <Expanded
+        testID={isCorporate ? 'question-card' : undefined}
         backgroundColor={theme.colors.surface}
         // Corporate: r16 per the handoff's question card spec (kids keeps
         // the shared defaultRadius). The page background is white now, so
