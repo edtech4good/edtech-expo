@@ -231,8 +231,51 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     setWrongCredentialsErrorKey('screen.login.invalidCredentialsError');
   }, [error, isWrongCredentialsError, isCorporate]);
 
+  // Once the learner edits either field, the wrong-credentials state is
+  // over: drop the key so a later language switch (which changes `t` and
+  // re-runs the effect below) can't push the error back onto a field
+  // they've already corrected. Both fields' server errors go together —
+  // it's one combined error, and leaving the password half behind with
+  // no key would freeze its message in the current language. Only
+  // `type === 'change'` counts (a user keystroke through useController's
+  // onChange); setValue/reset don't carry it, and setError emits no
+  // `values`, so RHF 7.88's watch(callback) never fires for it.
   useEffect(() => {
     if (!wrongCredentialsErrorKey) return;
+    const subscription = methods.watch((_values, { type }) => {
+      if (type !== 'change') return;
+      (['username', 'password'] as const).forEach((name) => {
+        if (methods.getFieldState(name).error?.type === 'server') {
+          methods.clearErrors(name);
+        }
+      });
+      setWrongCredentialsErrorKey(undefined);
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wrongCredentialsErrorKey]);
+
+  // Which key was last pushed into react-hook-form, so a `t`-only re-run
+  // (language switch) can be told apart from a fresh failure.
+  const appliedWrongCredentialsKeyRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!wrongCredentialsErrorKey) {
+      appliedWrongCredentialsKeyRef.current = undefined;
+      return;
+    }
+    const isFreshFailure =
+      appliedWrongCredentialsKeyRef.current !== wrongCredentialsErrorKey;
+    // A language switch only re-translates an error that is still on the
+    // field. If it's gone — cleared by an edit or by the next submit's
+    // revalidation while that request is in flight — leave it gone.
+    if (
+      !isFreshFailure &&
+      methods.getFieldState('password').error?.type !== 'server'
+    ) {
+      return;
+    }
+    appliedWrongCredentialsKeyRef.current = wrongCredentialsErrorKey;
     methods.setError('username', { type: 'server', message: '' });
     methods.setError('password', {
       type: 'server',
