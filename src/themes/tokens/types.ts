@@ -42,6 +42,8 @@ export interface ThemeColors {
   selection: string;
   success: string;
   onSuccess: string;
+  /** Text-only "Done" color for status words (lesson row status, step-dot labels) — a darker green than the `success` disc fill so 14/12px text stays readable on white. Also used as the done step dot's fill (LessonStepDots), not just the "Done" label text. */
+  successText: string;
   warning: string;
   warningText: string;
   lessonChip: string;

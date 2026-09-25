@@ -98,6 +98,31 @@ export default function HomeStack() {
         options={{
           title: t('screen.level.header'),
           ...learnerBackFor('/home/units'),
+          // Corporate Level Detail (handoff §3): back chevron only, no
+          // title text in the bar. Kids keeps the stock centered title +
+          // Material back arrow untouched.
+          ...(isCorporate
+            ? {
+                headerTitle: () => null,
+                ...(Platform.OS !== 'web'
+                  ? {
+                      headerLeft: ({ canGoBack }) =>
+                        canGoBack ? <BackButton variant="chevron" /> : null,
+                    }
+                  : {
+                      // Web's learnerBackFor above skips headerLeft for
+                      // corporate, which left the Material arrow instead of
+                      // this screen's chevron. Use the same reload-fallback
+                      // back button, but with the corporate chevron variant.
+                      headerLeft: () => (
+                        <LearnerBackButton
+                          fallback="/home/units"
+                          variant="chevron"
+                        />
+                      ),
+                    }),
+              }
+            : {}),
         }}
       />
       <Stack.Screen

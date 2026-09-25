@@ -228,7 +228,12 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
             <ExpandedWithLayout
               flex={isStacked ? 1 : undefined}
               backgroundColor={theme.colors.surface}
-              justifyContent="center">
+              justifyContent="center"
+              style={
+                isCorporate
+                  ? { borderWidth: 1, borderColor: theme.colors.divider }
+                  : undefined
+              }>
               <PracticeFile
                 id={question.questionnid}
                 file={_.get(question, 'questionobject.questionfile')}

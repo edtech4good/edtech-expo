@@ -18,7 +18,7 @@ import {
   PracticeHeading,
   SizedBox,
 } from '@/components';
-import { useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource, useScreenDimension } from '@/services';
 import _ from 'lodash';
 import FractionItem from './Components/FractionItem';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -46,6 +46,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     ref,
   ) {
     const theme = useTheme();
+    const { isCorporate } = useDesign();
     const { unblockHeightWithoutHeader } = useScreenDimension();
 
     const questionOptions = useMemo(
@@ -181,7 +182,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           justifyContent="center"
           borderRadius={theme.layouts.defaultRadius}
           backgroundColor={theme.colors.surface}
-          style={{ margin: theme.layouts.large }}>
+          style={{
+            margin: theme.layouts.large,
+            ...(isCorporate
+              ? { borderWidth: 1, borderColor: theme.colors.divider }
+              : null),
+          }}>
           {!_.isEmpty(exerciseImage) && (
             <ExpandedWithLayout justifyContent="center" alignItems="center">
               <ChildImage source={exerciseImage} />

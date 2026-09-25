@@ -1,9 +1,7 @@
 import { Images } from '@/assets';
 import {
   AppButton,
-  Chip,
   DefaultBackgroundImage,
-  EyebrowText,
   LayoutScrollView,
   LessonRow,
   ProgressBar,
@@ -56,13 +54,15 @@ function approximateSteps(
   return { learning: 'todo', practice: 'todo', quiz: 'todo' };
 }
 
-const LessonRowSpacer = () => <View style={{ height: 12 }} />;
+const LessonRowSpacer = () => <View style={{ height: 10 }} />;
 
 export default function LevelSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const displayFont = useFont('bold', 'display');
+  const bodyFont = useFont('normal', 'body');
+  const bodyFontSemi = useFont('semi', 'body');
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ levelid?: string }>();
   const selectedUnit = useAppSelector(getSelectedUnit);
@@ -155,67 +155,141 @@ export default function LevelSelectionScreen() {
     const upNextProgress = upNext?.progress ?? 0;
     const upNextCtaLabel =
       upNextProgress > 0 ? t('cta.continue') : t('cta.start');
+    const upNextOrder = upNext?.lessonorder;
+    // Fall back to the plain "Continue"/"Start" CTA when the lesson number
+    // is missing — "Continue Lesson " with a blank number reads as broken.
+    const footerCtaLabel =
+      upNextOrder != null
+        ? upNextProgress > 0
+          ? t('cta.continueLesson', { n: upNextOrder })
+          : t('cta.startLesson', { n: upNextOrder })
+        : upNextCtaLabel;
 
-    // A broken remote image would blank a hero that today always shows, so
-    // (unlike the curriculum cards) this needs an explicit runtime
-    // fallback: try the remote hero, and drop back to the bundled asset on
-    // load failure or when no remote URL is resolvable at all.
+    // A broken remote image would blank the illustration that today always
+    // shows, so (unlike the curriculum cards) this needs an explicit
+    // runtime fallback: try the remote asset, and drop back to the bundled
+    // one on load failure or when no remote URL is resolvable at all. The
+    // handoff (§3) shrank this from a 220px photo hero to a 110px inset
+    // illustration, but the image source itself is unchanged.
     const remoteHeroUrl = getRemoteResourceUrl(`level-${levelId}.jpg`);
-    const heroSource =
+    const illustrationSource =
       remoteHeroUrl && !heroLoadFailed
         ? { uri: remoteHeroUrl }
         : Images.CorporateCourseHero;
 
+    // v2 §3: grey category chip + lessonChip-colored "Grade · Level" chip,
+    // both H24/12px — the shared `Chip` component is H32/36 and colors its
+    // active state with `primary`, so these are the handoff's small pill
+    // built directly (matches the "Lesson N" chip on LessonRow).
     const detailHeader = (
       <View style={{ paddingBottom: theme.layouts.pageVerticalPadding }}>
-        <Image
-          source={heroSource}
-          onError={() => setHeroLoadFailed(true)}
-          contentFit="cover"
-          contentPosition="top"
-          style={{
-            width: '100%',
-            height: 220,
-            borderRadius: theme.radii.media,
-          }}
-        />
-        <SizedBox.Medium height />
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {headerGradeName != null && <Chip label={headerGradeName} />}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {headerGradeName != null && (
+            <View
+              style={{
+                minHeight: 24,
+                borderRadius: theme.radii.pill,
+                backgroundColor: theme.colors.surfaceVariant,
+                paddingHorizontal: 10,
+                paddingVertical: 2,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 12,
+                  color: theme.colors.onSurface,
+                }}>
+                {headerGradeName}
+              </Text>
+            </View>
+          )}
           {headerUnit?.levelname != null && (
-            <Chip label={headerUnit.levelname} active />
+            <View
+              style={{
+                minHeight: 24,
+                borderRadius: theme.radii.pill,
+                backgroundColor: theme.colors.lessonChip,
+                paddingHorizontal: 10,
+                paddingVertical: 2,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text
+                style={{
+                  fontFamily: bodyFont,
+                  fontSize: 12,
+                  color: theme.colors.onPrimary,
+                }}>
+                {headerUnit.levelname}
+              </Text>
+            </View>
           )}
         </View>
-        <SizedBox.Medium height />
+        {/* Header-section spacing per the review pass: 14 between sections
+            (chip row → title, description → illustration, illustration →
+            progress), not the shared 12px SizedBox.Medium — scoped here so
+            other SizedBox.Medium consumers are untouched. */}
+        <View style={{ height: 14 }} />
         <Text
           style={{
             fontFamily: displayFont,
-            fontSize: 22,
+            fontSize: theme.fontSizes.screenTitle,
             color: theme.colors.onBackground,
           }}>
           {headerUnit?.levelname ?? ''}
         </Text>
         {headerUnit?.leveldescription ? (
-          <View style={{ marginTop: 4 }}>
-            <EyebrowText size={10}>{headerUnit.leveldescription}</EyebrowText>
+          <View style={{ marginTop: 14 }}>
+            <Text
+              style={{
+                fontFamily: bodyFont,
+                fontSize: theme.fontSizes.body,
+                color: theme.colors.onSurface,
+              }}>
+              {headerUnit.leveldescription}
+            </Text>
           </View>
         ) : null}
-        <SizedBox.Medium height />
+        <View style={{ height: 14 }} />
+        <Image
+          source={illustrationSource}
+          onError={() => setHeroLoadFailed(true)}
+          contentFit="cover"
+          contentPosition="top"
+          style={{
+            width: '100%',
+            height: 110,
+            borderRadius: theme.radii.card,
+          }}
+        />
+        <View style={{ height: 14 }} />
         <View
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
-            marginBottom: 6,
+            marginBottom: 8,
           }}>
-          <EyebrowText size={10}>
-            {t('screen.level.lessonsProgress', {
+          <Text
+            style={{
+              fontFamily: bodyFontSemi,
+              fontSize: 12,
+              color: theme.colors.onSurface,
+            }}>
+            {t('screen.level.progressWithCertificate', {
               done: doneCount,
               total: sortedLessons.length,
             })}
-          </EyebrowText>
-          <EyebrowText size={10} color={theme.colors.onBackground}>
+          </Text>
+          <Text
+            style={{
+              fontFamily: bodyFontSemi,
+              fontSize: 12,
+              color: theme.colors.onSurface,
+            }}>
             {`${levelProgress}%`}
-          </EyebrowText>
+          </Text>
         </View>
         <ProgressBar progress={levelProgress / 100} height={6} />
       </View>
@@ -258,16 +332,13 @@ export default function LevelSelectionScreen() {
             <View
               style={{
                 paddingHorizontal: theme.layouts.pageHorizontalPadding,
-                paddingVertical: theme.layouts.pageVerticalPadding,
+                paddingTop: 12,
+                paddingBottom: theme.layouts.pageVerticalPadding,
                 borderTopWidth: 1,
                 borderTopColor: theme.colors.divider,
               }}>
               <AppButton
-                label={
-                  upNextProgress > 0
-                    ? t('screen.level.continueLearning')
-                    : t('cta.start')
-                }
+                label={footerCtaLabel}
                 fullWidth
                 onPress={() => handleItemPress(upNext)}
               />

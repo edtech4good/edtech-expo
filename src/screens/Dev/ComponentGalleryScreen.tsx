@@ -347,6 +347,15 @@ export default function ComponentGalleryScreen() {
                 steps={{ learning: 'done', practice: 'done', quiz: 'done' }}
               />
             </Swatch>
+            <Swatch label="multi-item counts (Practice 1/2)">
+              <LessonStepDots
+                steps={{
+                  learning: { state: 'done', done: 2, total: 2 },
+                  practice: { state: 'current', done: 1, total: 2 },
+                  quiz: { state: 'todo' },
+                }}
+              />
+            </Swatch>
           </Row>
           <EyebrowText size={9} style={{ marginBottom: 10 }}>
             Without labels
@@ -387,6 +396,9 @@ export default function ComponentGalleryScreen() {
             </Swatch>
             <Swatch label="todo">
               <StatusIcon status="todo" />
+            </Swatch>
+            <Swatch label="up next">
+              <StatusIcon status="upNext" />
             </Swatch>
           </Row>
         </Section>
