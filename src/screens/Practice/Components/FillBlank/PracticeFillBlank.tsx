@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useDesign, useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
 import {
   ChildImage,
@@ -49,7 +49,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions'),
@@ -204,7 +203,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(

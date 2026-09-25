@@ -9,12 +9,7 @@ import {
   ExpandedWithLayout,
 } from '@/components';
 import { PracticeProps } from '../../PracticeScreen';
-import {
-  useBreakpoint,
-  useDesign,
-  useResource,
-  useScreenDimension,
-} from '@/services';
+import { useBreakpoint, useDesign, useResource } from '@/services';
 import { FlatList } from 'react-native';
 import {
   forwardRef,
@@ -54,7 +49,6 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     // ROADMAP Track B (phone learner path): below 768dp the landscape
     // two-pane row (media | options, each crushed to ~180dp) is replaced
@@ -217,7 +211,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       : theme.layouts.medium;
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(

@@ -15,7 +15,7 @@ import {
 } from '@/components';
 import { FOptionAttempt, PracticeHandler, QuestionHeading } from '@/models';
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
-import { useResource, useScreenDimension } from '@/services';
+import { useResource } from '@/services';
 import _ from 'lodash';
 import {
   forwardRef,
@@ -45,7 +45,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption2(
   });
 
   const theme = useTheme();
-  const { unblockHeightWithoutHeader } = useScreenDimension();
 
   const questionOptions = useMemo(
     () => _.get(question, 'questionobject.questionoptions'),
@@ -144,7 +143,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption2(
   };
 
   return (
-    <Container containerHeight={unblockHeightWithoutHeader}>
+    <Container fill>
       <PracticeHeading
         heading={
           _.get(

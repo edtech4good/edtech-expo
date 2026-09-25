@@ -44,7 +44,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     ref,
   ) {
     const theme = useTheme();
-    const { unblockHeightWithoutHeader, windowWidth } = useScreenDimension();
+    const { windowWidth } = useScreenDimension();
 
     const [attempt, setAttempt] = useState<ArrangeImageAttempt>({
       tries: 1,
@@ -210,7 +210,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(

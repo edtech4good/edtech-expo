@@ -16,7 +16,7 @@ import {
   UserFillBlankAttept,
 } from '@/models';
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
-import { useResource, useScreenDimension } from '@/services';
+import { useResource } from '@/services';
 import _ from 'lodash';
 import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -41,7 +41,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption4(
   });
 
   const theme = useTheme();
-  const { unblockHeightWithoutHeader } = useScreenDimension();
 
   const questionOptions = useMemo(
     () =>
@@ -126,7 +125,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption4(
   };
 
   return (
-    <Container containerHeight={unblockHeightWithoutHeader}>
+    <Container fill>
       <PracticeHeading
         heading={
           _.get(

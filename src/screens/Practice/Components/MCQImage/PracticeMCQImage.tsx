@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useDesign, useScreenDimension } from '@/services';
+import { useDesign } from '@/services';
 import {
   Container,
   Expanded,
@@ -42,7 +42,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     useImperativeHandle(
       ref,
@@ -163,7 +162,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
 
     return (
       <Container
-        containerHeight={unblockHeightWithoutHeader}
+        fill
         paddingLeft={theme.layouts.large}
         paddingRight={theme.layouts.large}>
         <PracticeHeading

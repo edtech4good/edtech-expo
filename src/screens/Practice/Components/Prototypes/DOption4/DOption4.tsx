@@ -17,7 +17,7 @@ import {
   ShakingHandler,
 } from '@/models';
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
-import { useResource, useScreenDimension } from '@/services';
+import { useResource } from '@/services';
 import { Image, ImageSource } from 'expo-image';
 import _ from 'lodash';
 import {
@@ -55,7 +55,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption4(
   ref,
 ) {
   const theme = useTheme();
-  const { unblockHeightWithoutHeader } = useScreenDimension();
 
   const matchingItemRefs = useRef<Record<string, ShakingHandler>>({});
 
@@ -194,7 +193,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption4(
   };
 
   return (
-    <Container containerHeight={unblockHeightWithoutHeader}>
+    <Container fill>
       <PracticeHeading
         heading={
           _.get(

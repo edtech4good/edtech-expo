@@ -54,7 +54,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader, windowWidth } = useScreenDimension();
+    const { windowWidth } = useScreenDimension();
     const matchingItemRefs = useRef<Record<string, DraggableHandler>>({});
     const source = useResource(
       { name: _.get(question, 'questionobject.questionfile.filename', '') },
@@ -213,7 +213,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     // };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(

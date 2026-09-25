@@ -22,9 +22,11 @@ import {
 import {
   useDesign,
   useFont,
+  useNavShell,
   usePractice,
   notifyResultQueued,
 } from '@/services';
+import { NAV_RAIL_WIDTH } from '@/components/ui/NavRail';
 import { PASS_PERCENTAGE } from '@/constants';
 import {
   ActivityIndicator,
@@ -81,6 +83,7 @@ export default function PracticeScreen() {
   const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
+  const { isRail } = useNavShell();
 
   const dispatch = useAppDispatch();
   const selectedModule = useAppSelector(getSelectedModule);
@@ -142,7 +145,16 @@ export default function PracticeScreen() {
       ...(isCorporate
         ? {
             headerTitle: () => (
-              <View style={{ maxWidth: windowWidth - 2 * HEADER_SIDE_SLOT }}>
+              // On the tablet nav rail, the header is narrower than the
+              // window by the rail's fixed width, so subtract it too or the
+              // title's max-width overshoots the header's actual space.
+              <View
+                style={{
+                  maxWidth:
+                    windowWidth -
+                    (isRail ? NAV_RAIL_WIDTH : 0) -
+                    2 * HEADER_SIDE_SLOT,
+                }}>
                 <Text
                   numberOfLines={isKhmer ? 1 : 2}
                   ellipsizeMode="tail"
@@ -187,6 +199,7 @@ export default function PracticeScreen() {
     question,
     questions.length,
     windowWidth,
+    isRail,
     isKhmer,
   ]);
 

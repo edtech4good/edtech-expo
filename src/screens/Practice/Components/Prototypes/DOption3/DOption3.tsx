@@ -2,7 +2,6 @@ import { PracticeHandler, QuestionHeading } from '@/models';
 import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { PracticeProps } from '../../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useScreenDimension } from '@/services';
 import {
   Column,
   Container,
@@ -30,7 +29,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption3(
   ref,
 ) {
   const theme = useTheme();
-  const { unblockHeightWithoutHeader } = useScreenDimension();
 
   useImperativeHandle(
     ref,
@@ -125,7 +123,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption3(
   };
 
   return (
-    <Container containerHeight={unblockHeightWithoutHeader}>
+    <Container fill>
       <PracticeHeading
         heading={
           _.get(
