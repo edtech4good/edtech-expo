@@ -2,6 +2,9 @@
   "name": "expo_edtech",
   "version": "1.0.6",
   "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/edtech4good/edtech-expo.git"
@@ -17,11 +20,6 @@
     "build:android:staging": "eas build -p android --profile preview --local",
     "build:android:prod": "eas build -p android --profile production --local",
     "build:web": "expo export -p web",
-    "predeploy": "expo export -p web",
-    "select:prod": "firebase target:apply hosting prod your-firebase-project-id",
-    "deploy:prod": "NODE_ENV=production yarn build:web && yarn select:prod && firebase deploy --only hosting:prod",
-    "select:staging": "firebase target:apply hosting staging your-staging-target",
-    "deploy:staging": "NODE_ENV=test yarn build:web && yarn select:staging && firebase deploy --only hosting:staging",
     "test:themes": "tsx src/themes/__tests__/themeParity.ts"
   },
   "dependencies": {
