@@ -97,7 +97,36 @@
       "header": "Lessons",
       "learningTitle": "Learning",
       "practiceTitle": "Practice",
-      "quizTitle": "Quiz"
+      "quizTitle": "Quiz",
+      "inThisLesson": "In this lesson",
+      "metaVideos": "{{count}} video",
+      "metaVideos_plural": "{{count}} videos",
+      "metaPractices": "{{count}} practice",
+      "metaPractices_plural": "{{count}} practices",
+      "metaQuizzes": "{{count}} quiz",
+      "metaQuizzes_plural": "{{count}} quizzes",
+      "stepType": {
+        "learning": "Learning",
+        "practice": "Practice",
+        "quiz": "Quiz"
+      },
+      "stepEyebrowWithCount": "{{type}} · {{i}} of {{n}}",
+      "practiceQuestions": "{{count}} question · unscored",
+      "practiceQuestions_plural": "{{count}} questions · unscored",
+      "quizQuestions": "{{count}} question · scored",
+      "quizQuestions_plural": "{{count}} questions · scored",
+      "status": {
+        "learningDone": "Done · rewatch any time",
+        "done": "Done",
+        "inProgress": "In progress",
+        "todo": "Not started",
+        "quizTodo": "Not started · pass to finish the lesson",
+        "unsynced": "Done · saved on device, not synced"
+      },
+      "stepA11yLabel": "{{type}} {{i}} of {{n}}, {{title}}, {{status}}",
+      "stepA11yLabelSingle": "{{type}}, {{title}}, {{status}}",
+      "footerCta": "{{verb}} {{type}}",
+      "footerCtaWithIndex": "{{verb}} {{type}} {{i}}"
     },
     "practice": {
       "submitButton": "Submit",

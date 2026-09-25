@@ -1,10 +1,10 @@
 import {
+  AppButton,
   Column,
-  ContinueLearningRow,
   DefaultBackgroundImage,
-  EyebrowText,
   H4,
   LayoutScrollView,
+  LessonStepRow,
   Row,
 } from '@/components';
 import {
@@ -14,22 +14,26 @@ import {
   useNavigation,
 } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import LessonItem from './components/LessonItem';
-import { useDesign, useLesson } from '@/services';
-import { useAppSelector } from '@/redux';
-import { getSelectedLesson } from '@/redux/slices';
 import {
-  LessonLearning,
-  LessonLearningResource,
-  LessonPractice,
-  LessonQuiz,
-} from '@/models';
+  useActivityProgress,
+  useDesign,
+  useFont,
+  useLesson,
+} from '@/services';
+import { useAppSelector } from '@/redux';
+import {
+  getSelectedCourse,
+  getSelectedLesson,
+  getSelectedUnit,
+} from '@/redux/slices';
+import { LessonLearning, LessonPractice, LessonQuiz } from '@/models';
 import _ from 'lodash';
 import { useTranslation } from 'react-i18next';
 import { getRemoteResourceUrl } from '@/utils';
-import type { ImageProps } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ActivityType = 'learning' | 'practice' | 'quiz';
 
@@ -44,9 +48,12 @@ export default function LessonSelectionScreen() {
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const params = useLocalSearchParams<{ lessonid?: string }>();
   const selectedLesson = useAppSelector(getSelectedLesson);
+  const selectedCourse = useAppSelector(getSelectedCourse);
+  const selectedUnit = useAppSelector(getSelectedUnit);
   // The URL param survives a browser reload on web; the redux selection covers
   // native, where navigate() is not always given params by older code paths.
   const lessonId =
@@ -54,6 +61,11 @@ export default function LessonSelectionScreen() {
     selectedLesson?.lessonid ||
     '';
   const { fetch, clear, selectModule, lesson } = useLesson(lessonId);
+  const { statusFor, questionCountFor, unsyncedFor } =
+    useActivityProgress(lessonId);
+  const chipFontFamily = useFont('normal', 'body');
+  const bodyFontFamily = useFont('normal', 'body');
+  const displayFontFamily = useFont('bold', 'display');
 
   /**
    * `type` is what decides which renderer runs. It has to be a stable key rather
@@ -225,9 +237,12 @@ export default function LessonSelectionScreen() {
             width: '100%',
             flexWrap: 'wrap',
           }}>
-          {_.map(lesson?.lessonquizzes, d => {
-            return renderLessonQuiz(d as LessonQuiz);
-          })}
+          {_.map(
+            _.sortBy(lesson?.lessonquizzes, 'lessonquizorder'),
+            d => {
+              return renderLessonQuiz(d as LessonQuiz);
+            },
+          )}
         </Row>
       </Column>
     );
@@ -243,47 +258,131 @@ export default function LessonSelectionScreen() {
     );
 
   if (isCorporate) {
-    // Corporate lesson-content screen: the same three activity sections,
-    // restyled as eyebrow headers + row cards. Learning rows show the real
-    // per-item progress the lesson-detail fetch provides
-    // (studentlearningprogress); practices/quizzes have no per-item
-    // progress data, so their rows carry title only — no fake durations.
-    const learningProgress = (ll: LessonLearning): number | undefined => {
-      const resource = ll as Partial<LessonLearningResource>;
-      const pct = resource.studentlearningprogress?.progress_percentage;
-      if (typeof pct !== 'number' || pct <= 0) return undefined;
-      return Math.min(1, pct > 1 ? pct / 100 : pct);
+    // Corporate Lesson screen, v2.1 §3b: one "In this lesson" list in
+    // hierarchy order (all learnings, then practices, then quizzes), not
+    // three sectioned lists — see LessonStepRow. Status per row (and
+    // per-item progress for learnings) comes from the activityProgress
+    // store, kept fresh by useActivityProgress (fetched on mount + focus,
+    // merged offline-safe). The lesson-detail fetch's own
+    // studentlearningprogress is dead for this purpose — it's never
+    // returned by fetchChapters — so it isn't read here.
+    const sortedLearnings = _.sortBy(
+      lesson?.lessonlearnings,
+      'lessonlearningorder',
+    );
+    const sortedPractices = _.sortBy(
+      lesson?.lessonpractices,
+      'lessonpracticeorder',
+    );
+    const quizzes: LessonQuiz[] = _.sortBy(
+      lesson?.lessonquizzes,
+      'lessonquizorder',
+    );
+
+    type StepActivity = {
+      id: string;
+      type: 'learning' | 'practice' | 'quiz';
+      /** 1-based position within its own type, for "N of M" eyebrows/labels. */
+      indexInType: number;
+      countInType: number;
+      name: string;
     };
 
-    const corporateSection = (
-      title: string,
-      type: 'learning' | 'practice' | 'quiz',
-      rows: Array<{
-        key: string;
-        title: string;
-        progress?: number;
-        imageSource?: ImageProps['source'];
-        onPress: () => void;
-      }>,
-    ) =>
-      rows.length > 0 && (
-        <View style={{ gap: 12 }}>
-          <EyebrowText size={10} color={theme.colors.primary}>
-            {title}
-          </EyebrowText>
-          {rows.map(({ key, ...row }) => (
-            <ContinueLearningRow
-              key={key}
-              testID={`activity-row-${type}-${key}`}
-              {...row}
-            />
-          ))}
-        </View>
-      );
+    const steps: StepActivity[] = [
+      ...sortedLearnings.map((ll, i) => ({
+        id: ll.lessonlearningid,
+        type: 'learning' as const,
+        indexInType: i + 1,
+        countInType: sortedLearnings.length,
+        name: ll.lessonlearningname,
+      })),
+      ...sortedPractices.map((lp, i) => ({
+        id: lp.lessonpracticeid,
+        type: 'practice' as const,
+        indexInType: i + 1,
+        countInType: sortedPractices.length,
+        name: lp.lessonpracticename,
+      })),
+      ...quizzes.map((lq, i) => ({
+        id: lq.lessonquizid,
+        type: 'quiz' as const,
+        indexInType: i + 1,
+        countInType: quizzes.length,
+        name: lq.lessonquizname,
+      })),
+    ];
+
+    // "Next step": the first activity, in learnings -> practices -> quizzes
+    // order, that isn't done yet. Only that row gets a CTA pill and the 2px
+    // border; every other row shows its plain status icon. If everything is
+    // done, nextStep is undefined and the footer is hidden.
+    const nextStep = steps.find(step => statusFor(step.id) !== 'done');
+
+    // A step only carries its type + its 1-based index within that type —
+    // this looks up the actual learning/practice/quiz object to pass to
+    // handleItemPress.
+    const moduleForStep = (step: StepActivity) =>
+      step.type === 'learning'
+        ? sortedLearnings[step.indexInType - 1]
+        : step.type === 'practice'
+        ? sortedPractices[step.indexInType - 1]
+        : quizzes[step.indexInType - 1];
 
     const lessonImageUrl = getRemoteResourceUrl(
       `lesson-${lesson.lessonid}.jpg`,
     );
+
+    // Header meta: "Grade · Level · N videos · N practices · N quizzes",
+    // omitting zero-count parts. Grade/level come from the persisted
+    // selection, not the lesson response.
+    const metaParts = [
+      selectedCourse?.gradename,
+      selectedUnit?.levelname,
+      sortedLearnings.length > 0
+        ? t('screen.lesson.metaVideos', { count: sortedLearnings.length })
+        : undefined,
+      sortedPractices.length > 0
+        ? t('screen.lesson.metaPractices', { count: sortedPractices.length })
+        : undefined,
+      quizzes.length > 0
+        ? t('screen.lesson.metaQuizzes', { count: quizzes.length })
+        : undefined,
+    ].filter((part): part is string => !!part);
+
+    const stepTypeLabel = (type: StepActivity['type']) =>
+      t(`screen.lesson.stepType.${type}`);
+
+    const eyebrowFor = (step: StepActivity) =>
+      step.countInType > 1
+        ? t('screen.lesson.stepEyebrowWithCount', {
+            type: stepTypeLabel(step.type),
+            i: step.indexInType,
+            n: step.countInType,
+          })
+        : stepTypeLabel(step.type);
+
+    const titleFor = (step: StepActivity) => {
+      if (step.type === 'learning') return step.name;
+      const count = questionCountFor(step.id);
+      if (count == null) return step.name;
+      return step.type === 'practice'
+        ? t('screen.lesson.practiceQuestions', { count })
+        : t('screen.lesson.quizQuestions', { count });
+    };
+
+    const statusTextFor = (step: StepActivity, unsynced: boolean) => {
+      const status = statusFor(step.id);
+      if (unsynced && status === 'done') return t('screen.lesson.status.unsynced');
+      if (status === 'done')
+        return step.type === 'learning'
+          ? t('screen.lesson.status.learningDone')
+          : t('screen.lesson.status.done');
+      if (status === 'inProgress') return t('screen.lesson.status.inProgress');
+      // todo
+      return step.type === 'quiz'
+        ? t('screen.lesson.status.quizTodo')
+        : t('screen.lesson.status.todo');
+    };
 
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
@@ -295,52 +394,147 @@ export default function LessonSelectionScreen() {
               width: '100%',
               maxWidth: 1024,
               paddingHorizontal: theme.layouts.pageHorizontalPadding,
-              paddingVertical: theme.layouts.pageVerticalPadding,
-              gap: 24,
+              paddingTop: theme.layouts.pageVerticalPadding,
+              gap: 14,
             }}>
-            {corporateSection(
-              t('screen.lesson.learningTitle'),
-              'learning',
-              _.sortBy(lesson?.lessonlearnings, 'lessonlearningorder').map(
-                ll => ({
-                  key: ll.lessonlearningid,
-                  title: ll.lessonlearningname,
-                  progress: learningProgress(ll),
-                  imageSource: lessonImageUrl
-                    ? { uri: lessonImageUrl }
-                    : undefined,
-                  onPress: () => handleItemPress(ll, 'learning'),
-                }),
-              ),
+            <View style={{ flexDirection: 'row' }}>
+              <View
+                style={{
+                  minHeight: 24,
+                  borderRadius: theme.radii.pill,
+                  backgroundColor: theme.colors.lessonChip,
+                  paddingHorizontal: 10,
+                  paddingVertical: 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontFamily: chipFontFamily,
+                    fontSize: 12,
+                    color: theme.colors.onPrimary,
+                  }}>
+                  {t('screen.level.lessonChip', { n: lesson.lessonorder ?? '·' })}
+                </Text>
+              </View>
+            </View>
+            <Text
+              style={{
+                fontFamily: displayFontFamily,
+                fontSize: theme.fontSizes.screenTitle,
+                color: theme.colors.onBackground,
+              }}>
+              {lesson.lessonname}
+            </Text>
+            {metaParts.length > 0 && (
+              <Text
+                style={{
+                  fontFamily: bodyFontFamily,
+                  fontSize: 14,
+                  color: theme.colors.onSurfaceVariant,
+                }}>
+                {metaParts.join(' · ')}
+              </Text>
             )}
-            {corporateSection(
-              t('screen.lesson.practiceTitle'),
-              'practice',
-              _.sortBy(lesson?.lessonpractices, 'lessonpracticeorder').map(
-                lp => ({
-                  key: lp.lessonpracticeid,
-                  title: lp.lessonpracticename,
-                  imageSource: lessonImageUrl
-                    ? { uri: lessonImageUrl }
-                    : undefined,
-                  onPress: () => handleItemPress(lp, 'practice'),
-                }),
-              ),
-            )}
-            {corporateSection(
-              t('screen.lesson.quizTitle'),
-              'quiz',
-              (lesson?.lessonquizzes ?? []).map(lq => ({
-                key: lq.lessonquizid,
-                title: lq.lessonquizname,
-                imageSource: lessonImageUrl
-                  ? { uri: lessonImageUrl }
-                  : undefined,
-                onPress: () => handleItemPress(lq, 'quiz'),
-              })),
-            )}
+            <Text
+              style={{
+                fontFamily: displayFontFamily,
+                fontSize: theme.fontSizes.cardTitle,
+                color: theme.colors.onBackground,
+                marginTop: 10,
+              }}>
+              {t('screen.lesson.inThisLesson')}
+            </Text>
+            <View style={{ gap: 10, paddingBottom: 12 }}>
+              {steps.map(step => {
+                const isNext = step.id === nextStep?.id;
+                const status = statusFor(step.id);
+                const unsynced =
+                  step.type !== 'learning' && unsyncedFor(step.id);
+                const ctaLabel = isNext
+                  ? status === 'inProgress'
+                    ? t('cta.continue')
+                    : t('cta.start')
+                  : undefined;
+                const statusText = statusTextFor(step, unsynced);
+                // Omit " i of n" when there's only one of this type — same
+                // rule as eyebrowFor.
+                const a11yLabel = t(
+                  step.countInType > 1
+                    ? 'screen.lesson.stepA11yLabel'
+                    : 'screen.lesson.stepA11yLabelSingle',
+                  {
+                    type: stepTypeLabel(step.type),
+                    i: step.indexInType,
+                    n: step.countInType,
+                    title: titleFor(step),
+                    status: ctaLabel ?? statusText,
+                  },
+                );
+                const onPress = () => handleItemPress(moduleForStep(step), step.type);
+                return (
+                  <LessonStepRow
+                    key={step.id}
+                    testID={`activity-row-${step.type}-${step.id}`}
+                    type={step.type}
+                    eyebrow={eyebrowFor(step)}
+                    title={titleFor(step)}
+                    statusText={statusText}
+                    status={status}
+                    isNext={isNext}
+                    ctaLabel={ctaLabel}
+                    unsynced={unsynced}
+                    imageSource={
+                      step.type === 'learning' && lessonImageUrl
+                        ? { uri: lessonImageUrl }
+                        : undefined
+                    }
+                    onPress={onPress}
+                    accessibilityLabel={a11yLabel}
+                    accessibilityHint={
+                      isNext ? t('screen.level.upNextHint') : undefined
+                    }
+                  />
+                );
+              })}
+            </View>
           </View>
         </ScrollView>
+        {nextStep && (
+          <View
+            style={{
+              width: '100%',
+              paddingHorizontal: theme.layouts.pageHorizontalPadding,
+              paddingTop: 12,
+              paddingBottom: Math.max(insets.bottom, theme.layouts.pageVerticalPadding),
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.divider,
+              alignItems: 'center',
+            }}>
+            <View style={{ width: '100%', maxWidth: 1024 }}>
+              <AppButton
+                size="lg"
+                label={t(
+                  nextStep.countInType > 1
+                    ? 'screen.lesson.footerCtaWithIndex'
+                    : 'screen.lesson.footerCta',
+                  {
+                    verb:
+                      statusFor(nextStep.id) === 'inProgress'
+                        ? t('cta.continue')
+                        : t('cta.start'),
+                    type: stepTypeLabel(nextStep.type),
+                    i: nextStep.indexInType,
+                  },
+                )}
+                fullWidth
+                onPress={() =>
+                  handleItemPress(moduleForStep(nextStep), nextStep.type)
+                }
+              />
+            </View>
+          </View>
+        )}
       </LayoutScrollView>
     );
   }

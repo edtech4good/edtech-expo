@@ -13,6 +13,7 @@ import {
   EyebrowText,
   LessonRow,
   LessonStepDots,
+  LessonStepRow,
   OfflineBanner,
   ProgressBar,
   QuizOption,
@@ -455,6 +456,57 @@ export default function ComponentGalleryScreen() {
                 status="todo"
                 isNext={false}
                 steps={{ learning: 'todo', practice: 'todo', quiz: 'todo' }}
+                onPress={() => {}}
+              />
+            </Swatch>
+          </View>
+        </Section>
+
+        <Section title="Lesson step row">
+          <View style={{ width: 360, gap: 10 }}>
+            <Swatch label="learning · done">
+              <LessonStepRow
+                type="learning"
+                eyebrow="Learning · 1 of 2"
+                title="Fixture basics"
+                statusText="Done · rewatch any time"
+                status="done"
+                isNext={false}
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="practice · in progress · next step (Continue pill)">
+              <LessonStepRow
+                type="practice"
+                eyebrow="Practice · 2 of 2"
+                title="10 questions · unscored"
+                statusText="In progress"
+                status="inProgress"
+                isNext
+                ctaLabel="Continue"
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="practice · done, saved on device (not synced)">
+              <LessonStepRow
+                type="practice"
+                eyebrow="Practice · 1 of 2"
+                title="8 questions · unscored"
+                statusText="Done · saved on device, not synced"
+                status="done"
+                isNext={false}
+                unsynced
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="quiz · not started">
+              <LessonStepRow
+                type="quiz"
+                eyebrow="Quiz"
+                title="10 questions · scored"
+                statusText="Not started · pass to finish the lesson"
+                status="todo"
+                isNext={false}
                 onPress={() => {}}
               />
             </Swatch>

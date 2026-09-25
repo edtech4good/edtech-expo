@@ -2,6 +2,7 @@ import { Course } from './Course';
 import { Curriculum } from './Curriculum';
 import {
   Lesson,
+  LessonActivityProgress,
   LessonLearningResource,
   LessonPracticeResource,
   LessonQuizResource,
@@ -70,6 +71,11 @@ export interface LessonPracticeResponse {
 
 export interface LessonQuizResponse {
   data: LessonQuizResource[];
+}
+
+export interface LessonActivityProgressResponse {
+  data: LessonActivityProgress;
+  error: boolean;
 }
 
 export interface StandardResponse {

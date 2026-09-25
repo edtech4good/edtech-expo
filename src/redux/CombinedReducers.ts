@@ -12,11 +12,14 @@ import {
 } from './slices';
 import { resultSlice } from './slices/ResultSlice';
 import { pendingResultSlice } from './slices/PendingResultSlice';
+import { activityProgressSlice } from './slices/ActivityProgressSlice';
+import { lessonCacheSlice } from './slices/LessonCacheSlice';
 
 export const combinedReducers = combineReducers({
   [authenticationSlice.name]: authenticationSlice.reducer,
   [courseSlice.name]: courseSlice.reducer,
   [lessonSlice.name]: lessonSlice.reducer,
+  [lessonCacheSlice.name]: lessonCacheSlice.reducer,
   [levelSlice.name]: levelSlice.reducer,
   [settingSlice.name]: settingSlice.reducer,
   [subjectSlice.name]: subjectSlice.reducer,
@@ -25,4 +28,5 @@ export const combinedReducers = combineReducers({
   [selectionSlice.name]: selectionSlice.reducer,
   [standardSlice.name]: standardSlice.reducer,
   [pendingResultSlice.name]: pendingResultSlice.reducer,
+  [activityProgressSlice.name]: activityProgressSlice.reducer,
 });

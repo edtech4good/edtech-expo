@@ -129,6 +129,40 @@ export interface LessonQuiz {
   lessonquizorder: number;
 }
 
+export type ActivityStatus = 'done' | 'inProgress' | 'todo';
+
+export interface LearningActivityProgress {
+  lessonlearningid: string;
+  status: ActivityStatus;
+  progress_percentage: number;
+}
+
+export interface PracticeActivityProgress {
+  lessonpracticeid: string;
+  status: ActivityStatus;
+  attempts: number;
+  best_percentage: number | null;
+  /** Number of questions in the practice. Added alongside in-lesson status; optional because older/cached responses may not include it. */
+  question_count?: number;
+}
+
+export interface QuizActivityProgress {
+  lessonquizid: string;
+  status: ActivityStatus;
+  attempts: number;
+  best_percentage: number | null;
+  /** Number of questions in the quiz. Added alongside in-lesson status; optional because older/cached responses may not include it. */
+  question_count?: number;
+}
+
+export interface LessonActivityProgress {
+  lessonid: string;
+  pass_percentage: number;
+  learnings: LearningActivityProgress[];
+  practices: PracticeActivityProgress[];
+  quizzes: QuizActivityProgress[];
+}
+
 export interface Lesson {
   brick_points: number;
   // Server-computed completion, based on the lesson's pass mark (e.g. 80/100

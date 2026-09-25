@@ -6,6 +6,13 @@ import { ChevronIcon } from './StatusIcon';
 
 export interface CtaPillProps {
   label: string;
+  /**
+   * 'filled' (default): solid primary pill + chevron, unchanged for existing
+   * callers (e.g. the Level Detail up-next row's own inline pill markup).
+   * 'tint': primaryLight background, primaryDark text, no chevron, matching
+   * LessonRow's up-next pill — used by LessonStepRow's next-step pill.
+   */
+  variant?: 'filled' | 'tint';
   testID?: string;
 }
 
@@ -15,9 +22,14 @@ export interface CtaPillProps {
  * it doesn't read as "watch a video." Non-interactive on its own; it lives
  * inside a row whose whole surface is already the Pressable target.
  */
-export default function CtaPill({ label, testID = 'cta-pill' }: CtaPillProps) {
+export default function CtaPill({
+  label,
+  variant = 'filled',
+  testID = 'cta-pill',
+}: CtaPillProps) {
   const theme = useTheme();
   const labelFontFamily = useFont('semi', 'body');
+  const isTint = variant === 'tint';
 
   return (
     <View
@@ -26,21 +38,23 @@ export default function CtaPill({ label, testID = 'cta-pill' }: CtaPillProps) {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
+        justifyContent: 'center',
         gap: 2,
+        minHeight: isTint ? 28 : undefined,
         borderRadius: theme.radii.pill,
-        backgroundColor: theme.colors.primary,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        backgroundColor: isTint ? theme.colors.primaryLight : theme.colors.primary,
+        paddingHorizontal: isTint ? 12 : 10,
+        paddingVertical: isTint ? 3 : 4,
       }}>
       <Text
         style={{
           fontFamily: labelFontFamily,
           fontSize: 12,
-          color: theme.colors.onPrimary,
+          color: isTint ? theme.colors.primaryDark : theme.colors.onPrimary,
         }}>
         {label}
       </Text>
-      <ChevronIcon size={14} color={theme.colors.onPrimary} />
+      {!isTint && <ChevronIcon size={14} color={theme.colors.onPrimary} />}
     </View>
   );
 }

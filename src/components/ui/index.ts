@@ -55,5 +55,11 @@ export {
   type ChevronIconProps,
 } from './StatusIcon';
 export { default as CtaPill, type CtaPillProps } from './CtaPill';
+export {
+  default as LessonStepRow,
+  type LessonStepRowProps,
+  type LessonStepRowType,
+  type LessonStepRowStatus,
+} from './LessonStepRow';
 export { default as NavRail, NAV_RAIL_WIDTH } from './NavRail';
 export { default as LogoutButton } from './LogoutButton';

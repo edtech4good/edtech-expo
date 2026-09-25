@@ -5,7 +5,9 @@ import { VideoProgressPayload } from '@/models';
 import { createTimeStamp } from '@/utils';
 import { useAppDispatch, useAppSelector } from '@/redux';
 import {
+  ActivityProgressActions,
   getModuleResource,
+  getProfile,
   getResourcePath,
   SelectionActions,
 } from '@/redux/slices';
@@ -17,6 +19,7 @@ export default function useLearning(lessonLearningId: string) {
   const api = useApi();
   const { retrieveFile } = useSetting();
   const grantedDirectory = useAppSelector(getResourcePath);
+  const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   // const [source, setSource] = useState('');
   const [{ progress, source }, setInfo] = useState<{
     source: string;
@@ -117,6 +120,28 @@ export default function useLearning(lessonLearningId: string) {
     // save; lessonLearningId itself (not learningResource) is what the
     // request below is built from either way.
     if (!loaded) return;
+
+    // Optimistic local status write — done before/independent of the network
+    // call so it works offline. Mirrors the server rule: `ended` marks the
+    // activity done, otherwise any watch time (time > 0) marks it in
+    // progress. progress is only meaningful when we know content_length.
+    // Unlike practice/quiz results, video progress is NOT queued for retry
+    // when offline — if the saveVideoProgress call below fails, this local
+    // mark is all that survives; the server never records it.
+    if (userId) {
+      dispatch(
+        ActivityProgressActions.markLocal({
+          userId,
+          activityId: lessonLearningId,
+          status: hasEnded ? 'done' : progress > 0 ? 'inProgress' : 'todo',
+          progress:
+            contentLength > 0
+              ? Math.round((progress * 100) / contentLength)
+              : undefined,
+        }),
+      );
+    }
+
     const videoProgressPayload: VideoProgressPayload = {
       content_length: contentLength,
       date: createTimeStamp(),
