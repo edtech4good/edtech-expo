@@ -26,7 +26,7 @@ import { useAuth, useDesign, useFont, useSetting } from '@/services';
 import { isOnlineOnly } from '@/utils';
 import { useLocalSearchParams } from 'expo-router';
 import _ from 'lodash';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Image, Pressable, Text, View } from 'react-native';
@@ -141,8 +141,15 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   const selectedLanguage = useAppSelector(getSelectedLanguage);
   const displayFont = useFont('bold', 'display');
   const bodyFont = useFont('normal', 'body');
-  const { login, isLogginIn, error, errorStatus, errorCode, errorMessage } =
-    useAuth();
+  const {
+    login,
+    isLogginIn,
+    error,
+    resetError,
+    errorStatus,
+    errorCode,
+    errorMessage,
+  } = useAuth();
   const { isLoggedOut } = useLocalSearchParams();
   const { requestStoragePermission, updateResourcePath } = useSetting();
   const grantedDirectory = useAppSelector(getGrantedStorageDirectory);
@@ -206,17 +213,38 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   // clears these the same way it clears any other field error: the next
   // submit re-validates `required`, and since both fields still hold text,
   // that revalidation clears them before `handleLogin` re-runs.
+  //
+  // The i18n KEY is stored here, not a translated string — storing the
+  // translated text would freeze it at whatever language was active when
+  // the error first fired, same bug as the modal re-showing on language
+  // change. The key is re-translated (and re-pushed into react-hook-form)
+  // by the effect below, which does depend on `t`.
+  const [wrongCredentialsErrorKey, setWrongCredentialsErrorKey] = useState<
+    string | undefined
+  >(undefined);
+
   useEffect(() => {
-    if (!isCorporate || error === '' || !isWrongCredentialsError) return;
+    if (!isCorporate || error === '' || !isWrongCredentialsError) {
+      setWrongCredentialsErrorKey(undefined);
+      return;
+    }
+    setWrongCredentialsErrorKey('screen.login.invalidCredentialsError');
+  }, [error, isWrongCredentialsError, isCorporate]);
+
+  useEffect(() => {
+    if (!wrongCredentialsErrorKey) return;
     methods.setError('username', { type: 'server', message: '' });
     methods.setError('password', {
       type: 'server',
-      message: t('screen.login.invalidCredentialsError'),
+      message: t(wrongCredentialsErrorKey),
     });
-    // methods/t are stable enough for this purpose; re-running per keystroke
-    // would fight the revalidation-clears-it flow described above.
+    // methods is stable enough for this purpose; re-running per keystroke
+    // would fight the revalidation-clears-it flow described above. `t` IS
+    // a dependency on purpose, so the message re-translates on language
+    // switch instead of staying frozen in whatever language was active
+    // when the error first fired.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [error, isWrongCredentialsError, isCorporate]);
+  }, [wrongCredentialsErrorKey, t]);
 
   const handleStorageDirectory = async () => {
     await requestStoragePermission();
@@ -233,7 +261,12 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   };
 
   const handleCloseModal = () => {
-    // setAlertModal('');
+    // Clear the error state the modal-visibility effect above reads —
+    // otherwise a later language switch changes `t`'s identity, re-runs
+    // that effect while `error` is still non-empty, and the modal that was
+    // just dismissed pops back up (reported against both kids and
+    // corporate themes).
+    resetError();
     if (!modalRef.current) return;
     modalRef.current.hide();
   };

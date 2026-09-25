@@ -138,6 +138,18 @@ export default function useAuth() {
     }
   };
 
+  // Clears the login-failure state as a unit. Callers (e.g. dismissing the
+  // error modal) must not clear `error` alone: the modal-visibility effect
+  // in LoginScreen also reads `errorStatus`/`errorCode`/`errorMessage`, and
+  // a leftover value there could feed a stale classification into the next
+  // render before a fresh login attempt overwrites it.
+  const resetError = () => {
+    setError('');
+    setErrorStatus(undefined);
+    setErrorCode(undefined);
+    setErrorMessage(undefined);
+  };
+
   const logout = async () => {
     // Clear the apisauce authorization header before the redux dispatch —
     // clearAllData() resets AuthenticationSlice's accessToken, but the Api
@@ -165,6 +177,7 @@ export default function useAuth() {
     profile,
     error,
     setError,
+    resetError,
     errorStatus,
     errorCode,
     errorMessage,
