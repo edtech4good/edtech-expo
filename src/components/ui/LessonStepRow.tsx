@@ -30,7 +30,7 @@ export interface LessonStepRowProps {
   isNext: boolean;
   /** "Start" / "Continue" — only rendered when isNext. */
   ctaLabel?: string;
-  /** Practice/quiz done-but-not-yet-synced: amber upload badge on the status icon, warning-colored status text. Never true for learnings. */
+  /** Done but not yet synced (learning, practice or quiz still in the offline queue): amber upload badge on the status icon, warning-colored status text. */
   unsynced?: boolean;
   /** Learning only: 72x54 thumbnail with a play-disc overlay. */
   imageSource?: ImageProps['source'];

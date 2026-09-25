@@ -1,18 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
-import { PracticeResult, QuizResult } from '@/models/Practice';
+import {
+  enqueuePendingItem,
+  type PendingResultItem,
+} from '@/services/pendingResultsQueue';
+
+// Persisted (Store.ts whitelist). Adding kind 'learning' is additive: items
+// persisted by older builds are all 'practice'/'quiz' and rehydrate as-is.
+export type { PendingResultItem, PendingResultKind } from '@/services/pendingResultsQueue';
 
 const name = 'pendingResult';
-
-export interface PendingResultItem {
-  id: string;
-  kind: 'practice' | 'quiz';
-  lessonId: string;
-  payload: PracticeResult | QuizResult;
-  queuedAt: number;
-  attempts: number;
-  ownerId: string | null;
-}
 
 interface PendingResultState {
   items: PendingResultItem[];
@@ -26,8 +23,10 @@ export const pendingResultSlice = createSlice({
   name,
   initialState,
   reducers: {
+    // Learning (video progress) items coalesce per learning + owner — see
+    // enqueuePendingItem / coalesceLearningProgress.
     enqueueResult: (state, action: PayloadAction<PendingResultItem>) => {
-      state.items.push(action.payload);
+      state.items = enqueuePendingItem(state.items, action.payload);
     },
     dequeueResult: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter(item => item.id !== action.payload);

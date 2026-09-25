@@ -158,6 +158,15 @@ const responseTransform: AsyncResponseTransform = async response => {
     const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     (err as any).status = response.status;
     (err as any).problem = response.problem;
+    // The APIs' error body is { error, errormessage, data } (their
+    // GlobalExceptionFilter); `msg` above is almost always axios' generic
+    // "Request failed with status code N", so expose the server's own
+    // message separately. Used by the offline queue to tell a permanent
+    // learning-progress 400 from a transient one (pendingResultsQueue.ts).
+    const serverMessage = _.get(response.data, 'errormessage');
+    if (typeof serverMessage === 'string') {
+      (err as any).serverMessage = serverMessage;
+    }
     throw err;
   }
 };
