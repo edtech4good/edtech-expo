@@ -6,6 +6,7 @@ import {
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
+  LessonActivityProgressResponse,
   LessonLearningResponse,
   LessonListResponse,
   LessonPracticeResponse,
@@ -310,6 +311,19 @@ export default class Api {
   ): Promise<ApiResponse<LessonResponse, LessonResponse>> {
     return this.apiSauceInstance.get<LessonResponse>(
       `lesson/${lessonId}/learning`,
+    );
+  }
+
+  // Per-activity status/progress for a lesson (learnings/practices/quizzes),
+  // used to render status icons and the "next activity" CTA. See
+  // src/models/Lesson.ts LessonActivityProgress for the shape.
+  async fetchActivityProgress(
+    lessonId: string,
+  ): Promise<
+    ApiResponse<LessonActivityProgressResponse, LessonActivityProgressResponse>
+  > {
+    return this.apiSauceInstance.get<LessonActivityProgressResponse>(
+      `lesson/${lessonId}/activities/progress`,
     );
   }
 

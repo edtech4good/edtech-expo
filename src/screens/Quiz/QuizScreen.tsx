@@ -13,9 +13,15 @@ import {
   PracticeHandler,
   QuizResult,
 } from '@/models';
-import { useAppSelector } from '@/redux';
-import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
+import { useAppDispatch, useAppSelector } from '@/redux';
+import {
+  ActivityProgressActions,
+  getProfile,
+  getSelectedLesson,
+  getSelectedModule,
+} from '@/redux/slices';
 import { useDesign, useQuiz, useResult, notifyResultQueued } from '@/services';
+import { PASS_PERCENTAGE } from '@/constants';
 import { ActivityIndicator, View } from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
@@ -40,9 +46,11 @@ export default function QuizScreen() {
   const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
+  const dispatch = useAppDispatch();
   const { calculateResult } = useResult();
   const selectedModule = useAppSelector(getSelectedModule);
   const selectedLesson = useAppSelector(getSelectedLesson);
+  const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, saveResult, questions } = useQuiz(
     (selectedModule as LessonQuiz)?.lessonquizid ?? '',
   );
@@ -119,6 +127,24 @@ export default function QuizScreen() {
         result: methods.getValues('result'),
         endtime: createTimeStamp(),
       } as QuizResult;
+
+      // Optimistic local status write, done whether the submit below lands
+      // online or gets queued for later — the lessonquizid comes from the
+      // currently selected module, not the server response.
+      const lessonquizid = (selectedModule as LessonQuiz)?.lessonquizid;
+      if (userId && lessonquizid) {
+        const total = quizResult.result.length;
+        const correct = quizResult.result.filter(r => r.iscorrect).length;
+        const percentage = total ? (correct * 100) / total : 0;
+        dispatch(
+          ActivityProgressActions.markLocal({
+            userId,
+            activityId: lessonquizid,
+            status: percentage >= PASS_PERCENTAGE ? 'done' : 'inProgress',
+          }),
+        );
+      }
+
       const { synced } = await saveResult(quizResult);
       await calculateResult(methods.getValues('result'));
       router.replace('/home/result');

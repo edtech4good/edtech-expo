@@ -96,7 +96,10 @@
       "header": "Lessons",
       "learningTitle": "Learning",
       "practiceTitle": "Practice",
-      "quizTitle": "Quiz"
+      "quizTitle": "Quiz",
+      "sectionCount": "{{done}}/{{total}}",
+      "sectionCountA11y": "{{done}} of {{total}} done",
+      "activitiesDone": "{{done}} of {{total}} activities done"
     },
     "practice": {
       "submitButton": "Submit",

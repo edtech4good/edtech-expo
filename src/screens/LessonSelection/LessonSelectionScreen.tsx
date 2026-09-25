@@ -17,19 +17,15 @@ import { useEffect, useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import LessonItem from './components/LessonItem';
-import { useDesign, useLesson } from '@/services';
+import { useActivityProgress, useDesign, useLesson } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedLesson } from '@/redux/slices';
-import {
-  LessonLearning,
-  LessonLearningResource,
-  LessonPractice,
-  LessonQuiz,
-} from '@/models';
+import { LessonLearning, LessonPractice, LessonQuiz } from '@/models';
 import _ from 'lodash';
 import { useTranslation } from 'react-i18next';
 import { getRemoteResourceUrl } from '@/utils';
 import type { ImageProps } from 'expo-image';
+import type { StatusIconStatus } from '@/components/ui';
 
 type ActivityType = 'learning' | 'practice' | 'quiz';
 
@@ -54,6 +50,7 @@ export default function LessonSelectionScreen() {
     selectedLesson?.lessonid ||
     '';
   const { fetch, clear, selectModule, lesson } = useLesson(lessonId);
+  const { statusFor, progressFor } = useActivityProgress(lessonId);
 
   /**
    * `type` is what decides which renderer runs. It has to be a stable key rather
@@ -225,9 +222,12 @@ export default function LessonSelectionScreen() {
             width: '100%',
             flexWrap: 'wrap',
           }}>
-          {_.map(lesson?.lessonquizzes, d => {
-            return renderLessonQuiz(d as LessonQuiz);
-          })}
+          {_.map(
+            _.sortBy(lesson?.lessonquizzes, 'lessonquizorder'),
+            d => {
+              return renderLessonQuiz(d as LessonQuiz);
+            },
+          )}
         </Row>
       </Column>
     );
@@ -244,20 +244,59 @@ export default function LessonSelectionScreen() {
 
   if (isCorporate) {
     // Corporate lesson-content screen: the same three activity sections,
-    // restyled as eyebrow headers + row cards. Learning rows show the real
-    // per-item progress the lesson-detail fetch provides
-    // (studentlearningprogress); practices/quizzes have no per-item
-    // progress data, so their rows carry title only — no fake durations.
-    const learningProgress = (ll: LessonLearning): number | undefined => {
-      const resource = ll as Partial<LessonLearningResource>;
-      const pct = resource.studentlearningprogress?.progress_percentage;
-      if (typeof pct !== 'number' || pct <= 0) return undefined;
-      return Math.min(1, pct > 1 ? pct / 100 : pct);
+    // restyled as eyebrow headers + row cards. Status per row (and per-item
+    // progress for learnings) comes from the activityProgress store, kept
+    // fresh by useActivityProgress (fetched on mount + focus, merged
+    // offline-safe). The lesson-detail fetch's own
+    // studentlearningprogress is dead for this purpose — it's never
+    // returned by fetchChapters — so it isn't read here.
+    const sortedLearnings = _.sortBy(
+      lesson?.lessonlearnings,
+      'lessonlearningorder',
+    );
+    const sortedPractices = _.sortBy(
+      lesson?.lessonpractices,
+      'lessonpracticeorder',
+    );
+    const quizzes: LessonQuiz[] = _.sortBy(
+      lesson?.lessonquizzes,
+      'lessonquizorder',
+    );
+
+    // "Next activity": the first activity, in learnings -> practices ->
+    // quizzes order, that isn't done yet. Only that row gets a CTA pill;
+    // every other row shows its plain status icon. If everything is done,
+    // nextActivityId is undefined and no row gets a pill.
+    const orderedActivityIds = [
+      ...sortedLearnings.map(ll => ll.lessonlearningid),
+      ...sortedPractices.map(lp => lp.lessonpracticeid),
+      ...quizzes.map(lq => lq.lessonquizid),
+    ];
+    const nextActivityId = orderedActivityIds.find(
+      id => statusFor(id) !== 'done',
+    );
+
+    const doneCount = (ids: string[]) =>
+      ids.filter(id => statusFor(id) === 'done').length;
+
+    const trailingFor = (
+      activityId: string,
+    ): { status?: StatusIconStatus; ctaLabel?: string } => {
+      if (activityId === nextActivityId) {
+        return {
+          ctaLabel:
+            statusFor(activityId) === 'inProgress'
+              ? t('cta.continue')
+              : t('cta.start'),
+        };
+      }
+      return { status: statusFor(activityId) };
     };
 
     const corporateSection = (
       title: string,
       type: 'learning' | 'practice' | 'quiz',
+      ids: string[],
       rows: Array<{
         key: string;
         title: string;
@@ -265,25 +304,44 @@ export default function LessonSelectionScreen() {
         imageSource?: ImageProps['source'];
         onPress: () => void;
       }>,
-    ) =>
-      rows.length > 0 && (
-        <View style={{ gap: 12 }}>
-          <EyebrowText size={10} color={theme.colors.primary}>
-            {title}
-          </EyebrowText>
-          {rows.map(({ key, ...row }) => (
-            <ContinueLearningRow
-              key={key}
-              testID={`activity-row-${type}-${key}`}
-              {...row}
-            />
-          ))}
-        </View>
+    ) => {
+      const done = doneCount(ids);
+      const total = ids.length;
+      return (
+        total > 0 && (
+          <View style={{ gap: 12 }}>
+            <EyebrowText
+              size={10}
+              color={theme.colors.primary}
+              testID={`activity-section-${type}`}
+              accessibilityLabel={`${title}, ${t(
+                'screen.lesson.sectionCountA11y',
+                { done, total },
+              )}`}>
+              {`${title} · ${t('screen.lesson.sectionCount', { done, total })}`}
+            </EyebrowText>
+            {rows.map(({ key, ...row }) => (
+              <ContinueLearningRow
+                key={key}
+                testID={`activity-row-${type}-${key}`}
+                trailing={trailingFor(key)}
+                {...row}
+              />
+            ))}
+          </View>
+        )
       );
+    };
 
     const lessonImageUrl = getRemoteResourceUrl(
       `lesson-${lesson.lessonid}.jpg`,
     );
+
+    const learningIds = sortedLearnings.map(ll => ll.lessonlearningid);
+    const practiceIds = sortedPractices.map(lp => lp.lessonpracticeid);
+    const quizIds = quizzes.map(lq => lq.lessonquizid);
+    const totalActivities = orderedActivityIds.length;
+    const totalDone = doneCount(orderedActivityIds);
 
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
@@ -298,39 +356,53 @@ export default function LessonSelectionScreen() {
               paddingVertical: theme.layouts.pageVerticalPadding,
               gap: 24,
             }}>
+            {totalActivities > 0 && (
+              <EyebrowText
+                size={11}
+                color={theme.colors.onSurfaceVariant}
+                testID="lesson-activities-summary">
+                {t('screen.lesson.activitiesDone', {
+                  done: totalDone,
+                  total: totalActivities,
+                })}
+              </EyebrowText>
+            )}
             {corporateSection(
               t('screen.lesson.learningTitle'),
               'learning',
-              _.sortBy(lesson?.lessonlearnings, 'lessonlearningorder').map(
-                ll => ({
-                  key: ll.lessonlearningid,
-                  title: ll.lessonlearningname,
-                  progress: learningProgress(ll),
-                  imageSource: lessonImageUrl
-                    ? { uri: lessonImageUrl }
+              learningIds,
+              sortedLearnings.map(ll => ({
+                key: ll.lessonlearningid,
+                title: ll.lessonlearningname,
+                progress:
+                  statusFor(ll.lessonlearningid) === 'inProgress' &&
+                  (progressFor(ll.lessonlearningid) ?? 0) > 0
+                    ? Math.min(1, (progressFor(ll.lessonlearningid) ?? 0) / 100)
                     : undefined,
-                  onPress: () => handleItemPress(ll, 'learning'),
-                }),
-              ),
+                imageSource: lessonImageUrl
+                  ? { uri: lessonImageUrl }
+                  : undefined,
+                onPress: () => handleItemPress(ll, 'learning'),
+              })),
             )}
             {corporateSection(
               t('screen.lesson.practiceTitle'),
               'practice',
-              _.sortBy(lesson?.lessonpractices, 'lessonpracticeorder').map(
-                lp => ({
-                  key: lp.lessonpracticeid,
-                  title: lp.lessonpracticename,
-                  imageSource: lessonImageUrl
-                    ? { uri: lessonImageUrl }
-                    : undefined,
-                  onPress: () => handleItemPress(lp, 'practice'),
-                }),
-              ),
+              practiceIds,
+              sortedPractices.map(lp => ({
+                key: lp.lessonpracticeid,
+                title: lp.lessonpracticename,
+                imageSource: lessonImageUrl
+                  ? { uri: lessonImageUrl }
+                  : undefined,
+                onPress: () => handleItemPress(lp, 'practice'),
+              })),
             )}
             {corporateSection(
               t('screen.lesson.quizTitle'),
               'quiz',
-              (lesson?.lessonquizzes ?? []).map(lq => ({
+              quizIds,
+              quizzes.map(lq => ({
                 key: lq.lessonquizid,
                 title: lq.lessonquizname,
                 imageSource: lessonImageUrl

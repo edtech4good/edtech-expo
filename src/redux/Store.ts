@@ -14,7 +14,13 @@ import {
 } from 'redux-persist';
 
 import { combinedReducers } from './CombinedReducers';
-import { authenticationSlice, selectionSlice, settingSlice, pendingResultSlice } from './slices';
+import {
+  authenticationSlice,
+  selectionSlice,
+  settingSlice,
+  pendingResultSlice,
+  activityProgressSlice,
+} from './slices';
 import { setAccessToken } from '@/services/secureToken';
 
 const logger = createLogger({
@@ -47,7 +53,13 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: [authenticationSlice.name, selectionSlice.name, settingSlice.name, pendingResultSlice.name],
+  whitelist: [
+    authenticationSlice.name,
+    selectionSlice.name,
+    settingSlice.name,
+    pendingResultSlice.name,
+    activityProgressSlice.name,
+  ],
   transforms: [authTransform],
 };
 

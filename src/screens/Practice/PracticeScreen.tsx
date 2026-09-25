@@ -9,9 +9,15 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
-import { useAppSelector } from '@/redux';
-import { getSelectedLesson, getSelectedModule } from '@/redux/slices';
+import { useAppDispatch, useAppSelector } from '@/redux';
+import {
+  ActivityProgressActions,
+  getProfile,
+  getSelectedLesson,
+  getSelectedModule,
+} from '@/redux/slices';
 import { useDesign, usePractice, notifyResultQueued } from '@/services';
+import { PASS_PERCENTAGE } from '@/constants';
 import { ActivityIndicator, View } from 'react-native';
 import _ from 'lodash';
 import {
@@ -45,8 +51,10 @@ export default function PracticeScreen() {
   const { isCorporate } = useDesign();
   const navigation = useNavigation();
 
+  const dispatch = useAppDispatch();
   const selectedModule = useAppSelector(getSelectedModule);
   const selectedLesson = useAppSelector(getSelectedLesson);
+  const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, questions, saveResult } = usePractice(
     (selectedModule as LessonPractice)?.lessonpracticeid ?? '',
   );
@@ -94,6 +102,28 @@ export default function PracticeScreen() {
     console.log('===== Current Question =====', currentQuestion);
   }, [currentQuestion]);
 
+  // Optimistic local status write, done whether the submit below lands
+  // online or gets queued for later. The result array only contains
+  // correctly-answered questions (unlike the quiz's), so the correct count
+  // is just its length; `total` is the question count actually shown in
+  // this practice (an empty practice counts as done, matching the server:
+  // there's nothing to fail).
+  const markPracticeStatus = (result: PracticeResult['result']) => {
+    const lessonpracticeid = (selectedModule as LessonPractice)
+      ?.lessonpracticeid;
+    if (!userId || !lessonpracticeid) return;
+    const total = questions.length;
+    const correct = result.length;
+    const percentage = total === 0 ? 100 : (correct * 100) / total;
+    dispatch(
+      ActivityProgressActions.markLocal({
+        userId,
+        activityId: lessonpracticeid,
+        status: percentage >= PASS_PERCENTAGE ? 'done' : 'inProgress',
+      }),
+    );
+  };
+
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
       router.back();
@@ -120,6 +150,7 @@ export default function PracticeScreen() {
           result: methods.getValues('result'),
           endtime: createTimeStamp(),
         } as PracticeResult;
+        markPracticeStatus(practiceResult.result);
         const { synced } = await saveResult(practiceResult);
         router.back();
         if (!synced)
@@ -172,6 +203,7 @@ export default function PracticeScreen() {
           result: methods.getValues('result'),
           endtime: createTimeStamp(),
         } as PracticeResult;
+        markPracticeStatus(practiceResult.result);
         const { synced } = await saveResult(practiceResult);
         router.back();
         if (!synced)

@@ -95,7 +95,10 @@
       "header": "លំហាត់",
       "learningTitle": "សិក្សា",
       "practiceTitle": "អនុវត្ត",
-      "quizTitle": "តេស្ត"
+      "quizTitle": "តេស្ត",
+      "sectionCount": "{{done}}/{{total}}",
+      "sectionCountA11y": "បានបញ្ចប់ {{done}} ក្នុងចំណោម {{total}}",
+      "activitiesDone": "បានបញ្ចប់សកម្មភាព {{done}} ក្នុងចំណោម {{total}}"
     },
     "practice": {
       "submitButton": "បញ្ជូន",

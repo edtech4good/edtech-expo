@@ -2,3 +2,4 @@ export * from './CardColor';
 export * from './Font';
 export * from './QuestionTemplate';
 export * from './NavItems';
+export * from './progress';
