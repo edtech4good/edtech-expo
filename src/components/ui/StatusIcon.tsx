@@ -1,7 +1,7 @@
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
 
-export type StatusIconStatus = 'done' | 'inProgress' | 'todo';
+export type StatusIconStatus = 'done' | 'inProgress' | 'todo' | 'upNext';
 
 export interface StatusIconProps {
   status: StatusIconStatus;
@@ -52,32 +52,54 @@ export default function StatusIcon({
     );
   }
 
-  if (status === 'inProgress') {
-    const strokeWidth = 2;
-    const r = center - strokeWidth / 2;
+  if (status === 'upNext') {
+    // v2: the up-next lesson gets a filled primary disc with a white
+    // forward arrow — deliberately not a play triangle (that reads as
+    // "watch a video," not "this is next"). Fixed 28-unit viewBox straight
+    // from the handoff markup; react-native-svg scales it to `size`.
     return (
       <Svg
         width={size}
         height={size}
-        viewBox={`0 0 ${size} ${size}`}
+        viewBox="0 0 28 28"
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        testID={resolvedTestID}>
+        <Circle cx={14} cy={14} r={13} fill={theme.colors.primary} />
+        <Path
+          d="M8.5 14h11M15 9.5l4.5 4.5-4.5 4.5"
+          stroke={theme.colors.onPrimary}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </Svg>
+    );
+  }
+
+  if (status === 'inProgress') {
+    // v2: copy the spec on a fixed 0 0 28 28 viewBox, same as `upNext` —
+    // react-native-svg scales it to `size` via width/height, so the 24px
+    // use in ContinueLearningRow still works. Half-disc fill on the right
+    // with a white gap, not the previous computed-arc left half-disc.
+    return (
+      <Svg
+        width={size}
+        height={size}
+        viewBox="0 0 28 28"
         accessible={false}
         importantForAccessibility="no-hide-descendants"
         testID={resolvedTestID}>
         <Circle
-          cx={center}
-          cy={center}
-          r={r}
+          cx={14}
+          cy={14}
+          r={12}
+          fill={theme.colors.surface}
           stroke={theme.colors.primary}
-          strokeWidth={strokeWidth}
-          fill="none"
+          strokeWidth={2.5}
         />
-        {/* Left half-disc: top -> bottom arc swept through the left edge, closed back through center. */}
-        <Path
-          d={`M ${center} ${strokeWidth / 2} A ${r} ${r} 0 0 0 ${center} ${
-            size - strokeWidth / 2
-          } Z`}
-          fill={theme.colors.primary}
-        />
+        <Path d="M14 6.5a7.5 7.5 0 0 1 0 15z" fill={theme.colors.primary} />
       </Svg>
     );
   }
@@ -97,7 +119,7 @@ export default function StatusIcon({
         cx={center}
         cy={center}
         r={r}
-        stroke={theme.colors.outline}
+        stroke={theme.colors.onSurfaceVariant}
         strokeWidth={strokeWidth}
         fill="none"
       />
@@ -125,6 +147,29 @@ export function ChevronIcon({ size = 20, color, testID }: ChevronIconProps) {
         d="M9 5l7 7-7 7"
         stroke={color}
         strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+/** Left-pointing "‹" glyph for the corporate app bar's back button (handoff
+ * §3: "back chevron only, no title text"). Mirror of `ChevronIcon`. */
+export function BackChevronIcon({ size = 20, color, testID }: ChevronIconProps) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      testID={testID}>
+      <Path
+        d="M15 5l-7 7 7 7"
+        stroke={color}
+        strokeWidth={2.2}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"

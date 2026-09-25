@@ -113,6 +113,11 @@ export default function ContinueLearningRow({
           alignItems: 'center',
           borderRadius: theme.radii.card,
           backgroundColor: theme.colors.surface,
+          // v2: page background is now white, same as this row's surface —
+          // add the handoff's 1px hairline border so the row stays visible
+          // now that the shadow alone can't separate it from the page.
+          borderWidth: 1,
+          borderColor: theme.colors.divider,
           padding: 10,
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: 6 },

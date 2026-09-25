@@ -19,7 +19,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource, useScreenDimension } from '@/services';
 import {
   ArrangeItem,
   Container,
@@ -52,6 +52,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     ref,
   ) {
     const theme = useTheme();
+    const { isCorporate } = useDesign();
     const { unblockHeightWithoutHeader, windowWidth } = useScreenDimension();
     const matchingItemRefs = useRef<Record<string, DraggableHandler>>({});
     const source = useResource(
@@ -230,7 +231,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             borderRadius={theme.layouts.defaultRadius}
             backgroundColor={theme.colors.surface}
             paddingLeft={theme.layouts.large}
-            paddingRight={theme.layouts.large}>
+            paddingRight={theme.layouts.large}
+            style={
+              isCorporate
+                ? { borderWidth: 1, borderColor: theme.colors.divider }
+                : undefined
+            }>
             {!_.isEmpty(source) && (
               <ExpandedWithLayout justifyContent="center">
                 <ChildImage

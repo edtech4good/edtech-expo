@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useScreenDimension } from '@/services';
+import { useDesign, useScreenDimension } from '@/services';
 import {
   Container,
   Expanded,
@@ -40,6 +40,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     ref,
   ) {
     const theme = useTheme();
+    const { isCorporate } = useDesign();
     const { unblockHeightWithoutHeader } = useScreenDimension();
 
     useImperativeHandle(
@@ -172,7 +173,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           justifyContent="center"
           borderRadius={theme.layouts.defaultRadius}
           backgroundColor={theme.colors.surface}
-          style={{ marginHorizontal: theme.layouts.large }}>
+          style={{
+            marginHorizontal: theme.layouts.large,
+            ...(isCorporate
+              ? { borderWidth: 1, borderColor: theme.colors.divider }
+              : null),
+          }}>
           <FlatList
             style={{ flex: 1 }}
             data={options}
