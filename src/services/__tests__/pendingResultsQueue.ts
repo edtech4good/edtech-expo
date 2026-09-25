@@ -10,6 +10,7 @@
 import assert from 'node:assert/strict';
 import type { VideoProgressPayload } from '@/models';
 import {
+  buildLearningProgressItem,
   classifyFlushError,
   coalesceLearningProgress,
   enqueuePendingItem,
@@ -182,6 +183,76 @@ check('other 4xx (e.g. deleted learning) are poison: skipped, not blocking', () 
   for (const status of [400, 403, 404, 422]) {
     assert.equal(classifyFlushError({ status }), 'poison', `status ${status}`);
   }
+});
+
+check('learning 400: transient (unknown / DB) message stops, keeps the item', () => {
+  // updatelearningprogress wraps any in-transaction error as a 400.
+  for (const serverMessage of [
+    'Lock wait timeout exceeded; try restarting transaction',
+    'Validation error', // sequelize unique-key race on first create
+    'Learning Lesson Not Found ', // near-miss: exact match only
+    '',
+  ]) {
+    assert.equal(
+      classifyFlushError({ status: 400, serverMessage }, 'learning'),
+      'stop',
+      serverMessage,
+    );
+  }
+  // No server message at all (e.g. a body that isn't the API's shape).
+  assert.equal(classifyFlushError({ status: 400 }, 'learning'), 'stop');
+});
+
+check('learning 400: known permanent server messages are poison', () => {
+  for (const serverMessage of [
+    'Learning Lesson Not Found',
+    'Student Not Found',
+    'Content Lenght can not equal 0',
+    '"time" must be greater than or equal to 0',
+    '"ended" is required',
+    '"Invalid Date" must be a valid date',
+    '"content_length" must be a number, "time" is required',
+  ]) {
+    assert.equal(
+      classifyFlushError({ status: 400, serverMessage }, 'learning'),
+      'poison',
+      serverMessage,
+    );
+  }
+});
+
+check('the learning-400 stopgap leaves practice/quiz and other learning 4xx alone', () => {
+  const transient = { status: 400, serverMessage: 'Lock wait timeout exceeded' };
+  assert.equal(classifyFlushError(transient, 'practice'), 'poison');
+  assert.equal(classifyFlushError(transient, 'quiz'), 'poison');
+  assert.equal(classifyFlushError(transient), 'poison');
+  for (const status of [403, 404, 422]) {
+    assert.equal(classifyFlushError({ status }, 'learning'), 'poison', `status ${status}`);
+  }
+  for (const status of [500, 401, 429]) {
+    assert.equal(classifyFlushError({ status }, 'learning'), 'stop', `status ${status}`);
+  }
+});
+
+check('no owner, no queue item: learning progress is never queued ownerless', () => {
+  const base = {
+    id: 'x',
+    lessonLearningId: 'L1',
+    payload: progress(5000, false, T0),
+    now: T0 + 1,
+  };
+  assert.equal(buildLearningProgressItem({ ...base, ownerId: null }), null);
+  assert.equal(buildLearningProgressItem({ ...base, ownerId: undefined }), null);
+  assert.equal(buildLearningProgressItem({ ...base, ownerId: '' }), null);
+  assert.deepEqual(buildLearningProgressItem({ ...base, ownerId: 'u1' }), {
+    id: 'x',
+    kind: 'learning',
+    lessonId: 'L1',
+    payload: base.payload,
+    queuedAt: T0 + 1,
+    attempts: 0,
+    ownerId: 'u1',
+  });
 });
 
 check('poison is dropped only after 10 attempts AND 24 h', () => {

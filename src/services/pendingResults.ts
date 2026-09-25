@@ -5,6 +5,7 @@ import type { PendingResultItem } from '@/redux/slices';
 import type Api from './api/Api';
 import { PracticeResult, QuizResult, VideoProgressPayload } from '@/models';
 import {
+  buildLearningProgressItem,
   classifyFlushError,
   isFlushableBy,
   shouldDropPoison,
@@ -51,7 +52,7 @@ async function doFlush(api: Api): Promise<void> {
         }
         store.dispatch(PendingResultActions.dequeueResult(item.id));
       } catch (err) {
-        if (classifyFlushError(err) === 'poison') {
+        if (classifyFlushError(err, item.kind) === 'poison') {
           const status = (err as any)?.status;
           store.dispatch(PendingResultActions.bumpAttempts(item.id));
           const refreshed = getPendingResults(store.getState()).find(
@@ -133,17 +134,17 @@ export function queueLearningProgress(
   lessonLearningId: string,
   payload: VideoProgressPayload,
 ): void {
-  store.dispatch(
-    PendingResultActions.enqueueResult({
-      id: newItemId(),
-      kind: 'learning',
-      lessonId: lessonLearningId,
-      payload,
-      queuedAt: Date.now(),
-      attempts: 0,
-      ownerId: getProfile(store.getState())?.schooluserid ?? null,
-    }),
-  );
+  const item = buildLearningProgressItem({
+    id: newItemId(),
+    lessonLearningId,
+    payload,
+    ownerId: getProfile(store.getState())?.schooluserid,
+    now: Date.now(),
+  });
+  // Not logged in: nothing to attribute the watch to, so nothing is queued
+  // (useLearning skips markLocal in the same case).
+  if (!item) return;
+  store.dispatch(PendingResultActions.enqueueResult(item));
   flushPendingResults(api).catch(() => {});
 }
 

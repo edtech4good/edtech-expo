@@ -94,14 +94,52 @@ export function enqueuePendingItem(
 }
 
 /**
+ * The rpi-api messages for a learning-progress 400 that WILL repeat on
+ * every retry (lesson.business.ts updatelearningprogress / getlessonlearning
+ * / getstudent). Matched exactly; they reach the client as `serverMessage`
+ * (the body's `errormessage`, attached in Api.ts responseTransform — the
+ * Error's own `message` is axios' generic "Request failed with status code
+ * 400" and says nothing about the cause).
+ */
+export const LEARNING_PERMANENT_400_MESSAGES: readonly string[] = [
+  'Learning Lesson Not Found',
+  'Student Not Found',
+  // sic — the server's spelling. An in-progress report with no content
+  // length (media-less item not yet ended).
+  'Content Lenght can not equal 0',
+];
+
+/**
+ * A joi validation failure from SchemaValidationInterceptor
+ * (lesson.request.validator.ts `lessonlearningprogress`): joi messages
+ * always open with the quoted key/label, e.g. `"time" must be greater than
+ * or equal to 0`, `"ended" is required`, `"Invalid Date" must be a valid
+ * date`. Several failures are joined with ", ", but the first still leads.
+ */
+function isJoiValidationMessage(message: string): boolean {
+  return /^"[^"]+" /.test(message);
+}
+
+/**
  * What a flush does with an item whose POST threw:
  * - 'poison': a 4xx the server will keep rejecting (bad payload, deleted
  *   activity) — count an attempt and move on to the next item, so it can't
  *   block the queue.
  * - 'stop': offline (no status), a 5xx, 401 (token), 408/429 — transient,
  *   stop this flush and keep everything for the next one (preserves order).
+ *
+ * Stopgap for kind 'learning': rpi-api updatelearningprogress wraps ANY
+ * error inside its transaction — including transient DB errors (lock wait,
+ * deadlock, lost connection, a unique-key race on first create) — in a 400.
+ * So a learning 400 is 'stop' (retry later) unless its server message is one
+ * of the known permanent ones above or a joi validation message. The cost:
+ * an unrecognised permanent 400 on a learning item blocks the queue behind
+ * it until the server is fixed to return 5xx for transient errors.
  */
-export function classifyFlushError(err: unknown): 'poison' | 'stop' {
+export function classifyFlushError(
+  err: unknown,
+  kind?: PendingResultKind,
+): 'poison' | 'stop' {
   const status = (err as any)?.status;
   const isPoisonPayload =
     typeof status === 'number' &&
@@ -110,7 +148,41 @@ export function classifyFlushError(err: unknown): 'poison' | 'stop' {
     status !== 401 &&
     status !== 408 &&
     status !== 429;
-  return isPoisonPayload ? 'poison' : 'stop';
+  if (!isPoisonPayload) return 'stop';
+  if (kind === 'learning' && status === 400) {
+    const serverMessage = (err as any)?.serverMessage;
+    const known =
+      typeof serverMessage === 'string' &&
+      (LEARNING_PERMANENT_400_MESSAGES.includes(serverMessage) ||
+        isJoiValidationMessage(serverMessage));
+    return known ? 'poison' : 'stop';
+  }
+  return 'poison';
+}
+
+/**
+ * The queue item for a video-progress report, or null when nobody is logged
+ * in: an ownerless (null) item would be flushed by whichever user logs in
+ * next (isFlushableBy treats null as legacy), crediting their account with
+ * someone else's watch. Same gate useLearning puts on markLocal.
+ */
+export function buildLearningProgressItem(input: {
+  id: string;
+  lessonLearningId: string;
+  payload: VideoProgressPayload;
+  ownerId: string | null | undefined;
+  now: number;
+}): PendingResultItem | null {
+  if (!input.ownerId) return null;
+  return {
+    id: input.id,
+    kind: 'learning',
+    lessonId: input.lessonLearningId,
+    payload: input.payload,
+    queuedAt: input.now,
+    attempts: 0,
+    ownerId: input.ownerId,
+  };
 }
 
 /** A poison item is dropped only after enough attempts AND enough age. */
