@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import styled, { useTheme } from 'styled-components/native';
+import { useDesign } from '@/services';
 
 export type AppIconButtonVariant = 'plain' | 'filled' | 'surface';
 
@@ -31,6 +32,7 @@ interface ShapeProps {
   $size: number;
   $backgroundColor: string;
   $shadowColor?: string;
+  $borderColor?: string;
 }
 
 const Circle = styled(AnimatedPressable)<ShapeProps>`
@@ -40,6 +42,7 @@ const Circle = styled(AnimatedPressable)<ShapeProps>`
   align-items: center;
   justify-content: center;
   background-color: ${p => p.$backgroundColor};
+  ${p => (p.$borderColor ? `border-width: 1px; border-color: ${p.$borderColor};` : '')}
   ${p =>
     p.$shadowColor
       ? `shadow-color: ${p.$shadowColor};
@@ -60,6 +63,7 @@ export default function AppIconButton({
   testID,
 }: AppIconButtonProps) {
   const theme = useTheme();
+  const { isCorporate } = useDesign();
   const scale = useSharedValue(1);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -72,12 +76,16 @@ export default function AppIconButton({
           backgroundColor: theme.colors.primary,
           pressedBackgroundColor: theme.colors.primaryPressed,
           shadowColor: undefined as string | undefined,
+          borderColor: undefined as string | undefined,
         };
       case 'surface':
         return {
           backgroundColor: theme.colors.surface,
           pressedBackgroundColor: theme.colors.primaryLight,
           shadowColor: theme.colors.shadow,
+          // Corporate only: a white page makes a white surface button
+          // invisible without its own edge (kids pages aren't white).
+          borderColor: isCorporate ? theme.colors.divider : undefined,
         };
       case 'plain':
       default:
@@ -85,9 +93,10 @@ export default function AppIconButton({
           backgroundColor: 'transparent',
           pressedBackgroundColor: theme.colors.primaryLight,
           shadowColor: undefined as string | undefined,
+          borderColor: undefined as string | undefined,
         };
     }
-  }, [variant, theme]);
+  }, [variant, theme, isCorporate]);
 
   const backgroundColor = disabled
     ? theme.colors.divider
@@ -131,6 +140,7 @@ export default function AppIconButton({
       $size={size}
       $backgroundColor={backgroundColor}
       $shadowColor={disabled ? undefined : palette.shadowColor}
+      $borderColor={disabled ? undefined : palette.borderColor}
       style={animatedStyle}>
       {icon}
     </Circle>

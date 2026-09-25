@@ -8,12 +8,15 @@ import {
   Chip,
   CircularProgress,
   ContinueLearningRow,
+  CtaPill,
   CurriculumCard,
   EyebrowText,
+  LessonRow,
   LessonStepDots,
   OfflineBanner,
   ProgressBar,
   QuizOption,
+  StatusIcon,
   Toast,
 } from '@/components/ui';
 import type { QuizOptionState } from '@/components/ui/QuizOption';
@@ -344,6 +347,15 @@ export default function ComponentGalleryScreen() {
                 steps={{ learning: 'done', practice: 'done', quiz: 'done' }}
               />
             </Swatch>
+            <Swatch label="multi-item counts (Practice 1/2)">
+              <LessonStepDots
+                steps={{
+                  learning: { state: 'done', done: 2, total: 2 },
+                  practice: { state: 'current', done: 1, total: 2 },
+                  quiz: { state: 'todo' },
+                }}
+              />
+            </Swatch>
           </Row>
           <EyebrowText size={9} style={{ marginBottom: 10 }}>
             Without labels
@@ -372,6 +384,81 @@ export default function ComponentGalleryScreen() {
               />
             </Swatch>
           </Row>
+        </Section>
+
+        <Section title="Status icon">
+          <Row>
+            <Swatch label="done">
+              <StatusIcon status="done" />
+            </Swatch>
+            <Swatch label="in progress">
+              <StatusIcon status="inProgress" />
+            </Swatch>
+            <Swatch label="todo">
+              <StatusIcon status="todo" />
+            </Swatch>
+            <Swatch label="up next">
+              <StatusIcon status="upNext" />
+            </Swatch>
+          </Row>
+        </Section>
+
+        <Section title="CTA pill">
+          <Row>
+            <Swatch label="start">
+              <CtaPill label="Start" />
+            </Swatch>
+            <Swatch label="continue">
+              <CtaPill label="Continue" />
+            </Swatch>
+          </Row>
+        </Section>
+
+        <Section title="Lesson row">
+          <View style={{ width: 360, gap: 12 }}>
+            <Swatch label="done">
+              <LessonRow
+                chipLabel="Lesson 1"
+                title="Introduction to Fractions"
+                status="done"
+                isNext={false}
+                steps={{ learning: 'done', practice: 'done', quiz: 'done' }}
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="todo + isNext / Start pill">
+              <LessonRow
+                chipLabel="Lesson 2"
+                title="Adding and Subtracting Fractions"
+                status="todo"
+                isNext
+                ctaLabel="Start"
+                steps={{ learning: 'current', practice: 'todo', quiz: 'todo' }}
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="inProgress + isNext / Continue pill">
+              <LessonRow
+                chipLabel="Lesson 3"
+                title="Multiplying Fractions"
+                status="inProgress"
+                isNext
+                ctaLabel="Continue"
+                steps={{ learning: 'done', practice: 'current', quiz: 'todo' }}
+                onPress={() => {}}
+              />
+            </Swatch>
+            <Swatch label="todo (not next)">
+              <LessonRow
+                chipLabel="Lesson 4"
+                title="Dividing Fractions"
+                status="todo"
+                isNext={false}
+                steps={{ learning: 'todo', practice: 'todo', quiz: 'todo' }}
+                onPress={() => {}}
+              />
+            </Swatch>
+          </View>
         </Section>
 
         <Section title="Quiz option">
@@ -425,12 +512,45 @@ export default function ComponentGalleryScreen() {
             </Swatch>
           </Row>
           <Row>
-            <Swatch label="continue learning row">
+            <Swatch label="continue learning row / chevron only">
               <View style={{ width: 320 }}>
                 <ContinueLearningRow
                   title="Fractions and Decimals"
                   progress={0.62}
                   meta="62% · LESSON 10 OF 16"
+                  onPress={() => {}}
+                />
+              </View>
+            </Swatch>
+          </Row>
+          <Row>
+            <Swatch label="continue learning row / status done">
+              <View style={{ width: 320 }}>
+                <ContinueLearningRow
+                  title="Intro Video: Fractions"
+                  progress={1}
+                  meta="100% · LESSON 9 OF 16"
+                  trailing={{ status: 'done' }}
+                  onPress={() => {}}
+                />
+              </View>
+            </Swatch>
+            <Swatch label="continue learning row / status inProgress">
+              <View style={{ width: 320 }}>
+                <ContinueLearningRow
+                  title="Practice: Mixed Numbers"
+                  progress={0.4}
+                  meta="40% · LESSON 10 OF 16"
+                  trailing={{ status: 'inProgress' }}
+                  onPress={() => {}}
+                />
+              </View>
+            </Swatch>
+            <Swatch label="continue learning row / CTA pill">
+              <View style={{ width: 320 }}>
+                <ContinueLearningRow
+                  title="Quiz: Fractions Review"
+                  trailing={{ ctaLabel: 'Continue' }}
                   onPress={() => {}}
                 />
               </View>

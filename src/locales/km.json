@@ -75,13 +75,12 @@
     "level": {
       "header": "ចំណងជើងរង",
       "progressLabel": "វឌ្ឍនភាព",
-      "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
       "lessonCountMeta": "មេរៀន {{count}}",
       "lessonChip": "មេរៀនទី {{n}}",
-      "continueLearning": "បន្តការសិក្សា",
+      "upNextHint": "មេរៀនបន្ទាប់",
       "lessonRowStatus": {
         "done": "បានបញ្ចប់",
-        "next": "បន្ទាប់",
+        "inProgress": "កំពុងសិក្សា",
         "todo": "មិនទាន់ចាប់ផ្ដើម"
       },
       "stepState": {
@@ -89,7 +88,9 @@
         "current": "កំពុងសិក្សា",
         "todo": "មិនទាន់ចាប់ផ្ដើម"
       },
-      "stepFormat": "{{step}} ({{state}})"
+      "stepFormat": "{{step}} ({{state}})",
+      "stepFormatWithCount": "{{step}} ({{state}}, {{done}} ក្នុងចំណោម {{total}})",
+      "progressWithCertificate": "មេរៀន {{done}} ក្នុងចំណោម {{total}} · ទទួលវិញ្ញាបនបត្រពេលបញ្ចប់"
     },
     "lesson": {
       "header": "លំហាត់",
@@ -118,5 +119,12 @@
       "scoreLabel": "ពិន្ទុ",
       "finishButton": "រួចរាល់"
     }
+  },
+  "cta": {
+    "start": "ចាប់ផ្ដើម",
+    "continue": "បន្ត",
+    "review": "មើលឡើងវិញ",
+    "continueLesson": "បន្តមេរៀនទី {{n}}",
+    "startLesson": "ចាប់ផ្ដើមមេរៀនទី {{n}}"
   }
 }

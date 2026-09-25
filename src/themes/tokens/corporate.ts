@@ -12,9 +12,10 @@ const colors: ThemeTokens['colors'] = {
   secondaryDark: '#2B3A4B',
   onSecondary: '#FFFFFF',
 
-  // Paper. The Glean cream #FFF9EE was retired for this cool paper on
-  // 22 Sep 2026.
-  background: '#F3F5FF',
+  // v2 decision (26 Sep 2026): page background is white, matching the
+  // handoff's white screens — the cool paper #F3F5FF (itself a 22 Sep 2026
+  // replacement for the Glean cream #FFF9EE) is retired.
+  background: '#FFFFFF',
   onBackground: '#09101D',
 
   surface: '#FFFFFF',
@@ -26,20 +27,27 @@ const colors: ThemeTokens['colors'] = {
   outline: '#CDD5E0',
   divider: '#E3E8EF',
   // Track for the mint progress fill. #22DB8D on the #E3E8EF hairline is
-  // 1.47:1; this slate is 3.89:1 against the fill and 7.05:1 on white
+  // 1.47:1; this slate is 3.01:1 against the fill and 5.46:1 on white
   // (WCAG UI-component floor is 3:1). The quiz variant keeps `divider`.
-  progressTrack: '#4A5A6E',
+  // v2 handoff sets this to #5A6B80 (the `secondary` text color) exactly.
+  progressTrack: '#5A6B80',
   // U-03: placeholder on white 2.56 -> 5.46
   placeholder: '#5A6B80',
   shadow: 'rgba(9,16,29,0.05)',
   // U-24: onPrimary-on-error (white text/icons) 2.97 -> 4.99
   error: '#C7420A',
-  customAppBar: '#F3F5FF',
+  customAppBar: '#FFFFFF',
   customHeaderTitle: '#09101D',
 
   // U-23: selection ring on white 2.67 -> 4.14
   selection: '#078A95',
   success: '#22DB8D',
+  // StatusIcon's done-check mark on the mint `success` disc: #064E32 on
+  // #22DB8D is 5.40:1 (WCAG UI-component floor is 3:1).
+  onSuccess: '#064E32',
+  // v2.1: "Done" status word on the lesson row (white bg) — #0F7A4F on
+  // white is 4.6:1+.
+  successText: '#0F7A4F',
   warning: '#FFC228',
   // U-21: warningText on 18% warning tint 2.86 -> 7.01
   warningText: '#6B4B00',

@@ -80,6 +80,11 @@ export default function CurriculumCard({
         {
           borderRadius: theme.radii.card,
           backgroundColor: theme.colors.surface,
+          // v2: the page background is now white, same as this card's
+          // surface, so the shadow alone no longer separates the two — add
+          // the handoff's 1px hairline border to keep the card visible.
+          borderWidth: 1,
+          borderColor: theme.colors.divider,
           padding: 8,
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: 6 },

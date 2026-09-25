@@ -15,7 +15,7 @@ import {
 } from 'react';
 import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
-import { useScreenDimension } from '@/services';
+import { useDesign, useScreenDimension } from '@/services';
 import {
   Container,
   DragItem,
@@ -42,6 +42,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     ref,
   ) {
     const theme = useTheme();
+    const { isCorporate } = useDesign();
     const { unblockHeightWithoutHeader } = useScreenDimension();
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions', []),
@@ -237,6 +238,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             borderRadius: theme.layouts.defaultRadius,
             backgroundColor: theme.colors.surface,
             alignSelf: 'stretch',
+            ...(isCorporate
+              ? { borderWidth: 1, borderColor: theme.colors.divider }
+              : null),
           }}
           contentContainerStyle={{
             padding: theme.layouts.large,

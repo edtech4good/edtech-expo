@@ -38,6 +38,13 @@ const colors: ThemeTokens['colors'] = {
 
   selection: '#06AFBC',
   success: '#22DB8D',
+  // Same value and same rationale as corporate: #064E32 on #22DB8D is 5.40:1.
+  onSuccess: '#064E32',
+  // Parity only — kids has no lesson-row "Done" status word today. Kept
+  // identical to corporate's `successText` (#0F7A4F) rather than inventing
+  // a kids-specific dark green, since kids never renders it outside the
+  // theme-parity check.
+  successText: '#0F7A4F',
   warning: '#FFC228',
   warningText: '#B8860B',
   lessonChip: '#2AAADD',

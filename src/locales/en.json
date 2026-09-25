@@ -76,13 +76,12 @@
     "level": {
       "header": "Levels",
       "progressLabel": "Progress",
-      "lessonsProgress": "{{done}} of {{total}} lessons",
       "lessonCountMeta": "{{count}} lessons",
       "lessonChip": "Lesson {{n}}",
-      "continueLearning": "Continue learning",
+      "upNextHint": "Up next",
       "lessonRowStatus": {
         "done": "Completed",
-        "next": "Up next",
+        "inProgress": "In progress",
         "todo": "Not started"
       },
       "stepState": {
@@ -90,7 +89,9 @@
         "current": "in progress",
         "todo": "not started"
       },
-      "stepFormat": "{{step}} ({{state}})"
+      "stepFormat": "{{step}} ({{state}})",
+      "stepFormatWithCount": "{{step}} ({{state}}, {{done}} of {{total}})",
+      "progressWithCertificate": "{{done}} of {{total}} lessons · Certificate on completion"
     },
     "lesson": {
       "header": "Lessons",
@@ -119,5 +120,12 @@
       "scoreLabel": "Score",
       "finishButton": "Finish"
     }
+  },
+  "cta": {
+    "start": "Start",
+    "continue": "Continue",
+    "review": "Review",
+    "continueLesson": "Continue Lesson {{n}}",
+    "startLesson": "Start Lesson {{n}}"
   }
 }
