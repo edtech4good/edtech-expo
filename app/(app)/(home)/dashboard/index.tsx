@@ -1,5 +1,10 @@
 import { StudentDashboardScreen } from '@/screens';
+import { OfflineBannerFrame } from '@/components';
 
 export default function DashboardPage() {
-  return <StudentDashboardScreen />;
+  return (
+    <OfflineBannerFrame>
+      <StudentDashboardScreen />
+    </OfflineBannerFrame>
+  );
 }

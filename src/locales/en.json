@@ -20,6 +20,7 @@
   },
   "drawer": {
     "home": "Home",
+    "progress": "My progress",
     "profile": "Profile",
     "teacherDashboard": "Dashboard",
     "teacherTestScore": "Test Scores",
@@ -60,6 +61,17 @@
       "numOfStudentLabel": "No. of Student",
       "avgTimeSpentLabel": "Average Time Spent",
       "lastLoginLabel": "Last Login"
+    },
+    "dashboard": {
+      "greeting": "Hello",
+      "totalPoints": "Total points",
+      "levelsCompleted": "{{done}} of {{total}} levels completed",
+      "pointsLabel": "Points",
+      "completedLevelsLabel": "Completed levels",
+      "loadError": "We couldn't load your progress.",
+      "retry": "Retry",
+      "emptyGrades": "No grades yet.",
+      "staleNote": "Showing saved progress from {{date}}"
     },
     "subject": {
       "header": "Subjects",

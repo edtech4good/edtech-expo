@@ -15,6 +15,7 @@ import { pendingResultSlice } from './slices/PendingResultSlice';
 import { activityProgressSlice } from './slices/ActivityProgressSlice';
 import { lessonCacheSlice } from './slices/LessonCacheSlice';
 import { levelStepsSlice } from './slices/LevelStepsSlice';
+import { progressSlice } from './slices/ProgressSlice';
 
 export const combinedReducers = combineReducers({
   [authenticationSlice.name]: authenticationSlice.reducer,
@@ -31,4 +32,5 @@ export const combinedReducers = combineReducers({
   [pendingResultSlice.name]: pendingResultSlice.reducer,
   [activityProgressSlice.name]: activityProgressSlice.reducer,
   [levelStepsSlice.name]: levelStepsSlice.reducer,
+  [progressSlice.name]: progressSlice.reducer,
 });

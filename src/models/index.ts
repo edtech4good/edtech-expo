@@ -13,3 +13,4 @@ export * from './Modal';
 export * from './Animation';
 export * from './Standard';
 export * from './Curriculum';
+export * from './GradeProgress';

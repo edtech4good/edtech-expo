@@ -12,3 +12,4 @@ export * from './SelectionSlice';
 export * from './StandardSlice';
 export * from './PendingResultSlice';
 export * from './ActivityProgressSlice';
+export * from './ProgressSlice';

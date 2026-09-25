@@ -22,6 +22,7 @@ import {
   activityProgressSlice,
   lessonCacheSlice,
   levelStepsSlice,
+  progressSlice,
 } from './slices';
 import { setAccessToken } from '@/services/secureToken';
 
@@ -63,6 +64,7 @@ const persistConfig = {
     activityProgressSlice.name,
     lessonCacheSlice.name,
     levelStepsSlice.name,
+    progressSlice.name,
   ],
   transforms: [authTransform],
   // Wait for AsyncStorage however long it takes. redux-persist's default 5 s

@@ -82,6 +82,26 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
+          name="dashboard/index"
+          options={{
+            headerShown: true,
+            title: t('drawer.progress'),
+            headerTitleAlign: 'center',
+            headerTitleStyle: {
+              fontFamily: font,
+              fontSize: theme.fontSizes.h4,
+              color: theme.colors.customHeaderTitle,
+            },
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: theme.colors.customAppBar },
+            tabBarTestID: 'tab-progress',
+            tabBarAccessibilityLabel: t('drawer.progress'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="insights" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
             headerShown: true,
@@ -105,7 +125,6 @@ export default function Home() {
             ),
           }}
         />
-        <Tabs.Screen name="dashboard/index" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -164,7 +183,7 @@ export default function Home() {
           headerRight: isRail ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
-          title: 'Dashboard',
+          title: t('drawer.progress'),
         }}
       />
     </Drawer>

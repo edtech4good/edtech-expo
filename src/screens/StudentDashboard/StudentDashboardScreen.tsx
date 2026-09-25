@@ -2,150 +2,287 @@ import { Images } from '@/assets_edtech';
 import {
   Column,
   DefaultBackgroundImage,
-  Expanded,
+  FilledButton,
   H2,
   H5,
   H6,
   LayoutScrollView,
+  ProgressRing,
   Row,
   SizedBox,
 } from '@/components';
-import { Image, ScrollView, View } from 'react-native';
-import { CircularProgressbar } from 'react-circular-progressbar';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useTheme } from 'styled-components/native';
-import 'react-circular-progressbar/dist/styles.css';
-import { changeColorOpacity } from '@/utils';
 import LessonResultItem from './Components/LessonResultItem';
 import { DashboardCardColors } from '@/constants';
 import { useAppSelector } from '@/redux';
 import { getProfile } from '@/redux/slices';
+import { useFont, useStudentProgress } from '@/services';
+import type { GradeProgress } from '@/models';
+import { useTranslation } from 'react-i18next';
+
+// Phone ring ~160dp; a little larger beside the grid on wide screens.
+const RING_SIZE_NARROW = 160;
+const RING_SIZE_WIDE = 175;
+const RING_STROKE_WIDTH = 14;
+
+function formatFetchedAt(fetchedAt: number, language: string): string {
+  const date = new Date(fetchedAt);
+  try {
+    const locale = language === 'km' ? 'km-KH' : 'en-GB';
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  } catch {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(
+      date.getHours(),
+    )}:${pad(date.getMinutes())}`;
+  }
+}
 
 export default function StudentDashboardScreen() {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
+  const displayFont = useFont('bold', 'display');
   const profile = useAppSelector(getProfile);
+  const { progress, loading, error, isStale, refresh } = useStudentProgress();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < theme.breakpoints.DEFAULT_MIN_WIDTH;
+
+  const firstName = profile?.studentfirstname ?? '';
+  const lastName = profile?.studentlastname ?? '';
+  // Code-point safe (not charAt) so a surrogate-pair character in a name
+  // doesn't get split into a mangled half-character initial.
+  const firstInitial = firstName ? Array.from(firstName)[0] : '';
+  const lastInitial = lastName ? Array.from(lastName)[0] : '';
+  const initials = `${firstInitial}${lastInitial}`;
+
+  const hasData = !!progress;
+  const ringProgress =
+    hasData && progress.totalLevels > 0
+      ? progress.completedLevels / progress.totalLevels
+      : 0;
+
+  // No flex:1 here: this card lives inside a ScrollView content container,
+  // which has no height to distribute, so a flex:1 (flex-basis 0) child
+  // collapses to zero height and its content spills over the header.
+  // Let the content size the card.
+  const renderPointsCard = () => (
+    <View
+      style={{
+        alignSelf: 'stretch',
+        alignItems: 'center',
+        backgroundColor: theme.colors.surface,
+        borderRadius: 6,
+        borderWidth: 3,
+        borderColor: theme.colors.divider,
+        paddingHorizontal: theme.layouts.large,
+        paddingVertical: theme.layouts.xlarge,
+      }}>
+      <Image
+        source={Images.TrophyImage}
+        resizeMethod="resize"
+        resizeMode="contain"
+        style={{ width: 64, height: 64 }}
+      />
+      <SizedBox.Medium height />
+      <H5 fontWeight="semi">{t('screen.dashboard.totalPoints')}</H5>
+      <SizedBox.Large height />
+      <ProgressRing
+        size={isNarrow ? RING_SIZE_NARROW : RING_SIZE_WIDE}
+        strokeWidth={RING_STROKE_WIDTH}
+        progress={ringProgress}
+        color={theme.colors.primary}
+        trackColor={theme.colors.primaryLight}>
+        <H2 fontWeight="semi" color={theme.colors.customHeaderTitle}>
+          {String(progress?.totalPoints ?? 0)}
+        </H2>
+      </ProgressRing>
+      <SizedBox.Large height />
+      <H6 fontWeight="semi" color={theme.colors.onSurfaceVariant}>
+        {t('screen.dashboard.levelsCompleted', {
+          done: progress?.completedLevels ?? 0,
+          total: progress?.totalLevels ?? 0,
+        })}
+      </H6>
+    </View>
+  );
+
+  const renderGradeCards = () => {
+    const grades = progress?.grades ?? [];
+
+    if (grades.length === 0) {
+      return (
+        <Column justifyContent="center" alignItems="center" paddingTop={theme.layouts.large}>
+          <H6 color={theme.colors.onSurfaceVariant}>
+            {t('screen.dashboard.emptyGrades')}
+          </H6>
+        </Column>
+      );
+    }
+
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'flex-start',
+          columnGap: theme.layouts.large,
+          rowGap: theme.layouts.large,
+        }}>
+        {grades.map((grade: GradeProgress, index: number) => (
+          <View
+            key={grade.gradeId}
+            style={{
+              width: isNarrow ? '100%' : '48%',
+            }}>
+            <LessonResultItem
+              foregroundColor={
+                DashboardCardColors[index % DashboardCardColors.length]
+                  .foreground as string
+              }
+              backgroundColor={
+                DashboardCardColors[index % DashboardCardColors.length]
+                  .background
+              }
+              primaryColor={
+                DashboardCardColors[index % DashboardCardColors.length]
+                  .primary
+              }
+              image={
+                DashboardCardColors[index % DashboardCardColors.length].image
+              }
+              maxProgress={grade.totalLevels}
+              progress={grade.completedLevels}
+              name={grade.gradeName}
+              score={String(grade.score)}
+            />
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderContent = () => {
+    if (loading && !hasData) {
+      return (
+        <Column
+          justifyContent="center"
+          alignItems="center"
+          paddingTop={theme.layouts.large}
+          paddingBottom={theme.layouts.large}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </Column>
+      );
+    }
+
+    if (!hasData && error) {
+      return (
+        <Column
+          justifyContent="center"
+          alignItems="center"
+          paddingTop={theme.layouts.large}
+          paddingBottom={theme.layouts.large}>
+          <H6 color={theme.colors.onSurfaceVariant}>
+            {t('screen.dashboard.loadError')}
+          </H6>
+          <SizedBox.Large height />
+          <FilledButton
+            onPress={refresh}
+            style={{ alignSelf: 'center', minWidth: 160 }}>
+            {t('screen.dashboard.retry')}
+          </FilledButton>
+        </Column>
+      );
+    }
+
+    return (
+      <>
+        {hasData && isStale && (
+          <Row paddingBottom={theme.layouts.small} style={{ flexShrink: 1 }}>
+            <H6
+              color={theme.colors.onSurfaceVariant}
+              style={{ flexShrink: 1 }}>
+              {t('screen.dashboard.staleNote', {
+                date: formatFetchedAt(progress!.fetchedAt, i18n.language),
+              })}
+            </H6>
+          </Row>
+        )}
+        <View
+          style={{
+            flexDirection: isNarrow ? 'column' : 'row',
+            paddingTop: theme.layouts.large,
+            paddingBottom: theme.layouts.large,
+          }}>
+          <View
+            style={{
+              flex: isNarrow ? undefined : 1,
+              width: isNarrow ? '100%' : undefined,
+            }}>
+            {renderPointsCard()}
+          </View>
+          {isNarrow ? <SizedBox.Large height /> : <SizedBox.Large width />}
+          <View style={{ flex: isNarrow ? undefined : 2 }}>
+            {renderGradeCards()}
+          </View>
+        </View>
+      </>
+    );
+  };
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.surface}>
       <DefaultBackgroundImage />
-      <Row
-        alignItems="center"
-        borderRadius={theme.layouts.defaultRadius}
-        paddingTop={theme.layouts.large}
-        paddingBottom={theme.layouts.large}
-        paddingLeft={theme.layouts.large}
-        paddingRight={theme.layouts.large}>
-        <Image
-          source={Images.SampleProfile}
-          resizeMethod="resize"
-          resizeMode="contain"
-          style={{ width: 100, height: 100 }}
-        />
-        <SizedBox.Large width />
-        <Column justifyContent="center">
-          <H6 alignSelf="flex-start" fontWeight="bold">
-            Good morning,
-          </H6>
-          <H2 alignSelf="flex-start" fontWeight="semi">
-            {`${profile?.studentfirstname ?? 'N/A'}!`}
-          </H2>
-        </Column>
-      </Row>
-      <Expanded
-        flexDirection="row"
-        paddingTop={theme.layouts.large}
-        paddingBottom={theme.layouts.large}
-        paddingLeft={theme.layouts.large}
-        paddingRight={theme.layouts.large}>
-        <Expanded
-          backgroundColor={theme.colors.surface}
-          justifyContent="center"
-          borderRadius={6}
-          style={{
-            borderWidth: 3,
-            borderColor: theme.colors.divider,
-            maxHeight: 466,
-          }}>
-          <Image
-            source={Images.TrophyImage}
-            resizeMethod="resize"
-            resizeMode="contain"
-            style={{ height: 64 }}
-          />
-          <H5 fontWeight="semi">Total Points</H5>
-          <SizedBox.Large height />
-          <SizedBox.Large height />
-          <View style={{ width: 175 }}>
-            <CircularProgressbar
-              value={66}
-              text={`${99}`}
-              styles={{
-                path: { stroke: theme.colors.primary },
-                trail: { stroke: changeColorOpacity(theme.colors.primary, 10) },
-                text: {
-                  fontFamily: 'PoppinsSemiBold',
-                  fontSize: `${theme.fontSizes.h4}px`,
-                  alignSelf: 'flex-end',
-                  fill: theme.colors.customHeaderTitle,
-                },
-              }}
-            />
+      <ScrollView
+        style={{ alignSelf: 'stretch', flex: 1 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          padding: theme.layouts.large,
+        }}
+        showsVerticalScrollIndicator={false}>
+        <Row alignItems="center" borderRadius={theme.layouts.defaultRadius}>
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: theme.radii.pill,
+              backgroundColor: theme.colors.primaryLight,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <Text
+              style={{
+                fontFamily: displayFont,
+                fontSize: 28,
+                color: theme.colors.primary,
+              }}>
+              {initials}
+            </Text>
           </View>
-        </Expanded>
-        <SizedBox.Large width />
-        <ScrollView
-          style={{ flex: 2, alignSelf: 'stretch' }}
-          contentContainerStyle={{
-            height: '100%',
-          }}>
-          <Row>
-            <LessonResultItem
-              foregroundColor={DashboardCardColors[0].foreground as string}
-              backgroundColor={DashboardCardColors[0].background}
-              primaryColor={DashboardCardColors[0].primary}
-              image={Images.Mouse}
-              maxProgress={2}
-              progress={0}
-              name="Bridge"
-              score="23"
-            />
-            <SizedBox.Large width />
-            <LessonResultItem
-              foregroundColor={DashboardCardColors[2].foreground as string}
-              backgroundColor={DashboardCardColors[2].background}
-              primaryColor={DashboardCardColors[2].primary}
-              image={Images.Rabbit}
-              maxProgress={2}
-              progress={0}
-              name="Grade 8"
-              score="23"
-            />
-          </Row>
-          <SizedBox.Large height />
-          <Row>
-            <LessonResultItem
-              foregroundColor={DashboardCardColors[1].foreground as string}
-              backgroundColor={DashboardCardColors[1].background}
-              primaryColor={DashboardCardColors[1].primary}
-              image={Images.Lion}
-              maxProgress={2}
-              progress={0}
-              name="Grade 7"
-              score="23"
-            />
-            <SizedBox.Large width />
-            <LessonResultItem
-              foregroundColor={DashboardCardColors[3].foreground as string}
-              backgroundColor={DashboardCardColors[3].background}
-              primaryColor={DashboardCardColors[3].primary}
-              image={Images.Bear}
-              maxProgress={2}
-              progress={0}
-              name="Grade 9"
-              score="23"
-            />
-          </Row>
-        </ScrollView>
-      </Expanded>
+          <SizedBox.Large width />
+          <Column justifyContent="center" style={{ flex: 1, minWidth: 0 }}>
+            <H6 alignSelf="flex-start" textAlign="left" fontWeight="bold">
+              {t('screen.dashboard.greeting')}
+            </H6>
+            {!!profile?.studentfirstname && (
+              <H2 alignSelf="flex-start" textAlign="left" fontWeight="semi">
+                {`${profile.studentfirstname}!`}
+              </H2>
+            )}
+          </Column>
+        </Row>
+        {renderContent()}
+      </ScrollView>
     </LayoutScrollView>
   );
 }
