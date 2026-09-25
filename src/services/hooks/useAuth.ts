@@ -31,6 +31,24 @@ export default function useAuth() {
   const profile = useAppSelector(getProfile);
   const [isLogginIn, setIsLogginIn] = useState(false);
   const [error, setError] = useState('');
+  // HTTP status of the last login failure (set alongside `error`), so
+  // callers can tell a bad-credentials 400 apart from a network/5xx/429
+  // failure without re-parsing the stringified error. undefined for a
+  // network-level failure (Api.ts's responseTransform never sets `status`
+  // on those) or when there's no error at all.
+  const [errorStatus, setErrorStatus] = useState<number | undefined>(
+    undefined,
+  );
+  // Machine-readable classification alongside `error`/`errorStatus`, lifted
+  // straight from Api.ts's responseTransform (see the `code`/`errormessage`
+  // it attaches to the thrown error). `errorCode` is undefined on the
+  // current rpi-api contract and only starts arriving once #75 ships;
+  // `errorMessage` is the raw, unlocalized `errormessage` body text.
+  // Callers should classify on these, not by parsing `error`'s string.
+  const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    undefined,
+  );
 
   const { uploadContentToCloud, uploadContentToRpi } = useSyncContent();
 
@@ -52,6 +70,9 @@ export default function useAuth() {
       // return;
       setIsLogginIn(true);
       setError('');
+      setErrorStatus(undefined);
+      setErrorCode(undefined);
+      setErrorMessage(undefined);
       const authPayload = toAuthPayload(payload, false) as EdtechLoginPayload;
       const response = await api.login(authPayload);
       const accessToken = _.get(response.data, 'data.accessToken');
@@ -106,6 +127,12 @@ export default function useAuth() {
       else router.replace('/teacher/dashboard');
     } catch (e) {
       setError(`${e}`);
+      const err = e as
+        | { status?: number; code?: string; errormessage?: string }
+        | undefined;
+      setErrorStatus(err?.status);
+      setErrorCode(err?.code);
+      setErrorMessage(err?.errormessage);
     } finally {
       setIsLogginIn(false);
     }
@@ -131,5 +158,15 @@ export default function useAuth() {
     }
   };
 
-  return { login, logout, isLogginIn, profile, error, setError };
+  return {
+    login,
+    logout,
+    isLogginIn,
+    profile,
+    error,
+    setError,
+    errorStatus,
+    errorCode,
+    errorMessage,
+  };
 }

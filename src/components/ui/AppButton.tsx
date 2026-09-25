@@ -35,6 +35,7 @@ export interface AppButtonProps {
   icon?: ReactNode;
   fullWidth?: boolean;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 const HEIGHTS: Record<AppButtonSize, number> = { lg: 52, md: 44, sm: 36 };
@@ -116,6 +117,7 @@ export default function AppButton({
   icon,
   fullWidth = false,
   accessibilityLabel,
+  testID,
 }: AppButtonProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
@@ -212,6 +214,7 @@ export default function AppButton({
 
   return (
     <ButtonShape
+      testID={testID}
       onPress={isInteractive ? onPress : undefined}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}

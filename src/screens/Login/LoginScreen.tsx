@@ -1,7 +1,6 @@
 import { Images } from '@/assets';
 import {
   AppButton,
-  Chip,
   DebugDisplay,
   DefaultBackgroundImage,
   Expanded,
@@ -30,8 +29,103 @@ import _ from 'lodash';
 import { useEffect, useRef } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
+
+// Corporate branch's language-switch face for "ភាសាខ្មែរ" — the corporate
+// Latin faces (Space Grotesk/Plus Jakarta) have no Khmer glyphs, same
+// reasoning as the language chips this control replaces.
+const KHMER_LABEL_FONT_FAMILY = 'NotoSansKhmerSemiBold';
+
+// Handoff §1/v2.1: 44pt segmented English/ភាសាខ្មែរ switch, top-right,
+// active segment white on `#F4F6F9`. Replaces the old two-chip row.
+// role="radiogroup"/"radio" per the assignment's accessibility ask.
+function LoginLanguageSwitch({
+  selectedLanguage,
+  onChangeLanguage,
+}: {
+  selectedLanguage: string;
+  onChangeLanguage: (lng: string) => void;
+}) {
+  const theme = useTheme();
+  const { t } = useTranslation();
+  const bodyFontFamily = useFont('semi', 'body');
+
+  const segments: Array<{
+    code: 'en' | 'km';
+    label: string;
+    fontFamily?: string;
+    testID: string;
+  }> = [
+    { code: 'en', label: t('screen.login.englishOption'), testID: 'login-lang-en' },
+    {
+      code: 'km',
+      label: t('screen.login.khmerOption'),
+      fontFamily: KHMER_LABEL_FONT_FAMILY,
+      testID: 'login-lang-km',
+    },
+  ];
+
+  return (
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={t('screen.login.languageSwitchLabel')}
+      style={{
+        flexDirection: 'row',
+        padding: 3,
+        gap: 2,
+        borderRadius: theme.radii.pill,
+        backgroundColor: theme.colors.surfaceVariant,
+        minHeight: 44,
+        alignItems: 'center',
+      }}>
+      {segments.map(segment => {
+        const active = selectedLanguage === segment.code;
+        return (
+          <Pressable
+            key={segment.code}
+            testID={segment.testID}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: active, selected: active }}
+            accessibilityLabel={segment.label}
+            hitSlop={{ top: 3, bottom: 3 }}
+            onPress={() => onChangeLanguage(segment.code)}
+            style={{
+              minHeight: 38,
+              paddingHorizontal: 16,
+              borderRadius: theme.radii.pill,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: active ? theme.colors.surface : 'transparent',
+              ...(active
+                ? {
+                    shadowColor: theme.colors.shadow,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 1,
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }
+                : null),
+            }}>
+            <Text
+              style={{
+                fontFamily: segment.fontFamily ?? bodyFontFamily,
+                // Khmer glyphs read small at the English 13px used for this
+                // control — v2.1 spec calls for 14px on the Khmer segment
+                // label specifically; English stays 13px.
+                fontSize: segment.code === 'km' ? 14 : 13,
+                color: active
+                  ? theme.colors.onSurface
+                  : theme.colors.onSurfaceVariant,
+              }}>
+              {segment.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 interface Props {
   isTeacher?: boolean;
@@ -47,7 +141,8 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   const selectedLanguage = useAppSelector(getSelectedLanguage);
   const displayFont = useFont('bold', 'display');
   const bodyFont = useFont('normal', 'body');
-  const { login, isLogginIn, error } = useAuth();
+  const { login, isLogginIn, error, errorStatus, errorCode, errorMessage } =
+    useAuth();
   const { isLoggedOut } = useLocalSearchParams();
   const { requestStoragePermission, updateResourcePath } = useSetting();
   const grantedDirectory = useAppSelector(getGrantedStorageDirectory);
@@ -75,10 +170,53 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     modalRef.current.show(t('screen.login.sessionExpiredMessage'));
   }, [isLoggedOut]);
 
+  // A 400 is "wrong credentials" only when it's actually rpi-api's
+  // "User/Password not matching" failure, not any 400. The open
+  // error-contract PR (#75) adds a `code` to the body ('LOGIN_FAILED');
+  // until it lands, rpi-api sends no `code` and the message text lives in
+  // `errormessage` (see Api.ts's responseTransform), so both shapes are
+  // checked here. Any other 400 falls through to the modal below, same as
+  // every non-400 failure.
+  const isWrongCredentialsError =
+    errorStatus === 400 &&
+    (errorCode === 'LOGIN_FAILED' ||
+      (!errorCode && /User\/Password not matching/.test(errorMessage ?? '')));
+
   useEffect(() => {
     if (error === '' || !modalRef.current) return;
-    modalRef.current.show(error);
-  }, [error]);
+    // Corporate wrong-credentials is shown as the field-level error state
+    // per the v2.1 handoff (see the effect below) instead of the modal.
+    // Every other failure — network/unreachable, 5xx, 429, and non-credential
+    // 400s — keeps the existing modal here, for both themes.
+    if (isCorporate && isWrongCredentialsError) return;
+    // 429 rarely carries a usable body message, and apisauce/axios's own
+    // fallback text ("Request failed with status code 429") isn't fit for
+    // this modal — show the localized friendly copy instead, for both
+    // themes (kids kept the raw message here before this fix).
+    const modalMessage =
+      errorStatus === 429 ? t('screen.login.tooManyAttemptsError') : error;
+    modalRef.current.show(modalMessage);
+  }, [error, errorStatus, isWrongCredentialsError, isCorporate, t]);
+
+  // Corporate-only: rpi-api's wrong-credentials failure becomes the
+  // handoff's combined field error state instead of the modal above — both
+  // fields get the 2px error border, but the message renders once, under
+  // password (AppTextField's `showErrorBorder` border-only field lets
+  // username carry the border with no message of its own). react-hook-form
+  // clears these the same way it clears any other field error: the next
+  // submit re-validates `required`, and since both fields still hold text,
+  // that revalidation clears them before `handleLogin` re-runs.
+  useEffect(() => {
+    if (!isCorporate || error === '' || !isWrongCredentialsError) return;
+    methods.setError('username', { type: 'server', message: '' });
+    methods.setError('password', {
+      type: 'server',
+      message: t('screen.login.invalidCredentialsError'),
+    });
+    // methods/t are stable enough for this purpose; re-running per keystroke
+    // would fight the revalidation-clears-it flow described above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error, isWrongCredentialsError, isCorporate]);
 
   const handleStorageDirectory = async () => {
     await requestStoragePermission();
@@ -101,89 +239,118 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   };
 
   if (isCorporate) {
-    // Corporate layout per the handoff (§1 Login), tablet/web-first: cream
-    // page, logo slot, welcome heading, fields, primary pill. "Use company
-    // SSO" and "Forgot password?" are omitted — no backend for either
-    // (Bucket C in docs/corporate-design-per-school.md). The logo slot shows
-    // the EdTech lockup until Phase 4 wires per-school branding.
+    // Corporate layout per the v2.1 handoff (§1 Login): white page, 28px
+    // horizontal padding, top-right language segmented switch, a
+    // vertically-centered left-aligned stack (logo → "Welcome back" →
+    // subcopy → labelled username/password → primary pill), and a footer
+    // pinned to the bottom. "Use company SSO" and "Forgot password?" are
+    // omitted — no backend for either (Bucket C in
+    // docs/corporate-design-per-school.md; also dropped from v2.1's own
+    // login spec). The logo slot shows the EdTech lockup — brandingconfig
+    // (useBrandingRefresh) only resolves post-login from profile.schoolname,
+    // so there's nothing to key a per-school swap off of on this screen yet.
+    // v2.1 type scale differs by language: Khmer's taller glyphs/diacritics
+    // need more line-height than the Latin numbers below give them. English
+    // visuals (Space Grotesk 30, 14/22 subtitle) are unchanged.
+    const isKhmer = selectedLanguage === 'km';
+
     return (
-      <LayoutScrollView backgroundColor={theme.colors.background}>
+      <LayoutScrollView
+        backgroundColor={theme.colors.background}
+        useScroll
+        footer={
+          <Row
+            justifyContent="center"
+            paddingBottom={20}
+            paddingLeft={28}
+            paddingRight={28}>
+            <EyebrowText size={9} style={{ textAlign: 'center' }}>
+              {t('screen.login.poweredByFooter')}
+            </EyebrowText>
+          </Row>
+        }>
         <FormProvider {...methods}>
-          <Expanded justifyContent="center" alignItems="center">
-            <View
-              style={{
-                width: '100%',
-                maxWidth: 480,
-                paddingHorizontal: theme.layouts.pageHorizontalPadding,
-              }}>
-              <Image
-                source={Images.BrandLogo}
-                resizeMethod="resize"
-                resizeMode="contain"
-                style={{ alignSelf: 'center', width: 280, height: 72 }}
+          <View style={{ flex: 1, width: '100%', paddingHorizontal: 28 }}>
+            <Row justifyContent="flex-end" paddingTop={8}>
+              <LoginLanguageSwitch
+                selectedLanguage={selectedLanguage}
+                onChangeLanguage={handleChangeLanguage}
               />
-              <SizedBox.Large height />
-              <Text
-                style={{
-                  fontFamily: displayFont,
-                  fontSize: 30,
-                  color: theme.colors.onBackground,
-                  textAlign: 'center',
-                }}>
-                {t('screen.login.welcomeTitle')}
-              </Text>
-              <SizedBox.Small height />
-              <Text
-                style={{
-                  fontFamily: bodyFont,
-                  fontSize: 14,
-                  lineHeight: 22,
-                  color: theme.colors.onSurfaceVariant,
-                  textAlign: 'center',
-                }}>
-                {t('screen.login.welcomeSubtitle')}
-              </Text>
-              <SizedBox.Large height />
-              <FormAppTextField
-                name="username"
-                placeholder={t('screen.login.emailPlaceholder')}
-                rules={{ required: true }}
-              />
-              <SizedBox.Medium height />
-              <FormAppTextField
-                name="password"
-                placeholder={t('screen.login.passwordPlaceholder')}
-                secureTextEntry
-                rules={{ required: true }}
-              />
-              <SizedBox.Large height />
-              <AppButton
-                label={t('screen.login.loginButton')}
-                loading={isLogginIn}
-                fullWidth
-                onPress={methods.handleSubmit(handleLogin)}
-              />
-              <SizedBox.Large height />
-              <Row justifyContent="center">
-                <Chip
-                  label="English"
-                  active={selectedLanguage === 'en'}
-                  onPress={() => handleChangeLanguage('en')}
+            </Row>
+            <Expanded justifyContent="center" alignItems="flex-start">
+              <View
+                style={{ width: '100%', maxWidth: 480, alignSelf: 'center' }}>
+                <Image
+                  source={Images.BrandLogo}
+                  resizeMethod="resize"
+                  resizeMode="contain"
+                  style={{ alignSelf: 'flex-start', width: 160, height: 40 }}
                 />
-                <SizedBox.Medium width />
-                <Chip
-                  label="ភាសាខ្មែរ"
-                  fontFamily="NotoSansKhmerSemiBold"
-                  active={selectedLanguage === 'km'}
-                  onPress={() => handleChangeLanguage('km')}
+                <SizedBox.Large height />
+                <Text
+                  style={{
+                    fontFamily: displayFont,
+                    fontSize: isKhmer ? 26 : 30,
+                    lineHeight: isKhmer ? 44 : 34.5,
+                    color: theme.colors.onBackground,
+                    textAlign: 'left',
+                  }}>
+                  {t('screen.login.welcomeTitle')}
+                </Text>
+                <SizedBox.Small height />
+                <Text
+                  style={{
+                    fontFamily: bodyFont,
+                    fontSize: 14,
+                    lineHeight: isKhmer ? 26 : 22,
+                    color: theme.colors.onSurfaceVariant,
+                    textAlign: 'left',
+                  }}>
+                  {t('screen.login.welcomeSubtitle')}
+                </Text>
+                <SizedBox.Large height />
+                <FormAppTextField
+                  name="username"
+                  label={t('screen.login.usernameLabel')}
+                  rules={{
+                    required: {
+                      value: true,
+                      message: t('screen.login.usernameRequiredError'),
+                    },
+                  }}
+                  autoCapitalize="none"
+                  textContentType="username"
+                  autoComplete="username"
+                  testID="login-username"
+                  errorTestID="login-error-username"
                 />
-              </Row>
-              <SizedBox.Large height />
-              <EyebrowText size={9} style={{ textAlign: 'center' }}>
-                POWERED BY EDTECH FOR GOOD
-              </EyebrowText>
-            </View>
-          </Expanded>
+                <SizedBox.Medium height />
+                <FormAppTextField
+                  name="password"
+                  label={t('screen.login.passwordLabel')}
+                  secureTextEntry
+                  rules={{
+                    required: {
+                      value: true,
+                      message: t('screen.login.passwordRequiredError'),
+                    },
+                  }}
+                  textContentType="password"
+                  autoComplete="password"
+                  testID="login-password"
+                  errorTestID="login-error-password"
+                />
+                <SizedBox.Large height />
+                <AppButton
+                  label={t('screen.login.signInButton')}
+                  loading={isLogginIn}
+                  fullWidth
+                  testID="login-submit"
+                  onPress={methods.handleSubmit(handleLogin)}
+                />
+              </View>
+            </Expanded>
+          </View>
         </FormProvider>
         <GenericModal ref={modalRef} onConfirm={handleCloseModal} />
         {__DEV__ && <DebugDisplay />}

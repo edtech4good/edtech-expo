@@ -33,12 +33,21 @@
   "screen": {
     "login": {
       "loginButton": "ចូលគណនី",
+      "signInButton": "ចូល",
       "sessionExpiredMessage": "សូមព្យាយាមចូលគណនីម្តងទៀត",
       "welcomeMessage": "សូមស្វាគមន័មកកាន់ EdTech Learn!",
       "welcomeTitle": "សូមស្វាគមន៍",
-      "welcomeSubtitle": "ចូលគណនីដើម្បីបន្តការសិក្សា",
-      "emailPlaceholder": "អ៊ីមែល",
-      "passwordPlaceholder": "ពាក្យសម្ងាត់"
+      "welcomeSubtitle": "ចូលដោយប្រើឈ្មោះអ្នកប្រើដែលស្ថាប័នរបស់អ្នកបានផ្តល់ឱ្យ។",
+      "usernameLabel": "ឈ្មោះអ្នកប្រើ",
+      "passwordLabel": "ពាក្យសម្ងាត់",
+      "usernameRequiredError": "សូមបញ្ចូលឈ្មោះអ្នកប្រើ",
+      "passwordRequiredError": "សូមបញ្ចូលពាក្យសម្ងាត់",
+      "invalidCredentialsError": "ឈ្មោះអ្នកប្រើ ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ សូមព្យាយាមម្តងទៀត។",
+      "tooManyAttemptsError": "ការព្យាយាមច្រើនពេក។ សូមរង់ចាំមួយភ្លែត ហើយព្យាយាមម្តងទៀត។",
+      "languageSwitchLabel": "ភាសា",
+      "englishOption": "English",
+      "khmerOption": "ភាសាខ្មែរ",
+      "poweredByFooter": "POWERED BY EDTECH FOR GOOD"
     },
     "profile": {
       "header": "ប្រវត្តិរូប",
