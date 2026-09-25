@@ -13,7 +13,12 @@ import { useEffect, useState } from 'react';
 import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
-import { useAuth, useBreakpoint, useDesign, useFont } from '@/services';
+import {
+  useAuth,
+  useBreakpoint,
+  useDesign,
+  useTypeRole,
+} from '@/services';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useSubject } from '@/services';
 import { Subject } from '@/models';
@@ -25,7 +30,9 @@ export default function CourseSelectionScreen() {
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const { profile } = useAuth();
-  const displayFont = useFont('bold', 'display');
+  // Home greeting name — README §2 "Space Grotesk 700 20px name" matches
+  // the 'cardTitle' role (design v2.1 Khmer type scale) exactly.
+  const greetingType = useTypeRole('cardTitle');
   const [query, setQuery] = useState('');
   const { fetch, subjects, selectSubject } = useSubject();
 
@@ -93,8 +100,9 @@ export default function CourseSelectionScreen() {
               <Text
                 style={{
                   marginTop: 4,
-                  fontFamily: displayFont,
-                  fontSize: 24,
+                  fontFamily: greetingType.fontFamily,
+                  fontSize: greetingType.fontSize,
+                  lineHeight: greetingType.lineHeight,
                   color: theme.colors.onBackground,
                 }}>
                 {studentName}

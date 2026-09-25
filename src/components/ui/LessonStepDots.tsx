@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import { useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 
 export type StepState = 'done' | 'current' | 'todo';
 
@@ -50,7 +52,9 @@ const STEP_I18N_KEYS: Record<keyof LessonStepDotsProps['steps'], string> = {
   quiz: 'screen.lesson.quizTitle',
 };
 
-function toStepInfo(input: StepInput): Required<StepInfo> {
+// Exported for reuse by LevelSelectionScreen, which needs the same
+// bare-state/full-StepInfo normalization to derive a lesson's status.
+export function toStepInfo(input: StepInput): Required<StepInfo> {
   if (typeof input === 'string') return { state: input, done: 0, total: 1 };
   return { state: input.state, done: input.done ?? 0, total: input.total ?? 1 };
 }
@@ -65,19 +69,21 @@ export function describeSteps(
   steps: LessonStepDotsProps['steps'],
   t: ReturnType<typeof useTranslation>['t'],
 ): string {
-  return STEP_ORDER.map(step => {
-    const stepName = t(STEP_I18N_KEYS[step]);
-    const { state, done, total } = toStepInfo(steps[step]);
-    const stateText = t(`screen.level.stepState.${state}`);
-    return total > 1
-      ? t('screen.level.stepFormatWithCount', {
-          step: stepName,
-          state: stateText,
-          done,
-          total,
-        })
-      : t('screen.level.stepFormat', { step: stepName, state: stateText });
-  }).join(', ');
+  return STEP_ORDER.filter(step => toStepInfo(steps[step]).total > 0)
+    .map(step => {
+      const stepName = t(STEP_I18N_KEYS[step]);
+      const { state, done, total } = toStepInfo(steps[step]);
+      const stateText = t(`screen.level.stepState.${state}`);
+      return total > 1
+        ? t('screen.level.stepFormatWithCount', {
+            step: stepName,
+            state: stateText,
+            done,
+            total,
+          })
+        : t('screen.level.stepFormat', { step: stepName, state: stateText });
+    })
+    .join(', ');
 }
 
 export default function LessonStepDots({
@@ -90,6 +96,11 @@ export default function LessonStepDots({
   const { t } = useTranslation();
   const labelFontFamily = useFont('normal', 'body');
   const labelFontFamilySemi = useFont('semi', 'body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Khmer floor: never below 13px (the Latin labels stay at their 12pt
+  // floor per the handoff's U-19 audit item).
+  const labelFontSize = isKhmer ? 13 : 12;
+  const labelLineHeight = isKhmer ? 20 : undefined;
 
   const dotStyleFor = (state: StepState) => {
     if (state === 'done')
@@ -137,7 +148,7 @@ export default function LessonStepDots({
         gap: 12,
         flexWrap: 'wrap',
       }}>
-      {STEP_ORDER.map(step => {
+      {STEP_ORDER.filter(step => toStepInfo(steps[step]).total > 0).map(step => {
         const { state, done, total } = toStepInfo(steps[step]);
         const label =
           total > 1
@@ -163,7 +174,8 @@ export default function LessonStepDots({
               <Text
                 style={{
                   fontFamily: labelFontFamilyFor(state),
-                  fontSize: 12,
+                  fontSize: labelFontSize,
+                  lineHeight: labelLineHeight,
                   color: labelColorFor(state),
                 }}>
                 {label}

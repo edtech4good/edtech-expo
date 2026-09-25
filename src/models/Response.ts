@@ -3,6 +3,7 @@ import { Curriculum } from './Curriculum';
 import {
   Lesson,
   LessonActivityProgress,
+  LevelSteps,
   LessonLearningResource,
   LessonPracticeResource,
   LessonQuizResource,
@@ -75,6 +76,11 @@ export interface LessonQuizResponse {
 
 export interface LessonActivityProgressResponse {
   data: LessonActivityProgress;
+  error: boolean;
+}
+
+export interface LevelStepsResponse {
+  data: LevelSteps;
   error: boolean;
 }
 

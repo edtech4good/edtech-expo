@@ -18,7 +18,7 @@ import {
   PracticeHeading,
   SizedBox,
 } from '@/components';
-import { useDesign, useResource, useScreenDimension } from '@/services';
+import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
 import FractionItem from './Components/FractionItem';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -40,6 +40,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       onRetry = () => undefined,
       onSubmit = () => undefined,
     }: PracticeProps,
@@ -47,7 +48,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     const questionOptions = useMemo(
       () =>
@@ -167,7 +167,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
     };
 
     return (
-      <Container containerHeight={unblockHeightWithoutHeader}>
+      <Container fill>
         <PracticeHeading
           heading={
             _.get(
@@ -205,6 +205,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={methods.handleSubmit(handleSubmit)}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );

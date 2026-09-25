@@ -104,6 +104,52 @@ const fonts: ThemeTokens['fonts'] = {
   },
 };
 
+// Locale-aware type scale (design v2.1 "Khmer type scale"; Latin values are
+// the handoff's phone/tablet comparison column, already mirrored by the
+// legacy Metrics.fontSizes tokens elsewhere in the theme). Weights map to
+// useFont's FontWeight ('normal' | 'semi' | 'bold').
+const typeScale: ThemeTokens['typeScale'] = {
+  en: {
+    phone: {
+      screenTitle: { fontSize: 28, lineHeight: 34, weight: 'bold' },
+      cardTitle: { fontSize: 20, lineHeight: 26, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+    tablet: {
+      // Handoff: "tablet promotes one notch" — only screen/card titles have
+      // a distinct tablet value; other roles are unchanged from phone.
+      screenTitle: { fontSize: 34, lineHeight: 40, weight: 'bold' },
+      cardTitle: { fontSize: 24, lineHeight: 30, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 22, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 22, weight: 'normal' },
+      caption: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+      eyebrow: { fontSize: 12, lineHeight: 16, weight: 'normal' },
+    },
+  },
+  km: {
+    phone: {
+      screenTitle: { fontSize: 26, lineHeight: 44, weight: 'bold' },
+      cardTitle: { fontSize: 19, lineHeight: 32, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      // Khmer floor: never below 13px.
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+    tablet: {
+      screenTitle: { fontSize: 32, lineHeight: 52, weight: 'bold' },
+      cardTitle: { fontSize: 22, lineHeight: 36, weight: 'bold' },
+      button: { fontSize: 15, lineHeight: 26, weight: 'semi' },
+      body: { fontSize: 14, lineHeight: 26, weight: 'normal' },
+      caption: { fontSize: 13, lineHeight: 22, weight: 'normal' },
+      eyebrow: { fontSize: 13, lineHeight: 20, weight: 'semi' },
+    },
+  },
+};
+
 const radii: ThemeTokens['radii'] = {
   pill: 999,
   card: 16,
@@ -124,6 +170,7 @@ const corporateTokens: ThemeTokens = {
   fonts,
   radii,
   shadows,
+  typeScale,
 };
 
 export default corporateTokens;

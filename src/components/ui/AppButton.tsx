@@ -13,7 +13,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import styled, { useTheme } from 'styled-components/native';
 
-import { useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
+import { useTypeRole } from '@/services';
 
 export type AppButtonVariant =
   | 'primary'
@@ -65,7 +67,7 @@ interface ShapeProps {
 }
 
 const ButtonShape = styled(AnimatedPressable)<ShapeProps>`
-  height: ${p => p.$height}px;
+  min-height: ${p => p.$height}px;
   min-width: ${p => p.$height}px;
   padding-horizontal: ${p => p.$paddingHorizontal}px;
   flex-direction: row;
@@ -91,10 +93,12 @@ const Label = styled.Text<{
   $color: string;
   $fontFamily: string;
   $fontSize: number;
+  $lineHeight: number;
 }>`
   color: ${p => p.$color};
   font-family: ${p => p.$fontFamily};
   font-size: ${p => p.$fontSize}px;
+  line-height: ${p => p.$lineHeight}px;
 `;
 
 interface Palette {
@@ -120,7 +124,15 @@ export default function AppButton({
   testID,
 }: AppButtonProps) {
   const theme = useTheme();
-  const fontFamily = useFont('semi', 'body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // 'button' role (design v2.1 Khmer type scale): 600 weight; en 15/22,
+  // km 15/26. AppButton keeps its own lg/md/sm English sizes (16/14/13 —
+  // pre-existing, out of scope here) but borrows this role's family and
+  // locale-correct leading ratio so Khmer labels get the spec's 1.6–1.7x
+  // line height at every size, not just 'lg'.
+  const buttonRole = useTypeRole('button');
+  const lineHeightRatio = buttonRole.lineHeight / buttonRole.fontSize;
+  const fontFamily = buttonRole.fontFamily;
   const scale = useSharedValue(1);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -176,7 +188,9 @@ export default function AppButton({
   }, [variant, disabled, theme]);
 
   const height = HEIGHTS[size];
-  const fontSize = FONT_SIZES[size];
+  // Khmer floor: never below 13px (all three sizes already clear it).
+  const fontSize = Math.max(FONT_SIZES[size], 13);
+  const lineHeight = Math.round(fontSize * lineHeightRatio);
   const paddingHorizontal = HORIZONTAL_PADDING[size];
 
   const backgroundColor =
@@ -214,7 +228,6 @@ export default function AppButton({
 
   return (
     <ButtonShape
-      testID={testID}
       onPress={isInteractive ? onPress : undefined}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -223,6 +236,7 @@ export default function AppButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !isInteractive, busy: loading }}
+      testID={testID}
       $height={height}
       $paddingHorizontal={paddingHorizontal}
       $backgroundColor={backgroundColor}
@@ -245,7 +259,12 @@ export default function AppButton({
           $color={palette.textColor}
           $fontFamily={fontFamily}
           $fontSize={fontSize}
-          numberOfLines={1}>
+          $lineHeight={lineHeight}
+          // Khmer labels can run long (side-by-side PracticeFooter buttons
+          // especially) — allow a second line to wrap instead of
+          // truncating now that the button has a min-height to grow into.
+          // English keeps its single-line look.
+          numberOfLines={isKhmer ? 2 : 1}>
           {loading ? loadingLabel : label}
         </Label>
       )}

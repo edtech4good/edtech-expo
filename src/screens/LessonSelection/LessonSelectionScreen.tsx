@@ -22,10 +22,12 @@ import {
   useDesign,
   useFont,
   useLesson,
+  useTypeRole,
 } from '@/services';
 import { useAppSelector } from '@/redux';
 import {
   getSelectedCourse,
+  getSelectedLanguage,
   getSelectedLesson,
   getSelectedUnit,
 } from '@/redux/slices';
@@ -65,7 +67,14 @@ export default function LessonSelectionScreen() {
     useActivityProgress(lessonId);
   const chipFontFamily = useFont('normal', 'body');
   const bodyFontFamily = useFont('normal', 'body');
-  const displayFontFamily = useFont('bold', 'display');
+  // design v2.1 Khmer type scale roles.
+  const screenTitleType = useTypeRole('screenTitle');
+  const cardTitleType = useTypeRole('cardTitle');
+  const bodyType = useTypeRole('body');
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Lesson chip: Khmer floor — never below 13px.
+  const chipFontSize = isKhmer ? 13 : 12;
+  const chipLineHeight = isKhmer ? 20 : undefined;
 
   /**
    * `type` is what decides which renderer runs. It has to be a stable key rather
@@ -411,7 +420,8 @@ export default function LessonSelectionScreen() {
                 <Text
                   style={{
                     fontFamily: chipFontFamily,
-                    fontSize: 12,
+                    fontSize: chipFontSize,
+                    lineHeight: chipLineHeight,
                     color: theme.colors.onPrimary,
                   }}>
                   {t('screen.level.lessonChip', { n: lesson.lessonorder ?? '·' })}
@@ -420,8 +430,9 @@ export default function LessonSelectionScreen() {
             </View>
             <Text
               style={{
-                fontFamily: displayFontFamily,
-                fontSize: theme.fontSizes.screenTitle,
+                fontFamily: screenTitleType.fontFamily,
+                fontSize: screenTitleType.fontSize,
+                lineHeight: screenTitleType.lineHeight,
                 color: theme.colors.onBackground,
               }}>
               {lesson.lessonname}
@@ -430,7 +441,8 @@ export default function LessonSelectionScreen() {
               <Text
                 style={{
                   fontFamily: bodyFontFamily,
-                  fontSize: 14,
+                  fontSize: bodyType.fontSize,
+                  lineHeight: bodyType.lineHeight,
                   color: theme.colors.onSurfaceVariant,
                 }}>
                 {metaParts.join(' · ')}
@@ -438,8 +450,9 @@ export default function LessonSelectionScreen() {
             )}
             <Text
               style={{
-                fontFamily: displayFontFamily,
-                fontSize: theme.fontSizes.cardTitle,
+                fontFamily: cardTitleType.fontFamily,
+                fontSize: cardTitleType.fontSize,
+                lineHeight: cardTitleType.lineHeight,
                 color: theme.colors.onBackground,
                 marginTop: 10,
               }}>
@@ -449,8 +462,7 @@ export default function LessonSelectionScreen() {
               {steps.map(step => {
                 const isNext = step.id === nextStep?.id;
                 const status = statusFor(step.id);
-                const unsynced =
-                  step.type !== 'learning' && unsyncedFor(step.id);
+                const unsynced = unsyncedFor(step.id);
                 const ctaLabel = isNext
                   ? status === 'inProgress'
                     ? t('cta.continue')

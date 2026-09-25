@@ -6,6 +6,7 @@ export * from './UnitSlice';
 export * from './LevelSlice';
 export * from './LessonSlice';
 export * from './LessonCacheSlice';
+export * from './LevelStepsSlice';
 export * from './ResultSlice';
 export * from './SelectionSlice';
 export * from './StandardSlice';

@@ -7,6 +7,8 @@ import {
   LayoutScrollView,
   PracticeContent,
 } from '@/components';
+import EyebrowText from '@/components/ui/EyebrowText';
+import ProgressBar from '@/components/ui/ProgressBar';
 import {
   LessonQuiz,
   ModalHandler,
@@ -17,12 +19,26 @@ import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   ActivityProgressActions,
   getProfile,
+  getSelectedLanguage,
   getSelectedLesson,
   getSelectedModule,
 } from '@/redux/slices';
-import { useDesign, useQuiz, useResult, notifyResultQueued } from '@/services';
+import {
+  useDesign,
+  useFont,
+  useNavShell,
+  useQuiz,
+  useResult,
+  notifyResultQueued,
+} from '@/services';
+import { NAV_RAIL_WIDTH } from '@/components/ui/NavRail';
 import { PASS_PERCENTAGE } from '@/constants';
-import { ActivityIndicator, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -40,15 +56,27 @@ import PracticeArrangeImage from '../Practice/Components/ArrangeImage/PracticeAr
 import PracticeDragDrop from '../Practice/Components/DragDrop/PracticeDragDrop';
 import { useTranslation } from 'react-i18next';
 
+// Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
+// for the full rationale; kept identical here so both screens' headers
+// constrain the title the same way.
+const LEFT_SLOT = 64;
+const RIGHT_SLOT = 130;
+const HEADER_SIDE_SLOT = Math.max(LEFT_SLOT, RIGHT_SLOT);
+
 export default function QuizScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
+  const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
+  const { isRail } = useNavShell();
 
   const dispatch = useAppDispatch();
   const { calculateResult } = useResult();
   const selectedModule = useAppSelector(getSelectedModule);
+  const selectedLanguage = useAppSelector(getSelectedLanguage);
+  const isKhmer = selectedLanguage === 'km';
   const selectedLesson = useAppSelector(getSelectedLesson);
   const userId = useAppSelector(getProfile)?.schooluserid ?? null;
   const { fetch, saveResult, questions } = useQuiz(
@@ -82,13 +110,80 @@ export default function QuizScreen() {
   });
 
   useEffect(() => {
+    const quizName = (selectedModule as LessonQuiz)?.lessonquizname;
     navigation.setOptions({
-      ...(isCorporate && (selectedModule as LessonQuiz)?.lessonquizname
-        ? { title: (selectedModule as LessonQuiz).lessonquizname }
-        : {}),
+      ...(isCorporate && quizName ? { title: quizName } : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
+      // Android native-stack (react-native-screens) renders its own stock
+      // back chevron alongside a custom headerLeft unless headerBackVisible
+      // is explicitly turned off — see PracticeScreen.tsx for the full
+      // root cause. Unconditional, same as there.
+      headerBackVisible: false,
+      headerTitleAlign: 'center',
+      // Corporate child app bar (handoff §4, v2.1): centred title wraps to
+      // up to two lines instead of truncating (kids keeps the stock header
+      // untouched), plus a mono "N OF total" eyebrow on the right. The
+      // title is wrapped in a max-width View so it can never grow into the
+      // back button or the counter — see HEADER_SIDE_SLOT above.
+      ...(isCorporate
+        ? {
+            headerTitle: () => (
+              // On the tablet nav rail, the header is narrower than the
+              // window by the rail's fixed width, so subtract it too or the
+              // title's max-width overshoots the header's actual space.
+              <View
+                style={{
+                  maxWidth:
+                    windowWidth -
+                    (isRail ? NAV_RAIL_WIDTH : 0) -
+                    2 * HEADER_SIDE_SLOT,
+                }}>
+                <Text
+                  numberOfLines={isKhmer ? 1 : 2}
+                  ellipsizeMode="tail"
+                  style={{
+                    fontFamily: displayBold,
+                    fontSize: theme.fontSizes.subtitle,
+                    // See PracticeScreen.tsx: Khmer is capped to one line
+                    // (with an end ellipsis) at a taller line-height rather
+                    // than stretched to two, since the native Android
+                    // header height is fixed and two Khmer lines risk
+                    // clipping there.
+                    lineHeight: isKhmer
+                      ? theme.fontSizes.subtitle * 1.65
+                      : undefined,
+                    color: theme.colors.onBackground,
+                    textAlign: 'center',
+                  }}>
+                  {quizName}
+                </Text>
+              </View>
+            ),
+            headerRight: () => (
+              <EyebrowText
+                testID="practice-progress-label"
+                size={theme.fontSizes.eyebrow}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.layouts.pageHorizontalPadding }}>
+                {t('screen.practice.progressLabel', {
+                  i: question + 1,
+                  n: questions.length,
+                })}
+              </EyebrowText>
+            ),
+          }
+        : {}),
     });
-  }, [navigation]);
+  }, [
+    navigation,
+    selectedModule,
+    isCorporate,
+    question,
+    questions.length,
+    windowWidth,
+    isRail,
+    isKhmer,
+  ]);
 
   useEffect(() => {
     if (!selectedModule) return;
@@ -203,6 +298,15 @@ export default function QuizScreen() {
 
   return (
     <LayoutScrollView backgroundColor={theme.colors.background}>
+      {isCorporate && (
+        <ProgressBar
+          testID="practice-progress-track"
+          variant="quiz"
+          progress={
+            questions.length > 0 ? (question + 1) / questions.length : 0
+          }
+        />
+      )}
       <PracticeContent
         ref={practiceRef}
         key={currentQuestion.question.questionnid}
@@ -211,6 +315,9 @@ export default function QuizScreen() {
         maxQuestion={questions.length}
         onSubmit={handleSubmitPress}
         onRetry={handleRetryPress}
+        // Quiz is scored, not retried — no Retry equivalent exists here
+        // (handleRetryPress above is a no-op stub), so hide the pill.
+        hideRetry
       />
       {/* {currentQuestion.question.templatetypeid === 7 && (
         <PracticeDragDrop

@@ -3,7 +3,7 @@ import {
   useConnectivity,
   useDesign,
 } from '@/services';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import OfflineBanner, { BANNER_HEIGHT } from './OfflineBanner';
@@ -34,6 +34,11 @@ import OfflineBanner, { BANNER_HEIGHT } from './OfflineBanner';
  * themselves to the window — Container.tsx, useScreenDimension.ts — can
  * subtract it, the same way they already subtract the bottom tab bar
  * height, instead of clipping content/footers underneath the banner.
+ *
+ * The banner now sizes to its content (OfflineBanner measures itself via
+ * onLayout, e.g. when Khmer copy wraps onto a second line), so the height
+ * published here tracks OfflineBanner's own `onHeightChange` measurement
+ * rather than the constant BANNER_HEIGHT.
  */
 export default function OfflineBannerFrame({
   children,
@@ -46,12 +51,19 @@ export default function OfflineBannerFrame({
   const { isOffline } = useConnectivity();
   const insets = useSafeAreaInsets();
   const topInset = safeAreaTop ? insets.top : 0;
-  const bannerHeight = isCorporate && isOffline ? BANNER_HEIGHT + topInset : 0;
+  const [measuredHeight, setMeasuredHeight] = useState(
+    () => BANNER_HEIGHT + topInset,
+  );
+  const bannerHeight = isCorporate && isOffline ? measuredHeight : 0;
 
   return (
     <View style={{ flex: 1 }}>
       {isCorporate ? (
-        <OfflineBanner visible={isOffline} topInset={topInset} />
+        <OfflineBanner
+          visible={isOffline}
+          topInset={topInset}
+          onHeightChange={setMeasuredHeight}
+        />
       ) : null}
       <OfflineBannerHeightContext.Provider value={bannerHeight}>
         {children}

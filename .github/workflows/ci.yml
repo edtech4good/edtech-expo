@@ -48,6 +48,9 @@ jobs:
       - name: Theme parity
         run: yarn test:themes
 
+      - name: Offline queue rules
+        run: yarn test:queue
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

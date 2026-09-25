@@ -1,4 +1,6 @@
 import { useFont } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import { Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
@@ -30,6 +32,10 @@ export default function CtaPill({
   const theme = useTheme();
   const labelFontFamily = useFont('semi', 'body');
   const isTint = variant === 'tint';
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Khmer floor: never below 13px.
+  const fontSize = isKhmer ? 13 : 12;
+  const lineHeight = isKhmer ? 20 : undefined;
 
   return (
     <View
@@ -49,7 +55,8 @@ export default function CtaPill({
       <Text
         style={{
           fontFamily: labelFontFamily,
-          fontSize: 12,
+          fontSize,
+          lineHeight,
           color: isTint ? theme.colors.primaryDark : theme.colors.onPrimary,
         }}>
         {label}

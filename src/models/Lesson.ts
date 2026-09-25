@@ -163,6 +163,26 @@ export interface LessonActivityProgress {
   quizzes: QuizActivityProgress[];
 }
 
+// GET lesson/level/:levelid/steps — the multi-lesson sibling of
+// lesson/:lessonid/activities/progress (LessonActivityProgress above): same
+// per-item shape (learnings/practices/quizzes), but one entry per lesson in
+// the level, plus lessonorder so structure can be cached without a second
+// lookup. Used to build real per-step dots on Level Detail instead of the
+// `approximateSteps` guess.
+export interface LevelStepsLesson {
+  lessonid: string;
+  lessonorder: number;
+  learnings: LearningActivityProgress[];
+  practices: PracticeActivityProgress[];
+  quizzes: QuizActivityProgress[];
+}
+
+export interface LevelSteps {
+  levelid: string;
+  pass_percentage: number;
+  lessons: LevelStepsLesson[];
+}
+
 export interface Lesson {
   brick_points: number;
   // Server-computed completion, based on the lesson's pass mark (e.g. 80/100

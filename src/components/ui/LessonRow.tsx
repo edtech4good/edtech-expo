@@ -1,4 +1,6 @@
-import { useFont } from '@/services';
+import { useFont, useTypeRole } from '@/services';
+import { useAppSelector } from '@/redux';
+import { getSelectedLanguage } from '@/redux/slices';
 import { GestureResponderEvent, Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -62,6 +64,14 @@ export default function LessonRow({
   const chipFontFamily = useFont('normal', 'body');
   const statusWordFontFamily = useFont('semi', 'body');
   const ctaFontFamily = useFont('bold', 'body');
+  // The row title keeps its own 14px/semi weight (the handoff's "title 600
+  // 14", not the larger 'cardTitle' role) but borrows 'body' for a
+  // locale-correct line height so Khmer gets the spec's 26px leading.
+  const titleLineHeight = useTypeRole('body').lineHeight;
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
+  // Chip/CTA/status micro-labels: Khmer floor — never below 13px.
+  const microFontSize = isKhmer ? 13 : 12;
+  const microLineHeight = isKhmer ? 20 : undefined;
   const { t } = useTranslation();
   const scale = useSharedValue(1);
 
@@ -147,7 +157,8 @@ export default function LessonRow({
             <Text
               style={{
                 fontFamily: chipFontFamily,
-                fontSize: 12,
+                fontSize: microFontSize,
+                lineHeight: microLineHeight,
                 color: theme.colors.onPrimary,
               }}>
               {chipLabel}
@@ -168,7 +179,8 @@ export default function LessonRow({
               <Text
                 style={{
                   fontFamily: ctaFontFamily,
-                  fontSize: 12,
+                  fontSize: microFontSize,
+                  lineHeight: microLineHeight,
                   color: theme.colors.primaryDark,
                 }}>
                 {ctaLabel}
@@ -178,7 +190,8 @@ export default function LessonRow({
             <Text
               style={{
                 fontFamily: statusWordFontFamily,
-                fontSize: 12,
+                fontSize: microFontSize,
+                lineHeight: microLineHeight,
                 color: statusWordColor,
               }}>
               {rowStatusText}
@@ -186,11 +199,10 @@ export default function LessonRow({
           )}
         </View>
         <Text
-          numberOfLines={2}
           style={{
             fontFamily: titleFontFamily,
             fontSize: theme.fontSizes.body,
-            lineHeight: theme.fontSizes.body * 1.35,
+            lineHeight: titleLineHeight,
             color: theme.colors.onSurface,
           }}>
           {title}

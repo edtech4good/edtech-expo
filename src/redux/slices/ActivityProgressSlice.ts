@@ -1,6 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
-import { ActivityStatus, LessonActivityProgress } from '@/models/Lesson';
+import {
+  ActivityStatus,
+  LessonActivityProgress,
+  LevelSteps,
+} from '@/models/Lesson';
 
 const name = 'activityProgress';
 
@@ -66,6 +70,40 @@ function mergeEntry(
   };
 }
 
+// Shared by mergeServer (one lesson) and mergeServerLevel (every lesson in
+// a level, one response object per lesson) — same per-item merge, just a
+// different-shaped source. Mutates `userEntries` in place (called from
+// inside an Immer draft) and returns it for convenience.
+function applyActivitySnapshot(
+  userEntries: Record<string, ActivityProgressEntry>,
+  response: Pick<LessonActivityProgress, 'learnings' | 'practices' | 'quizzes'>,
+): Record<string, ActivityProgressEntry> {
+  response.learnings?.forEach(item => {
+    userEntries[item.lessonlearningid] = mergeEntry(
+      userEntries[item.lessonlearningid],
+      item.status,
+      item.progress_percentage,
+    );
+  });
+  response.practices?.forEach(item => {
+    userEntries[item.lessonpracticeid] = mergeEntry(
+      userEntries[item.lessonpracticeid],
+      item.status,
+      undefined,
+      { questionCount: item.question_count },
+    );
+  });
+  response.quizzes?.forEach(item => {
+    userEntries[item.lessonquizid] = mergeEntry(
+      userEntries[item.lessonquizid],
+      item.status,
+      undefined,
+      { questionCount: item.question_count },
+    );
+  });
+  return userEntries;
+}
+
 export const activityProgressSlice = createSlice({
   name,
   initialState,
@@ -80,32 +118,28 @@ export const activityProgressSlice = createSlice({
       }>,
     ) => {
       const { userId, response } = action.payload;
-      const userEntries = state.byUser[userId] ?? {};
-
-      response.learnings?.forEach(item => {
-        userEntries[item.lessonlearningid] = mergeEntry(
-          userEntries[item.lessonlearningid],
-          item.status,
-          item.progress_percentage,
-        );
+      const userEntries = applyActivitySnapshot(
+        state.byUser[userId] ?? {},
+        response,
+      );
+      state.byUser[userId] = userEntries;
+    },
+    // Sibling of mergeServer for the multi-lesson lesson/level/:id/steps
+    // response (see useLevelSteps): applies the same never-downgrade merge
+    // across every lesson's items in one dispatch, instead of one call per
+    // lesson.
+    mergeServerLevel: (
+      state,
+      action: PayloadAction<{
+        userId: string;
+        response: LevelSteps;
+      }>,
+    ) => {
+      const { userId, response } = action.payload;
+      let userEntries = state.byUser[userId] ?? {};
+      response.lessons?.forEach(lesson => {
+        userEntries = applyActivitySnapshot(userEntries, lesson);
       });
-      response.practices?.forEach(item => {
-        userEntries[item.lessonpracticeid] = mergeEntry(
-          userEntries[item.lessonpracticeid],
-          item.status,
-          undefined,
-          { questionCount: item.question_count },
-        );
-      });
-      response.quizzes?.forEach(item => {
-        userEntries[item.lessonquizid] = mergeEntry(
-          userEntries[item.lessonquizid],
-          item.status,
-          undefined,
-          { questionCount: item.question_count },
-        );
-      });
-
       state.byUser[userId] = userEntries;
     },
     // Optimistic local write (quiz submit, practice submit, learning video

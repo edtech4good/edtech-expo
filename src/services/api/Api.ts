@@ -14,6 +14,7 @@ import {
   LessonResponse,
   LevelIndexResponse,
   LevelResponse,
+  LevelStepsResponse,
   LmsLoginPayload,
   PracticeResult,
   QuizResult,
@@ -164,13 +165,19 @@ const responseTransform: AsyncResponseTransform = async response => {
     const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     (err as any).status = response.status;
     (err as any).problem = response.problem;
-    // rpi-api's error contract currently puts its message under
-    // `errormessage` (not `message`) with no `code`; the open error-contract
-    // PR (#75) adds `code` alongside it. Attach both, when present, so
-    // callers can classify without re-parsing the stringified error and
-    // without caring which shape is live.
+    // The APIs' error body is { error, errormessage, data } (their
+    // GlobalExceptionFilter); `msg` above is almost always axios' generic
+    // "Request failed with status code N". rpi-api's error-contract PR (#75)
+    // adds `code` alongside it. Attach both, when present, so callers can
+    // classify without re-parsing the stringified error:
+    // - `code` / `errormessage`: login's wrong-credentials rule (LoginScreen)
+    // - `serverMessage`: logged when the offline queue skips a poison item
     (err as any).code = _.get(response.data, 'code');
     (err as any).errormessage = _.get(response.data, 'errormessage');
+    const serverMessage = _.get(response.data, 'errormessage');
+    if (typeof serverMessage === 'string') {
+      (err as any).serverMessage = serverMessage;
+    }
     throw err;
   }
 };
@@ -337,6 +344,17 @@ export default class Api {
   > {
     return this.apiSauceInstance.get<LessonActivityProgressResponse>(
       `lesson/${lessonId}/activities/progress`,
+    );
+  }
+
+  // Per-lesson step structure + status for every lesson in a level, in one
+  // call — the level-screen sibling of fetchActivityProgress above. See
+  // src/models/Lesson.ts LevelSteps for the shape.
+  async fetchLevelSteps(
+    levelId: string,
+  ): Promise<ApiResponse<LevelStepsResponse, LevelStepsResponse>> {
+    return this.apiSauceInstance.get<LevelStepsResponse>(
+      `lesson/level/${levelId}/steps`,
     );
   }
 

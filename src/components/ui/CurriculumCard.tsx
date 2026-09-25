@@ -1,4 +1,4 @@
-import { useFont } from '@/services';
+import { useTypeRole } from '@/services';
 import { Image, ImageProps } from 'expo-image';
 import { GestureResponderEvent, Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -40,7 +40,9 @@ export default function CurriculumCard({
   onPress,
 }: CurriculumCardProps) {
   const theme = useTheme();
-  const titleFontFamily = useFont('bold', 'display');
+  // 'cardTitle' role (design v2.1 Khmer type scale): 700 weight; en 20/26
+  // (tablet 24/30), km 19/32 (tablet 22/36).
+  const titleType = useTypeRole('cardTitle');
   const scale = useSharedValue(1);
 
   const hasProgress = typeof progress === 'number';
@@ -128,11 +130,11 @@ export default function CurriculumCard({
       <View style={{ padding: 12 }}>
         {category != null && <Chip label={category} />}
         <Text
-          numberOfLines={2}
           style={{
             marginTop: category != null ? 8 : 0,
-            fontFamily: titleFontFamily,
-            fontSize: theme.fontSizes.cardTitle,
+            fontFamily: titleType.fontFamily,
+            fontSize: titleType.fontSize,
+            lineHeight: titleType.lineHeight,
             color: theme.colors.onSurface,
           }}>
           {title}

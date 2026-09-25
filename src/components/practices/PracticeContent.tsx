@@ -20,7 +20,14 @@ import PracticeArrangeImage from '@/screens/Practice/Components/ArrangeImage/Pra
 
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeContent(
-    { question, currentQuestionIndex, maxQuestion, onRetry, onSubmit },
+    {
+      question,
+      currentQuestionIndex,
+      maxQuestion,
+      onRetry,
+      onSubmit,
+      hideRetry,
+    },
     ref,
   ) {
     useEffect(() => {
@@ -36,6 +43,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -47,6 +55,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -58,6 +67,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -69,6 +79,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -80,6 +91,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -91,6 +103,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -102,6 +115,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -113,6 +127,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -124,6 +139,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -135,6 +151,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -146,6 +163,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -157,6 +175,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -168,6 +187,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -179,6 +199,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />
@@ -190,6 +211,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}
+            hideRetry={hideRetry}
             onSubmit={onSubmit}
             onRetry={onRetry}
           />

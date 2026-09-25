@@ -140,6 +140,7 @@
     "practice": {
       "submitButton": "Submit",
       "retryButton": "Retry",
+      "progressLabel": "{{i}} OF {{n}}",
       "correctTitle": "Congratulations!",
       "correctMessage": "Good job!",
       "correctButton": "Next",

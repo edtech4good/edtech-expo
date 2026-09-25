@@ -18,12 +18,26 @@ interface Props extends ViewProps {
   paddingBottom?: number;
   paddingLeft?: number;
   paddingRight?: number;
+  // Fill the space the parent already gives this Container (via flexbox)
+  // instead of pinning to a pixel height computed from header/tab-bar/inset
+  // hooks. React Navigation already sizes a screen's content slot to
+  // exactly the space between the header and the bottom tab bar, so `fill`
+  // just trusts that instead of re-deriving it — which drifts whenever a
+  // sibling (e.g. the corporate progress track) or the header's own height
+  // changes and the manual math isn't updated to match (root cause of the
+  // Practice/Quiz footer floating with a gap above the tab bar — see
+  // PracticeFooter.tsx and PracticeScreen.tsx). Prefer `fill` over
+  // `containerHeight` in any new usage.
+  fill?: boolean;
 }
 
 const ContainerView = styled.View<Props>`
   width: ${props =>
     props.containerWidth != null ? `${props.containerWidth}px` : '100%'};
-  height: ${props => props.containerHeight}px;
+  ${props =>
+    props.fill
+      ? 'flex: 1; align-self: stretch;'
+      : `height: ${props.containerHeight}px;`}
   background-color: ${props =>
     props.backgroundColor ?? props.theme.colors.background};
   flex-direction: column;
@@ -49,6 +63,7 @@ function Container({
   paddingBottom,
   paddingLeft,
   paddingRight,
+  fill = false,
   style,
 }: Props) {
   const theme = useTheme();
@@ -81,6 +96,7 @@ function Container({
 
   return (
     <ContainerView
+      fill={fill}
       containerHeight={containerHeight ?? resultHeight}
       containerWidth={containerWidth}
       backgroundColor={backgroundColor}

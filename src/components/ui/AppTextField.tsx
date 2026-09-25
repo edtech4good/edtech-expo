@@ -129,10 +129,15 @@ const Container = styled.View`
   align-self: stretch;
 `;
 
-const Label = styled.Text<{ $fontFamily: string; $lineHeight?: number }>`
+const Label = styled.Text<{ $fontFamily: string; $isKhmer: boolean }>`
   font-family: ${p => p.$fontFamily};
   font-size: 13px;
-  ${p => (p.$lineHeight ? `line-height: ${p.$lineHeight}px;` : '')}
+  /* Khmer label spec (v2.1): 13/20 line height (>=1.5x). English keeps its
+     natural leading — omit the declaration rather than emit 'normal', which
+     css-to-react-native turns into the string lineHeight: "normal" and
+     crashes Android (old architecture, RN 0.73) with
+     UnexpectedNativeTypeException. */
+  ${p => (p.$isKhmer ? 'line-height: 20px;' : '')}
   color: ${p => p.theme.colors.onSurfaceVariant};
   margin-bottom: 6px;
 `;
@@ -144,11 +149,14 @@ const Field = styled.View<{
   $borderColor: string;
   $borderWidth: number;
   $paddingHorizontal: number;
+  $isKhmer: boolean;
 }>`
   flex-direction: row;
   align-items: center;
   align-self: stretch;
   min-height: ${p => p.$height}px;
+  /* Khmer's 24px input line height needs room to grow on Android. */
+  ${p => (p.$isKhmer ? 'padding-vertical: 8px;' : '')}
   border-radius: ${p => p.$radius}px;
   background-color: ${p => p.$backgroundColor};
   border-width: ${p => p.$borderWidth}px;
@@ -156,11 +164,21 @@ const Field = styled.View<{
   padding-horizontal: ${p => p.$paddingHorizontal}px;
 `;
 
-const Input = styled.TextInput<{ $fontFamily: string; $color: string }>`
+const Input = styled.TextInput<{
+  $fontFamily: string;
+  $color: string;
+  $isKhmer: boolean;
+}>`
   flex: 1;
   align-self: stretch;
   font-family: ${p => p.$fontFamily};
   font-size: 15px;
+  /* Khmer input spec (v2.1): ~24px line height (>=1.5x fontSize). English
+     keeps its natural leading — omit the declaration rather than emit
+     'normal', which css-to-react-native turns into the string
+     lineHeight: "normal" and crashes Android (old architecture, RN 0.73)
+     with UnexpectedNativeTypeException. */
+  ${p => (p.$isKhmer ? 'line-height: 24px;' : '')}
   color: ${p => p.$color};
 `;
 
@@ -170,14 +188,11 @@ const ErrorRow = styled.View`
   margin-top: 6px;
 `;
 
-const ErrorText = styled.Text<{
-  $fontFamily: string;
-  $fontSize: number;
-  $lineHeight?: number;
-}>`
+const ErrorText = styled.Text<{ $fontFamily: string; $isKhmer: boolean }>`
   font-family: ${p => p.$fontFamily};
-  font-size: ${p => p.$fontSize}px;
-  ${p => (p.$lineHeight ? `line-height: ${p.$lineHeight}px;` : '')}
+  /* Khmer floor: never below 13px (Latin stays at its 12px floor). */
+  font-size: ${p => (p.$isKhmer ? 13 : 12)}px;
+  line-height: ${p => (p.$isKhmer ? 22 : 16)}px;
   color: ${p => p.theme.colors.error};
   margin-left: 4px;
   flex-shrink: 1;
@@ -206,8 +221,7 @@ export default function AppTextField({
   const theme = useTheme();
   const bodyFontFamily = useFont('normal', 'body');
   const labelFontFamily = useFont('semi', 'body');
-  const selectedLanguage = useAppSelector(getSelectedLanguage);
-  const isKhmer = selectedLanguage === 'km';
+  const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const [isFocused, setIsFocused] = useState(false);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
 
@@ -263,7 +277,7 @@ export default function AppTextField({
   return (
     <Container>
       {label && (
-        <Label $fontFamily={labelFontFamily} $lineHeight={isKhmer ? 22 : undefined}>
+        <Label $fontFamily={labelFontFamily} $isKhmer={isKhmer}>
           {label}
         </Label>
       )}
@@ -273,7 +287,8 @@ export default function AppTextField({
         $backgroundColor={backgroundColor}
         $borderColor={borderColor}
         $borderWidth={borderWidth}
-        $paddingHorizontal={paddingHorizontal}>
+        $paddingHorizontal={paddingHorizontal}
+        $isKhmer={isKhmer}>
         {isSearch && (
           <View style={{ marginRight: 8 }}>
             <SearchGlyph color={theme.colors.placeholder} />
@@ -297,6 +312,7 @@ export default function AppTextField({
           onBlur={handleBlur}
           $fontFamily={bodyFontFamily}
           $color={textColor}
+          $isKhmer={isKhmer}
           style={webOutlineStyle}
           accessibilityState={{ disabled }}
         />
@@ -320,10 +336,7 @@ export default function AppTextField({
           <View style={{ marginTop: 4 }}>
             <AlertGlyph color={theme.colors.error} />
           </View>
-          <ErrorText
-            $fontFamily={labelFontFamily}
-            $fontSize={isKhmer ? 13 : 12}
-            $lineHeight={isKhmer ? 22 : undefined}>
+          <ErrorText $fontFamily={labelFontFamily} $isKhmer={isKhmer}>
             {error}
           </ErrorText>
         </ErrorRow>

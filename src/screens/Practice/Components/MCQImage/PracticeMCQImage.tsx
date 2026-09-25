@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useDesign, useScreenDimension } from '@/services';
+import { useDesign } from '@/services';
 import {
   Container,
   Expanded,
@@ -34,6 +34,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       question,
       currentQuestionIndex,
       maxQuestion,
+      hideRetry = false,
       onRetry = () => undefined,
       onSubmit = () => undefined,
     }: PracticeProps,
@@ -41,7 +42,6 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
-    const { unblockHeightWithoutHeader } = useScreenDimension();
 
     useImperativeHandle(
       ref,
@@ -140,12 +140,19 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       }
     };
 
-    const renderQuestionOption = ({ item }: { item: QuestionOption }) => {
+    const renderQuestionOption = ({
+      item,
+      index,
+    }: {
+      item: QuestionOption;
+      index: number;
+    }) => {
       return (
         <MCQImageItem
           option={item}
           isSelected={!_.isEmpty(attempt.selections[item.questionoptionid])}
           isShowingAnswer={isShowingAnswer}
+          index={index}
           onPress={() => handleItemPress(item)}
         />
       );
@@ -155,7 +162,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
 
     return (
       <Container
-        containerHeight={unblockHeightWithoutHeader}
+        fill
         paddingLeft={theme.layouts.large}
         paddingRight={theme.layouts.large}>
         <PracticeHeading
@@ -202,6 +209,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           maxQuestion={maxQuestion}
           onSubmit={handleSubmit}
           onRetry={handleRetryPress}
+          hideRetry={hideRetry}
         />
       </Container>
     );
