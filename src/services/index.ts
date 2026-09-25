@@ -20,6 +20,7 @@ export { default as useActivityProgress } from './hooks/useActivityProgress';
 export { default as useLesson } from './hooks/useLesson';
 export { default as useLevel } from './hooks/useLevel';
 export { default as useLevelHeader } from './hooks/useLevelHeader';
+export { default as useLevelSteps } from './hooks/useLevelSteps';
 export { default as useScreenDimension } from './hooks/useScreenDimension';
 export { default as useSubject } from './hooks/useSubject';
 export { default as useUnit } from './hooks/useUnit';

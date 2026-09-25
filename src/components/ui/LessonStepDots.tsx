@@ -50,7 +50,9 @@ const STEP_I18N_KEYS: Record<keyof LessonStepDotsProps['steps'], string> = {
   quiz: 'screen.lesson.quizTitle',
 };
 
-function toStepInfo(input: StepInput): Required<StepInfo> {
+// Exported for reuse by LevelSelectionScreen, which needs the same
+// bare-state/full-StepInfo normalization to derive a lesson's status.
+export function toStepInfo(input: StepInput): Required<StepInfo> {
   if (typeof input === 'string') return { state: input, done: 0, total: 1 };
   return { state: input.state, done: input.done ?? 0, total: input.total ?? 1 };
 }
@@ -65,19 +67,21 @@ export function describeSteps(
   steps: LessonStepDotsProps['steps'],
   t: ReturnType<typeof useTranslation>['t'],
 ): string {
-  return STEP_ORDER.map(step => {
-    const stepName = t(STEP_I18N_KEYS[step]);
-    const { state, done, total } = toStepInfo(steps[step]);
-    const stateText = t(`screen.level.stepState.${state}`);
-    return total > 1
-      ? t('screen.level.stepFormatWithCount', {
-          step: stepName,
-          state: stateText,
-          done,
-          total,
-        })
-      : t('screen.level.stepFormat', { step: stepName, state: stateText });
-  }).join(', ');
+  return STEP_ORDER.filter(step => toStepInfo(steps[step]).total > 0)
+    .map(step => {
+      const stepName = t(STEP_I18N_KEYS[step]);
+      const { state, done, total } = toStepInfo(steps[step]);
+      const stateText = t(`screen.level.stepState.${state}`);
+      return total > 1
+        ? t('screen.level.stepFormatWithCount', {
+            step: stepName,
+            state: stateText,
+            done,
+            total,
+          })
+        : t('screen.level.stepFormat', { step: stepName, state: stateText });
+    })
+    .join(', ');
 }
 
 export default function LessonStepDots({
@@ -137,7 +141,7 @@ export default function LessonStepDots({
         gap: 12,
         flexWrap: 'wrap',
       }}>
-      {STEP_ORDER.map(step => {
+      {STEP_ORDER.filter(step => toStepInfo(steps[step]).total > 0).map(step => {
         const { state, done, total } = toStepInfo(steps[step]);
         const label =
           total > 1

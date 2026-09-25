@@ -19,7 +19,11 @@ export {
 } from './CircularProgress';
 export {
   default as LessonStepDots,
+  toStepInfo,
   type LessonStepDotsProps,
+  type StepInfo,
+  type StepState,
+  type StepInput,
 } from './LessonStepDots';
 export { default as QuizOption, type QuizOptionProps } from './QuizOption';
 export { default as Toast, type ToastProps } from './Toast';
