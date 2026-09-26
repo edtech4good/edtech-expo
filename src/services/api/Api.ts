@@ -156,15 +156,25 @@ const responseTransform: AsyncResponseTransform = async response => {
     }
     const fromAxios = (response.originalError as Error | undefined)?.message;
     const fromBody = _.get(response.data, 'message');
+    // No English fallback here for 429 (or anything else) — apisauce's
+    // axios message ("Request failed with status code 429") would always
+    // win over it anyway, and it can't be localized from this layer.
+    // Callers that need a friendly, localized message classify on
+    // `status`/`code`/`errormessage` below instead (see LoginScreen's 429
+    // handling and useAuth's errorStatus/errorCode/errorMessage).
     const msg = fromAxios || fromBody || problem || 'Request failed';
     const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     (err as any).status = response.status;
     (err as any).problem = response.problem;
     // The APIs' error body is { error, errormessage, data } (their
     // GlobalExceptionFilter); `msg` above is almost always axios' generic
-    // "Request failed with status code N", so expose the server's own
-    // message separately. Used by the offline queue to tell a permanent
-    // learning-progress 400 from a transient one (pendingResultsQueue.ts).
+    // "Request failed with status code N". rpi-api's error-contract PR (#75)
+    // adds `code` alongside it. Attach both, when present, so callers can
+    // classify without re-parsing the stringified error:
+    // - `code` / `errormessage`: login's wrong-credentials rule (LoginScreen)
+    // - `serverMessage`: logged when the offline queue skips a poison item
+    (err as any).code = _.get(response.data, 'code');
+    (err as any).errormessage = _.get(response.data, 'errormessage');
     const serverMessage = _.get(response.data, 'errormessage');
     if (typeof serverMessage === 'string') {
       (err as any).serverMessage = serverMessage;

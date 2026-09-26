@@ -35,12 +35,21 @@
   "screen": {
     "login": {
       "loginButton": "Login",
+      "signInButton": "Sign In",
       "sessionExpiredMessage": "Please login again.",
       "welcomeMessage": "Welcome to EdTech Learn!",
       "welcomeTitle": "Welcome back",
-      "welcomeSubtitle": "Sign in to continue learning.",
-      "emailPlaceholder": "Email",
-      "passwordPlaceholder": "Password"
+      "welcomeSubtitle": "Sign in with the username your organisation gave you.",
+      "usernameLabel": "Username",
+      "passwordLabel": "Password",
+      "usernameRequiredError": "Enter your username",
+      "passwordRequiredError": "Enter your password",
+      "invalidCredentialsError": "Username or password is incorrect. Try again.",
+      "tooManyAttemptsError": "Too many attempts. Wait a minute and try again.",
+      "languageSwitchLabel": "Language",
+      "englishOption": "English",
+      "khmerOption": "ភាសាខ្មែរ",
+      "poweredByFooter": "POWERED BY EDTECH FOR GOOD"
     },
     "profile": {
       "header": "Profile",
