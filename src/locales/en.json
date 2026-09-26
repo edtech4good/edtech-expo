@@ -26,6 +26,7 @@
     "teacherStudentList": "Students",
     "teacherDownload": "Download",
     "logout": "Logout",
+    "library": "Library",
     "profileAndSettings": "Profile & settings"
   },
   "offline": {
@@ -170,6 +171,12 @@
       "failedTitle": "Try Again!!",
       "scoreLabel": "Score",
       "finishButton": "Finish"
+    },
+    "library": {
+      "header": "Library",
+      "lessonsProgress": "{{done}} of {{total}} lessons",
+      "empty": "No courses yet",
+      "unavailable": "Your library will appear once you're online."
     }
   },
   "cta": {

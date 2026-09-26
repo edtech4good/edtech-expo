@@ -22,6 +22,7 @@ import {
   activityProgressSlice,
   lessonCacheSlice,
   levelStepsSlice,
+  librarySlice,
   progressSlice,
 } from './slices';
 import { setAccessToken } from '@/services/secureToken';
@@ -64,6 +65,7 @@ const persistConfig = {
     activityProgressSlice.name,
     lessonCacheSlice.name,
     levelStepsSlice.name,
+    librarySlice.name,
     progressSlice.name,
   ],
   transforms: [authTransform],

@@ -1,8 +1,8 @@
 import { Images as EdtechImages } from '@/assets_edtech';
 import { Images } from '@/assets';
 import {
+  corporateStudentNavItems,
   progressNavItem,
-  studentNavItems,
   teacherNavItems,
   NavItem,
 } from '@/constants';
@@ -41,6 +41,7 @@ const ICON_SIZE = 24;
 // is the 'home' screen).
 const ROUTE_NAME_BY_ITEM_ROUTE: Record<string, string> = {
   '/home/subjects': 'home',
+  '/library': 'library/index',
   '/progress': 'progress/index',
   '/profile': 'profile/index',
   'teacher/dashboard': 'teacher/dashboard',
@@ -113,13 +114,18 @@ export default function NavRail(props: DrawerContentComponentProps) {
 
   const activeRouteName = props.state.routes[props.state.index]?.name;
 
-  // Students: Home, My progress, Profile. My progress is corporate-only, so
-  // it is spliced in here rather than added to studentNavItems (which the
-  // kids CustomDrawer also renders).
+  // Students: Home, Library, My progress, Profile. Library and My progress
+  // are corporate-only, so they come from corporateStudentNavItems and are
+  // spliced in here rather than added to studentNavItems (which the kids
+  // CustomDrawer also renders).
   const navItems = useMemo(
     () =>
       profile?.schooluserrole === 4
-        ? [studentNavItems[0], progressNavItem, ...studentNavItems.slice(1)]
+        ? [
+            ...corporateStudentNavItems.filter(item => item.route !== '/profile'),
+            progressNavItem,
+            ...corporateStudentNavItems.filter(item => item.route === '/profile'),
+          ]
         : teacherNavItems,
     [profile],
   );

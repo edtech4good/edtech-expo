@@ -26,6 +26,7 @@
     "teacherStudentList": "រាយបញ្ចីរសិស្ស",
     "teacherDownload": "ទាញទិន្នន័យ",
     "logout": "ចាកចេញ",
+    "library": "បណ្ណាល័យ",
     "profileAndSettings": "ប្រវត្តិរូប និងការកំណត់"
   },
   "offline": {
@@ -164,6 +165,12 @@
       "failedTitle": "សូមព្យាយាមម្តងទៀត!!",
       "scoreLabel": "ពិន្ទុ",
       "finishButton": "រួចរាល់"
+    },
+    "library": {
+      "header": "បណ្ណាល័យ",
+      "lessonsProgress": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
+      "empty": "មិនទាន់មានវគ្គសិក្សានៅឡើយ",
+      "unavailable": "បណ្ណាល័យរបស់អ្នកនឹងបង្ហាញនៅពេលអ្នកភ្ជាប់អ៊ីនធឺណិត។"
     }
   },
   "cta": {

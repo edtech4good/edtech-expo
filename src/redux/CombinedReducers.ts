@@ -4,6 +4,7 @@ import {
   courseSlice,
   lessonSlice,
   levelSlice,
+  librarySlice,
   selectionSlice,
   settingSlice,
   standardSlice,
@@ -32,5 +33,6 @@ export const combinedReducers = combineReducers({
   [pendingResultSlice.name]: pendingResultSlice.reducer,
   [activityProgressSlice.name]: activityProgressSlice.reducer,
   [levelStepsSlice.name]: levelStepsSlice.reducer,
+  [librarySlice.name]: librarySlice.reducer,
   [progressSlice.name]: progressSlice.reducer,
 });

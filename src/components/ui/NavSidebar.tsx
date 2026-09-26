@@ -1,7 +1,7 @@
 import { Images } from '@/assets';
 import {
+  corporateStudentNavItems,
   progressNavItem,
-  studentNavItems,
   teacherNavItems,
   NavItem,
 } from '@/constants';
@@ -33,9 +33,9 @@ const AVATAR_SIZE = 40;
  * top, labelled items (active = primaryLight tint, blue label/icon), profile
  * block pinned to the bottom.
  *
- * The mock also shows Library, Awards and a bell; those features don't exist
- * yet, so they are omitted. Students get Home and My progress (the
- * /progress route); Profile is reached from the profile block pinned to the
+ * The mock also shows Awards and a bell; those features don't exist yet, so
+ * they are omitted. Students get Home, Library (the /library route) and My
+ * progress (the /progress route); Profile is reached from the profile block pinned to the
  * bottom rather than a list item. Teachers get teacherNavItems. Logout,
  * which the rail offers as an icon, is kept as a labelled item above the
  * profile block so nothing the rail offers is lost.
@@ -46,6 +46,7 @@ const AVATAR_SIZE = 40;
 // active).
 const ROUTE_NAME_BY_ITEM_ROUTE: Record<string, string> = {
   '/home/subjects': 'home',
+  '/library': 'library/index',
   '/progress': 'progress/index',
   '/profile': 'profile/index',
   'teacher/dashboard': 'teacher/dashboard',
@@ -268,7 +269,9 @@ export default function NavSidebar(props: DrawerContentComponentProps) {
     () =>
       isStudent
         ? [
-            ...studentNavItems.filter(item => item.route !== '/profile'),
+            ...corporateStudentNavItems.filter(
+              item => item.route !== '/profile',
+            ),
             progressNavItem,
           ]
         : teacherNavItems,
