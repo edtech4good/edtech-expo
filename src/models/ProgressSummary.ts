@@ -12,6 +12,29 @@ export interface RawProgressSummaryCurriculumLevel {
   lessonsTotal: number | string | null;
 }
 
+// Raw per-level row inside a grade's `levels` array (additive: grades/levels
+// breakdown for the Courses/Units grade & level cards). `completed` is a
+// literal boolean from the API, not derived here.
+export interface RawProgressSummaryGradeLevel {
+  levelid: string;
+  levelname: string;
+  lessonsCompleted: number | string | null;
+  lessonsTotal: number | string | null;
+  completed: boolean;
+}
+
+// Raw per-grade row inside a curriculum's `grades` array. Additive on the
+// summary response -- an older API build simply omits `grades`.
+export interface RawProgressSummaryGrade {
+  gradeid: string;
+  gradename: string;
+  lessonsCompleted: number | string | null;
+  lessonsTotal: number | string | null;
+  levelsCompleted: number | string | null;
+  levelsTotal: number | string | null;
+  levels: RawProgressSummaryGradeLevel[];
+}
+
 export interface RawProgressSummaryCurriculum {
   curriculumid: string;
   curriculumname: string;
@@ -20,6 +43,9 @@ export interface RawProgressSummaryCurriculum {
   levelsCompleted: number | string | null;
   levelsTotal: number | string | null;
   currentLevel: RawProgressSummaryCurriculumLevel | null;
+  // Additive: absent entirely on an older API response. Normalised to `[]`
+  // rather than crashing or falling back to the old points-based number.
+  grades?: RawProgressSummaryGrade[] | null;
 }
 
 export interface RawProgressSummaryTotals {
@@ -45,6 +71,30 @@ export interface CurriculumProgressLevel {
   percent: number;
 }
 
+// Normalised per-level row inside a grade's `levels` array.
+export interface LevelProgressRow {
+  levelId: string;
+  name: string;
+  lessonsCompleted: number;
+  lessonsTotal: number;
+  /** lessons, 0-100 integer */
+  percent: number;
+  completed: boolean;
+}
+
+// Normalised per-grade row inside a curriculum's `grades` array.
+export interface GradeProgressRow {
+  gradeId: string;
+  name: string;
+  lessonsCompleted: number;
+  lessonsTotal: number;
+  levelsCompleted: number;
+  levelsTotal: number;
+  /** lessons, 0-100 integer */
+  percent: number;
+  levels: LevelProgressRow[];
+}
+
 // Normalised per-curriculum progress row.
 export interface CurriculumProgressRow {
   curriculumId: string;
@@ -56,6 +106,10 @@ export interface CurriculumProgressRow {
   /** lessons, 0-100 integer */
   percent: number;
   currentLevel: CurriculumProgressLevel | null;
+  // Additive; `[]` when the API response predates the grades/levels
+  // breakdown, or when a persisted (pre-upgrade) summary is rehydrated
+  // without it.
+  grades: GradeProgressRow[];
 }
 
 // Normalised, persistable snapshot of a student's progress across every
@@ -107,6 +161,36 @@ function normaliseCurrentLevel(
   };
 }
 
+function normaliseGradeLevel(
+  raw: RawProgressSummaryGradeLevel,
+): LevelProgressRow {
+  const lessonsCompleted = toNumber(raw.lessonsCompleted);
+  const lessonsTotal = toNumber(raw.lessonsTotal);
+  return {
+    levelId: raw.levelid,
+    name: raw.levelname,
+    lessonsCompleted,
+    lessonsTotal,
+    percent: toPercent(lessonsCompleted, lessonsTotal),
+    completed: !!raw.completed,
+  };
+}
+
+function normaliseGrade(raw: RawProgressSummaryGrade): GradeProgressRow {
+  const lessonsCompleted = toNumber(raw.lessonsCompleted);
+  const lessonsTotal = toNumber(raw.lessonsTotal);
+  return {
+    gradeId: raw.gradeid,
+    name: raw.gradename,
+    lessonsCompleted,
+    lessonsTotal,
+    levelsCompleted: toNumber(raw.levelsCompleted),
+    levelsTotal: toNumber(raw.levelsTotal),
+    percent: toPercent(lessonsCompleted, lessonsTotal),
+    levels: (raw.levels ?? []).map(normaliseGradeLevel),
+  };
+}
+
 // Pure normaliser: raw rpi-api response -> ProgressSummary. `fetchedAt`
 // defaults to Date.now() but is accepted as a param so callers/tests can
 // pin it.
@@ -128,6 +212,10 @@ export function normaliseProgressSummary(
         levelsTotal: toNumber(curriculum.levelsTotal),
         percent: toPercent(lessonsCompleted, lessonsTotal),
         currentLevel: normaliseCurrentLevel(curriculum.currentLevel),
+        // Older API responses omit `grades` entirely; normalise to `[]` so
+        // cards show no pill/bar instead of crashing or falling back to the
+        // old points-based number.
+        grades: (curriculum.grades ?? []).map(normaliseGrade),
       };
     },
   );
@@ -148,4 +236,33 @@ export function normaliseProgressSummary(
     levelsPercent: toPercent(levelsCompleted, levelsTotal),
     fetchedAt,
   };
+}
+
+
+// Lookup helpers -- find a grade/level row by id across every curriculum, so
+// screens don't each duplicate the search loop. A persisted summary from
+// before this change may have curricula without a `grades` array at all
+// (despite the type), so both tolerate a missing array defensively.
+export function findGradeProgress(
+  curricula: CurriculumProgressRow[] | undefined | null,
+  gradeId: string,
+): GradeProgressRow | undefined {
+  for (const curriculum of curricula ?? []) {
+    const grade = (curriculum.grades ?? []).find(g => g.gradeId === gradeId);
+    if (grade) return grade;
+  }
+  return undefined;
+}
+
+export function findLevelProgress(
+  curricula: CurriculumProgressRow[] | undefined | null,
+  levelId: string,
+): LevelProgressRow | undefined {
+  for (const curriculum of curricula ?? []) {
+    for (const grade of curriculum.grades ?? []) {
+      const level = (grade.levels ?? []).find(l => l.levelId === levelId);
+      if (level) return level;
+    }
+  }
+  return undefined;
 }
