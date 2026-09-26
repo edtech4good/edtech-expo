@@ -3,7 +3,6 @@ import {
   DefaultBackgroundImage,
   EyebrowText,
   LayoutScrollView,
-  normalizeProgressFraction,
   ProgressCard,
   SizedBox,
 } from '@/components';
@@ -11,12 +10,19 @@ import { useEffect } from 'react';
 import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { ActivityIndicator, View, Text } from 'react-native';
-import { useBreakpoint, useDesign, useFont, useLibrary } from '@/services';
+import {
+  useBreakpoint,
+  useDesign,
+  useFont,
+  useLibrary,
+  useProgressSummary,
+} from '@/services';
 import { router, useNavigation } from 'expo-router';
 import { useAppDispatch } from '@/redux';
 import { SelectionActions } from '@/redux/slices';
 import {
   Course,
+  findLevelProgress,
   LibraryCurriculum,
   LibraryGrade,
   LibraryLevel,
@@ -100,6 +106,14 @@ export default function LibraryScreen() {
   const dispatch = useAppDispatch();
   const { curricula, isLoading, isEmpty, isUnavailable, hasEntry } =
     useLibrary();
+  // Same source of truth as Home/Courses/Units for the % pill and bar
+  // (lessons completed / all lessons in the level, matched by levelid) --
+  // see ce67345. No summary row means no pill/bar; the library endpoint's
+  // own points-based `level.progress` is no longer shown for the corporate
+  // card. The "N OF M LESSONS" meta line stays as-is (computed below from
+  // the library endpoint's own lesson counts, not from `level.progress`).
+  const { summary } = useProgressSummary();
+  const progressCurricula = summary?.curricula ?? [];
 
   const columns =
     useBreakpoint({ mobile: 1, phablet: 2, tablet: 3, desktop: 3 }) ?? 3;
@@ -143,13 +157,17 @@ export default function LibraryScreen() {
     grade: LibraryGrade,
     level: LibraryLevel,
   ) => {
-    const progressPercent = Math.round(
-      (normalizeProgressFraction(level.progress) ?? 0) * 100,
-    );
+    const levelProgress = findLevelProgress(progressCurricula, level.levelid);
+    const progress =
+      levelProgress === undefined ? undefined : levelProgress.percent / 100;
     const lessonsProgress = t('screen.library.lessonsProgress', {
       done: level.number_completed_lessons,
       total: level.number_lessons,
     });
+    const accessibilityLabel =
+      progress === undefined
+        ? `${level.levelname}, ${lessonsProgress}`
+        : `${level.levelname}, ${levelProgress!.percent}%, ${lessonsProgress}`;
     return (
       <View
         key={level.levelid}
@@ -162,11 +180,11 @@ export default function LibraryScreen() {
           testID={`library-level-${level.levelid}`}
           title={level.levelname}
           meta={level.leveldescription ?? undefined}
-          progress={normalizeProgressFraction(level.progress)}
+          progress={progress}
           footer={lessonsProgress}
           metaNumberOfLines={2}
           onPress={() => handleLevelPress(curriculum, grade, level)}
-          accessibilityLabel={`${level.levelname}, ${progressPercent}%, ${lessonsProgress}`}
+          accessibilityLabel={accessibilityLabel}
         />
       </View>
     );
