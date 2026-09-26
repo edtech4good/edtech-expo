@@ -1,6 +1,11 @@
 import { Images as EdtechImages } from '@/assets_edtech';
 import { Images } from '@/assets';
-import { corporateStudentNavItems, teacherNavItems, NavItem } from '@/constants';
+import {
+  corporateStudentNavItems,
+  progressNavItem,
+  teacherNavItems,
+  NavItem,
+} from '@/constants';
 import { useAuth, useSyncContent } from '@/services';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
@@ -37,6 +42,7 @@ const ICON_SIZE = 24;
 const ROUTE_NAME_BY_ITEM_ROUTE: Record<string, string> = {
   '/home/subjects': 'home',
   '/library': 'library/index',
+  '/progress': 'progress/index',
   '/profile': 'profile/index',
   'teacher/dashboard': 'teacher/dashboard',
   // 'teacher/score' has no backing route in this navigator today — it never
@@ -108,9 +114,19 @@ export default function NavRail(props: DrawerContentComponentProps) {
 
   const activeRouteName = props.state.routes[props.state.index]?.name;
 
+  // Students: Home, Library, My progress, Profile. Library and My progress
+  // are corporate-only, so they come from corporateStudentNavItems and are
+  // spliced in here rather than added to studentNavItems (which the kids
+  // CustomDrawer also renders).
   const navItems = useMemo(
     () =>
-      profile?.schooluserrole === 4 ? corporateStudentNavItems : teacherNavItems,
+      profile?.schooluserrole === 4
+        ? [
+            ...corporateStudentNavItems.filter(item => item.route !== '/profile'),
+            progressNavItem,
+            ...corporateStudentNavItems.filter(item => item.route === '/profile'),
+          ]
+        : teacherNavItems,
     [profile],
   );
 

@@ -14,6 +14,8 @@ import {
   LessonRow,
   LessonStepDots,
   LessonStepRow,
+  NAV_SIDEBAR_WIDTH,
+  NavSidebarView,
   OfflineBanner,
   ProgressBar,
   QuizOption,
@@ -22,8 +24,12 @@ import {
 } from '@/components/ui';
 import type { QuizOptionState } from '@/components/ui/QuizOption';
 import type { ToastType } from '@/components/ui/Toast';
+import type { ProgressSummary } from '@/models';
+import MyProgressSection, {
+  myProgressVariantFor,
+} from '@/screens/MyProgress/Components/MyProgressSection';
 import { ReactNode, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
 
@@ -36,8 +42,24 @@ import { useTheme } from 'styled-components/native';
 function PlusIcon({ color }: { color: string }) {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Line x1={12} y1={5} x2={12} y2={19} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={5} y1={12} x2={19} y2={12} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line
+        x1={12}
+        y1={5}
+        x2={12}
+        y2={19}
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <Line
+        x1={5}
+        y1={12}
+        x2={19}
+        y2={12}
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
     </Svg>
   );
 }
@@ -81,6 +103,116 @@ function Row({ children }: { children: ReactNode }) {
   );
 }
 
+// "My progress" fixtures (the real screen needs a logged-in student).
+// Curriculum-total semantics: each row's %, bar and "N of M lessons" are
+// lessons completed across the whole curriculum (row.lessonsCompleted /
+// row.lessonsTotal); the meta names the current grade and level only. The
+// currentLevel lesson counts are deliberately different (2 of 4) so a
+// regression back to level-scoped numbers shows up in the screenshot.
+// Partial: 18 of 44 lessons (41%), 1 of 12 levels. c3 is finished
+// (currentLevel null) -> "All levels complete"; c4 has no lessons yet
+// (lessonsTotal 0) -> the count is omitted. Phone needs "View all" past c2.
+const MP_FIXTURE_PARTIAL: ProgressSummary = {
+  studentId: 'gallery',
+  lessonsCompleted: 18,
+  lessonsTotal: 44,
+  levelsCompleted: 1,
+  levelsTotal: 12,
+  overallPercent: 41,
+  levelsPercent: 8,
+  fetchedAt: Date.UTC(2026, 8, 24, 7, 30),
+  curricula: [
+    {
+      curriculumId: 'c1',
+      name: 'Water Conservation in Building Design',
+      lessonsCompleted: 10,
+      lessonsTotal: 16,
+      levelsCompleted: 0,
+      levelsTotal: 4,
+      percent: 63,
+      currentLevel: {
+        levelId: 'l12',
+        levelName: 'Level 2',
+        gradeName: 'Grade 7',
+        lessonsCompleted: 2,
+        lessonsTotal: 4,
+        percent: 50,
+      },
+    },
+    {
+      curriculumId: 'c2',
+      name: 'On-Site Renewable Energy Systems',
+      lessonsCompleted: 0,
+      lessonsTotal: 20,
+      levelsCompleted: 0,
+      levelsTotal: 6,
+      percent: 0,
+      currentLevel: {
+        levelId: 'l21',
+        levelName: 'Level 1',
+        gradeName: 'Grade 8',
+        lessonsCompleted: 0,
+        lessonsTotal: 5,
+        percent: 0,
+      },
+    },
+    {
+      curriculumId: 'c3',
+      name: 'Designing for Greater Efficiency',
+      lessonsCompleted: 8,
+      lessonsTotal: 8,
+      levelsCompleted: 1,
+      levelsTotal: 1,
+      percent: 100,
+      currentLevel: null,
+    },
+    {
+      curriculumId: 'c4',
+      name: 'Introduction to Green Building',
+      lessonsCompleted: 0,
+      lessonsTotal: 0,
+      levelsCompleted: 0,
+      levelsTotal: 1,
+      percent: 0,
+      currentLevel: {
+        levelId: 'l41',
+        levelName: 'Level 1',
+        gradeName: 'Grade 9',
+        lessonsCompleted: 0,
+        lessonsTotal: 0,
+        percent: 0,
+      },
+    },
+  ],
+};
+
+// Nothing started: ring 0%, stats "0 of N".
+const MP_FIXTURE_EMPTY: ProgressSummary = {
+  studentId: 'gallery-empty',
+  lessonsCompleted: 0,
+  lessonsTotal: 36,
+  levelsCompleted: 0,
+  levelsTotal: 10,
+  overallPercent: 0,
+  levelsPercent: 0,
+  fetchedAt: Date.UTC(2026, 8, 24, 7, 30),
+  curricula: MP_FIXTURE_PARTIAL.curricula.slice(0, 2).map(row => ({
+    ...row,
+    lessonsCompleted: 0,
+    percent: 0,
+    currentLevel: row.currentLevel
+      ? {
+          ...row.currentLevel,
+          levelName: 'Level 1',
+          lessonsCompleted: 0,
+          percent: 0,
+        }
+      : null,
+  })),
+};
+
+const MP_NAME = 'Camila Gutiérrez';
+
 function Swatch({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View style={{ alignItems: 'flex-start', gap: 6 }}>
@@ -92,6 +224,12 @@ function Swatch({ label, children }: { label: string; children: ReactNode }) {
 
 export default function ComponentGalleryScreen() {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const mpVariant = myProgressVariantFor(width, theme.breakpoints);
+  const [sidebarActive, setSidebarActive] = useState<'home' | 'progress'>(
+    'progress',
+  );
+  const [mpRetries, setMpRetries] = useState(0);
 
   // Selection controls — one "off" and one "on" instance per component,
   // each independently toggleable.
@@ -132,6 +270,129 @@ export default function ComponentGalleryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+        <Section title={`My progress · partial (${mpVariant})`}>
+          <View testID="mp-partial">
+            <MyProgressSection
+              summary={MP_FIXTURE_PARTIAL}
+              loading={false}
+              error={false}
+              isStale={false}
+              onRetry={() => {}}
+              studentName={MP_NAME}
+              variant={mpVariant}
+            />
+          </View>
+        </Section>
+
+        <Section title="My progress · nothing started">
+          <MyProgressSection
+            summary={MP_FIXTURE_EMPTY}
+            loading={false}
+            error={false}
+            isStale={false}
+            onRetry={() => {}}
+            studentName={MP_NAME}
+            variant={mpVariant}
+          />
+        </Section>
+
+        <Section title="My progress · loading (no cache)">
+          <MyProgressSection
+            loading
+            error={false}
+            isStale={false}
+            onRetry={() => {}}
+            studentName={MP_NAME}
+            variant={mpVariant}
+          />
+        </Section>
+
+        <Section
+          title={`My progress · error (no cache) · retries ${mpRetries}`}>
+          <MyProgressSection
+            loading={false}
+            error
+            isStale={false}
+            onRetry={() => setMpRetries(n => n + 1)}
+            studentName={MP_NAME}
+            variant={mpVariant}
+          />
+        </Section>
+
+        <Section title="My progress · stale cache">
+          <MyProgressSection
+            summary={MP_FIXTURE_PARTIAL}
+            loading={false}
+            error
+            isStale
+            onRetry={() => {}}
+            studentName={MP_NAME}
+            variant={mpVariant}
+          />
+        </Section>
+
+        <Section
+          title={`Sidebar (desktop shell) · ${
+            sidebarActive === 'progress' ? 'My progress' : 'Home'
+          } active`}>
+          <View
+            testID="nav-sidebar"
+            style={{
+              flexDirection: 'row',
+              height: 860,
+              borderWidth: 1,
+              borderColor: theme.colors.divider,
+              borderRadius: theme.radii.card,
+              overflow: 'hidden',
+              backgroundColor: theme.colors.background,
+            }}>
+            {/* Fixed-width wrapper: NavSidebarView fills its parent's height
+                with flex: 1, which in this row would also grow its width. */}
+            <View style={{ width: NAV_SIDEBAR_WIDTH }}>
+              <NavSidebarView
+                items={[
+                  {
+                    key: 'home',
+                    label: 'Home',
+                    icon: 'home',
+                    active: sidebarActive === 'home',
+                    onPress: () => setSidebarActive('home'),
+                  },
+                  {
+                    key: 'progress',
+                    label: 'My progress',
+                    icon: 'insert-chart-outlined',
+                    active: sidebarActive === 'progress',
+                    onPress: () => setSidebarActive('progress'),
+                  },
+                ]}
+                studentName={MP_NAME}
+                // In the app the profile block opens Profile, not My progress.
+                onProfilePress={() => {}}
+                onLogout={() => {}}
+              />
+            </View>
+            {mpVariant === 'desktop' && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  paddingVertical: 36,
+                  paddingHorizontal: 48,
+                }}>
+                <MyProgressSection
+                  summary={MP_FIXTURE_PARTIAL}
+                  loading={false}
+                  error={false}
+                  isStale={false}
+                  onRetry={() => {}}
+                  studentName={MP_NAME}
+                  variant="desktop"
+                />
+              </ScrollView>
+            )}
+          </View>
+        </Section>
+
         <Section title="Buttons">
           <Row>
             <Swatch label="primary lg / rest">
@@ -144,7 +405,11 @@ export default function ComponentGalleryScreen() {
               <AppButton label="Continue" disabled />
             </Swatch>
             <Swatch label="secondary lg">
-              <AppButton variant="secondary" label="Cancel" onPress={() => {}} />
+              <AppButton
+                variant="secondary"
+                label="Cancel"
+                onPress={() => {}}
+              />
             </Swatch>
             <Swatch label="tertiary md">
               <AppButton
@@ -519,9 +784,18 @@ export default function ComponentGalleryScreen() {
           </EyebrowText>
           <View style={{ gap: 10, marginBottom: 16 }}>
             {(
-              ['default', 'selected', 'correct', 'incorrect'] as QuizOptionState[]
+              [
+                'default',
+                'selected',
+                'correct',
+                'incorrect',
+              ] as QuizOptionState[]
             ).map(state => (
-              <QuizOption key={state} label={`Option — ${state}`} state={state} />
+              <QuizOption
+                key={state}
+                label={`Option — ${state}`}
+                state={state}
+              />
             ))}
           </View>
           <EyebrowText size={9} style={{ marginBottom: 10 }}>
@@ -654,7 +928,9 @@ export default function ComponentGalleryScreen() {
             <AppButton
               variant="secondary"
               size="sm"
-              label={offlineVisible ? 'Hide offline banner' : 'Show offline banner'}
+              label={
+                offlineVisible ? 'Hide offline banner' : 'Show offline banner'
+              }
               onPress={() => setOfflineVisible(v => !v)}
             />
           </Row>
@@ -671,7 +947,9 @@ export default function ComponentGalleryScreen() {
             : 'Could not save progress.'
         }
         actionLabel={toastType === 'error' ? 'Retry' : undefined}
-        onAction={toastType === 'error' ? () => setToastVisible(false) : undefined}
+        onAction={
+          toastType === 'error' ? () => setToastVisible(false) : undefined
+        }
         onDismiss={() => setToastVisible(false)}
       />
     </View>

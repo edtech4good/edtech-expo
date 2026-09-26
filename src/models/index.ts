@@ -14,3 +14,4 @@ export * from './Animation';
 export * from './Standard';
 export * from './Curriculum';
 export * from './Library';
+export * from './ProgressSummary';

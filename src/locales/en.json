@@ -26,7 +26,8 @@
     "teacherStudentList": "Students",
     "teacherDownload": "Download",
     "logout": "Logout",
-    "library": "Library"
+    "library": "Library",
+    "profileAndSettings": "Profile & settings"
   },
   "offline": {
     "banner": "You are offline. Downloaded lessons are still available."
@@ -61,6 +62,26 @@
       "numOfStudentLabel": "No. of Student",
       "avgTimeSpentLabel": "Average Time Spent",
       "lastLoginLabel": "Last Login"
+    },
+    "myProgress": {
+      "title": "My progress",
+      "greeting": "Hello",
+      "greetingWithName": "Hello, {{name}}",
+      "overall": "overall",
+      "lessonsCompleted": "Lessons completed",
+      "levelsCompleted": "Levels completed",
+      "ofTotal": "of {{total}}",
+      "byCurriculum": "By curriculum",
+      "viewAll": "View all",
+      "showLess": "Show less",
+      "lessonsOfTotal": "{{done}} of {{total}} lessons",
+      "allLevelsComplete": "All levels complete",
+      "noCurricula": "You are not enrolled in any curriculum yet.",
+      "loading": "Loading your progress",
+      "loadError": "We couldn't load your progress.",
+      "retry": "Retry",
+      "staleNote": "Showing saved progress from {{date}}",
+      "overallProgress": "Overall progress"
     },
     "subject": {
       "header": "Subjects",

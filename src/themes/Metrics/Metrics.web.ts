@@ -14,6 +14,11 @@ const breakpoints = {
   MOBILE_MAX_WIDTH: 767,
   MOBILE_MIN_WIDTH: 430,
   DEFAULT_MIN_WIDTH: 768,
+  // Corporate desktop nav shell (labelled sidebar, useNavShell 'sidebar')
+  // and the desktop My progress layout. Deliberately separate from
+  // DESKTOP_MIN_WIDTH (1281, useBreakpoint's grid buckets) so adding the
+  // sidebar doesn't shift any existing grid at exactly 1280dp.
+  SIDEBAR_MIN_WIDTH: 1280,
 
   DRAWER_LABEL_MIN_WIDTH: 110,
   DRAWER_ROW_MIN_WIDTH: 142,

@@ -50,10 +50,10 @@ const colors: ThemeTokens['colors'] = {
   lessonChip: '#2AAADD',
   videoAccent: '#00A2E3',
 
-  // Card Color. Index semantics are fixed by StudentDashboardScreen.tsx:
-  // 0 = Bridge / generic dashboard tint (periwinkle), 1 = Grade 7 (lavender,
-  // orange accent), 2 = Grade 8 (blue), 3 = Grade 9 (violet); 4 and 5 are
-  // extra rotation slots (teal, slate). Tints come from the EdTech for Good
+  // Card Color. Exposed as DashboardCardColors (constants/CardColor.ts) and
+  // cycled by index (index % length) by the kids card screens — no index
+  // has a fixed grade meaning: 0 periwinkle, 1 lavender (orange accent),
+  // 2 blue, 3 violet, 4 teal, 5 slate. Tints come from the EdTech for Good
   // design system (docs/design/design-system/tokens/colors.css in the
   // workspace): cream/peach/rose were retired in favour of these cool tints.
   cards: [

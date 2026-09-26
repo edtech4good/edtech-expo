@@ -27,6 +27,7 @@ declare module 'styled-components/native' {
       MOBILE_MAX_WIDTH: number;
       MOBILE_MIN_WIDTH: number;
       DEFAULT_MIN_WIDTH: number;
+      SIDEBAR_MIN_WIDTH: number;
       DRAWER_LABEL_MIN_WIDTH: number;
       DRAWER_ROW_MIN_WIDTH: number;
     };

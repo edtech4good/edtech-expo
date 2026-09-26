@@ -48,6 +48,16 @@ export const corporateStudentNavItems: Array<NavItem> = [
   },
 ];
 
+// My progress (its own route, app/(app)/(home)/progress). Corporate shells
+// only — the tablet NavRail and desktop NavSidebar add it after Home; the
+// kids CustomDrawer never shows it (its style was never designed).
+export const progressNavItem: NavItem = {
+  title: 'screen.myProgress.title',
+  icon: 'insert-chart-outlined',
+  url: '/progress',
+  route: '/progress',
+};
+
 export const teacherNavItems: Array<NavItem> = [
   {
     title: 'drawer.teacherDashboard',

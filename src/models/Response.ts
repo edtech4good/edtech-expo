@@ -1,5 +1,6 @@
 import { Course } from './Course';
 import { Curriculum } from './Curriculum';
+import { RawProgressSummary } from './ProgressSummary';
 import {
   Lesson,
   LessonActivityProgress,
@@ -100,6 +101,11 @@ export interface LibraryResponse {
     generated_at: string;
     curricula: LibraryCurriculum[];
   };
+  error: boolean;
+}
+
+export interface ProgressSummaryResponse {
+  data: RawProgressSummary;
   error: boolean;
 }
 

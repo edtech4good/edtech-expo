@@ -3,7 +3,9 @@ import {
   DrawerButton,
   LogoutButton,
   NavRail,
+  NavSidebar,
   NAV_RAIL_WIDTH,
+  NAV_SIDEBAR_WIDTH,
 } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
@@ -31,9 +33,22 @@ export default function Home() {
   const theme = useTheme();
   const { t } = useTranslation();
   const font = useFont('semi');
-  const { isRail, isTabs } = useNavShell();
+  const { isRail, isSidebar, isTabs, hasPermanentNav } = useNavShell();
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const insets = useSafeAreaInsets();
+
+  // Phone tab headers (My progress and Profile share one look).
+  const phoneHeaderOptions = {
+    headerShown: true,
+    headerTitleAlign: 'center' as const,
+    headerTitleStyle: {
+      fontFamily: font,
+      fontSize: theme.fontSizes.h4,
+      color: theme.colors.customHeaderTitle,
+    },
+    headerShadowVisible: false,
+    headerStyle: { backgroundColor: theme.colors.customAppBar },
+  };
 
   // Rendering <Tabs> vs <Drawer> below is a component-type swap in this
   // layout's own output (not inside a shared child slot like drawerContent),
@@ -93,18 +108,26 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
+          name="progress/index"
+          options={{
+            ...phoneHeaderOptions,
+            title: t('screen.myProgress.title'),
+            tabBarTestID: 'tab-progress',
+            tabBarAccessibilityLabel: t('screen.myProgress.title'),
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons
+                name="insert-chart-outlined"
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
-            headerShown: true,
+            ...phoneHeaderOptions,
             title: t('drawer.profile'),
-            headerTitleAlign: 'center',
-            headerTitleStyle: {
-              fontFamily: font,
-              fontSize: theme.fontSizes.h4,
-              color: theme.colors.customHeaderTitle,
-            },
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: theme.colors.customAppBar },
             headerRight: () => <LogoutButton />,
             headerRightContainerStyle: {
               paddingRight: theme.layouts.medium,
@@ -116,7 +139,6 @@ export default function Home() {
             ),
           }}
         />
-        <Tabs.Screen name="dashboard/index" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -125,14 +147,21 @@ export default function Home() {
     <Drawer
       // Swap elements, not components, in drawerContent: expo-router/drawer
       // calls this as a plain function inside the Drawer's own fiber, and
-      // NavRail calls one more hook (useSafeAreaInsets) than CustomDrawer.
+      // NavRail / NavSidebar call different hooks than CustomDrawer.
       // Passing `isRail ? NavRail : CustomDrawer` would swap which function
-      // fills that hook slot without remounting, which is a hook-order
-      // violation the moment isRail flips at runtime (dev theme toggle, web
-      // resize across the 768 breakpoint). Rendering elements lets React
-      // key off the differing component type and remount cleanly instead.
+      // fills those hook slots without remounting, which is a hook-order
+      // violation the moment the shell flips at runtime (dev theme toggle,
+      // web resize across the 768 or 1280 breakpoint). Rendering elements
+      // lets React key off the differing component type and remount cleanly
+      // instead.
       drawerContent={props =>
-        isRail ? <NavRail {...props} /> : <CustomDrawer {...props} />
+        isSidebar ? (
+          <NavSidebar {...props} />
+        ) : isRail ? (
+          <NavRail {...props} />
+        ) : (
+          <CustomDrawer {...props} />
+        )
       }
       initialRouteName="profile/index"
       screenOptions={{
@@ -142,13 +171,13 @@ export default function Home() {
           fontSize: theme.fontSizes.h4,
           color: theme.colors.customHeaderTitle,
         },
-        drawerPosition: isRail ? 'left' : 'right',
+        drawerPosition: hasPermanentNav ? 'left' : 'right',
         headerLeft: () => null,
-        ...(isRail
+        ...(hasPermanentNav
           ? {
               drawerType: 'permanent' as const,
               drawerStyle: {
-                width: NAV_RAIL_WIDTH,
+                width: isSidebar ? NAV_SIDEBAR_WIDTH : NAV_RAIL_WIDTH,
                 borderRightWidth: 0,
                 backgroundColor: theme.colors.surface,
               },
@@ -162,40 +191,45 @@ export default function Home() {
       />
       <Drawer.Screen
         name="library/index"
-        // headerShown: false only for the corporate rail — LibraryScreen
-        // renders its own "Library" title there, and the rail itself is the
-        // permanent nav. The kids theme reaches this same Drawer branch
-        // (see useNavShell: isDrawer is the "neither rail nor tabs" case)
-        // but has no rail and no nav entry point to Library today — a kids
-        // learner who still lands here (e.g. a stale deep link) previously
-        // got a headerless dead end with no way back except an edge-swipe
-        // on the drawer. Give kids the same real header (with a DrawerButton
-        // to reopen the drawer) every other kids screen in this navigator
-        // gets, instead of hiding it just for this one route.
+        // headerShown: false only for the corporate permanent nav (rail or
+        // sidebar) — LibraryScreen renders its own "Library" title there, and
+        // the rail/sidebar itself is the permanent nav. The kids theme
+        // reaches this same Drawer branch (see useNavShell: isDrawer is the
+        // "neither rail, sidebar nor tabs" case) but has no nav entry point
+        // to Library today — a kids learner who still lands here (e.g. a
+        // stale deep link) previously got a headerless dead end with no way
+        // back except an edge-swipe on the drawer. Give kids the same real
+        // header (with a DrawerButton to reopen the drawer) every other kids
+        // screen in this navigator gets, instead of hiding it just for this
+        // one route.
         options={{
-          headerShown: !isRail,
-          headerRight: isRail ? undefined : () => <DrawerButton />,
+          headerShown: !hasPermanentNav,
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
           title: t('drawer.library'),
         }}
       />
       <Drawer.Screen
-        name="profile/index"
+        name="progress/index"
         options={{
-          headerRight: isRail ? undefined : () => <DrawerButton />,
+          // Rail and sidebar: My progress carries its own large title, so no
+          // header bar (design v2 tablet and desktop mocks have none). The
+          // kids drawer has no entry for this route.
+          headerShown: !hasPermanentNav,
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
-          title: t('drawer.profile'),
+          title: t('screen.myProgress.title'),
         }}
       />
       <Drawer.Screen
-        name="dashboard/index"
+        name="profile/index"
         options={{
-          headerRight: isRail ? undefined : () => <DrawerButton />,
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
-          title: 'Dashboard',
+          title: t('drawer.profile'),
         }}
       />
     </Drawer>
