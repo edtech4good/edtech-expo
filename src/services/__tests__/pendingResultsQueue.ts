@@ -16,6 +16,7 @@ import {
   enqueuePendingItem,
   isFlushableBy,
   MIN_POISON_AGE_MS,
+  reconnectFlushAction,
   shouldDropPoison,
   type PendingResultItem,
 } from '../pendingResultsQueue';
@@ -227,6 +228,127 @@ check('flush sends own and legacy (null-owner) items only', () => {
   assert.equal(isFlushableBy(learning('a', 'L1', progress(1, false, T0), 'u1'), 'u1'), true);
   assert.equal(isFlushableBy(learning('a', 'L1', progress(1, false, T0), null), 'u1'), true);
   assert.equal(isFlushableBy(learning('a', 'L1', progress(1, false, T0), 'u2'), 'u1'), false);
+});
+
+// --- Reconnect flush (app/(app)/_layout.tsx) -----------------------------
+// Replays timestamped connectivity reports through reconnectFlushAction the
+// way the layout effect applies it (one debounced timer), and returns the
+// times at which a flush fired. `queued` sets the queue length from then on.
+// A flush empties the queue only if the network is really up when it runs
+// (`networkUp`, default: the last report said so) — offline it stops and
+// keeps everything (classifyFlushError -> 'stop').
+type Report =
+  | { t: number; isConnected: boolean | null }
+  | { t: number; queued: number };
+const RECONNECT_DELAY = 2000;
+function flushTimes(
+  reports: Report[],
+  networkUp?: (t: number) => boolean,
+): number[] {
+  let timerAt: number | undefined;
+  let queued = 0;
+  let lastSaidOnline = true;
+  const fired: number[] = [];
+  const fire = (t: number) => {
+    fired.push(t);
+    if (networkUp ? networkUp(t) : lastSaidOnline) queued = 0;
+  };
+  for (const r of reports) {
+    if (timerAt !== undefined && timerAt <= r.t) {
+      fire(timerAt);
+      timerAt = undefined;
+    }
+    if ('queued' in r) {
+      queued = r.queued;
+      continue;
+    }
+    lastSaidOnline = r.isConnected !== false;
+    const action = reconnectFlushAction({
+      isConnected: r.isConnected,
+      flushScheduled: timerAt !== undefined,
+      hasPendingItems: queued > 0,
+    });
+    if (action === 'cancel') timerAt = undefined;
+    if (action === 'schedule') timerAt = r.t + RECONNECT_DELAY;
+  }
+  if (timerAt !== undefined) fire(timerAt);
+  return fired;
+}
+
+// The sequence observed on web (Chromium, Playwright setOffline) on
+// 25 Sep 2026, ms from mount. netinfo never sees the window go offline, and
+// its reachability probe failing offline re-emits its stale
+// isConnected: true (State._handleInternetReachabilityUpdate).
+const MOUNT: Report[] = [
+  { t: 0, isConnected: true }, // netinfo initial delivery
+  { t: 40, isConnected: true }, // netinfo reachability -> true
+];
+const WENT_OFFLINE = 1570; // window 'offline'
+const STALE_NETINFO = 5030; // netinfo: isConnected true, reachable false
+const BACK_ONLINE = 8680; // window 'online'
+const NETINFO_REACHABLE = 10050; // netinfo: isConnected true, reachable true
+const webNetworkUp = (t: number) => t < WENT_OFFLINE || t >= BACK_ONLINE;
+const flushedAfterReconnect = (times: number[]) =>
+  times.some(t => t >= BACK_ONLINE);
+
+check('web: stale netinfo "connected" while offline does not mask the real reconnect (queued after the stale event, as observed)', () => {
+  const times = flushTimes([
+    ...MOUNT,
+    { t: WENT_OFFLINE, isConnected: false },
+    { t: STALE_NETINFO, isConnected: true },
+    { t: 7600, queued: 1 }, // video report queued, its POST failed offline
+    { t: BACK_ONLINE, isConnected: true },
+    { t: NETINFO_REACHABLE, isConnected: true },
+    { t: 60000, isConnected: true },
+  ], webNetworkUp);
+  assert.ok(flushedAfterReconnect(times), `flushes at ${times}`);
+});
+
+check('web: an item queued before the stale event still flushes after the real reconnect', () => {
+  const times = flushTimes([
+    ...MOUNT,
+    { t: WENT_OFFLINE, isConnected: false },
+    { t: 3000, queued: 1 },
+    { t: STALE_NETINFO, isConnected: true }, // schedules a flush that runs offline and stops
+    { t: BACK_ONLINE, isConnected: true },
+    { t: NETINFO_REACHABLE, isConnected: true },
+    { t: 60000, isConnected: true },
+  ], webNetworkUp);
+  assert.ok(flushedAfterReconnect(times), `flushes at ${times}`);
+});
+
+check('reconnect: going offline cancels a pending flush; duplicate online reports neither cancel nor restart it', () => {
+  const times = flushTimes([
+    { t: 0, queued: 1 },
+    { t: 100, isConnected: false },
+    { t: 1000, isConnected: true }, // flap up...
+    { t: 1500, isConnected: false }, // ...and down before the 2 s settle
+    { t: 5000, isConnected: true }, // window 'online'
+    { t: 5100, isConnected: true }, // netinfo reports the same reconnect
+    { t: 6500, isConnected: true }, // and again (reachability)
+    { t: 60000, isConnected: true },
+  ]);
+  assert.deepEqual(times, [7000]);
+});
+
+check('reconnect: nothing queued -> no flush; unknown (null) counts as online', () => {
+  assert.deepEqual(
+    flushTimes([
+      { t: 0, isConnected: false },
+      { t: 1000, isConnected: true },
+      { t: 60000, isConnected: true },
+    ]),
+    [],
+  );
+  assert.deepEqual(
+    flushTimes([
+      { t: 0, queued: 2 },
+      { t: 10, isConnected: false },
+      { t: 1000, isConnected: null },
+      { t: 60000, isConnected: true },
+    ]),
+    [3000],
+  );
 });
 
 console.log(`pendingResultsQueue: ${passed} checks passed`);
