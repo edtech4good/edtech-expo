@@ -130,6 +130,7 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
       levelsCompleted: 0,
       levelsTotal: 4,
       percent: 63,
+      grades: [],
       currentLevel: {
         levelId: 'l12',
         levelName: 'Level 2',
@@ -147,6 +148,7 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
       levelsCompleted: 0,
       levelsTotal: 6,
       percent: 0,
+      grades: [],
       currentLevel: {
         levelId: 'l21',
         levelName: 'Level 1',
@@ -164,6 +166,7 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
       levelsCompleted: 1,
       levelsTotal: 1,
       percent: 100,
+      grades: [],
       currentLevel: null,
     },
     {
@@ -174,6 +177,7 @@ const MP_FIXTURE_PARTIAL: ProgressSummary = {
       levelsCompleted: 0,
       levelsTotal: 1,
       percent: 0,
+      grades: [],
       currentLevel: {
         levelId: 'l41',
         levelName: 'Level 1',
