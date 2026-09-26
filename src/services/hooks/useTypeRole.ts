@@ -35,17 +35,18 @@ export interface TypeRoleResult {
  * font family via useFont, so callers get one object with everything a
  * <Text> needs: `{ fontFamily, fontSize, lineHeight }`.
  *
- * Tablet promotion reuses useNavShell's `isRail` (corporate at
- * `theme.breakpoints.DEFAULT_MIN_WIDTH` or wider) — the same signal the app
- * already uses to distinguish phone vs. tablet layout elsewhere. Non-rail
- * (kids, or corporate below that width) always resolves the phone scale.
+ * Tablet promotion reuses useNavShell's `hasPermanentNav` (corporate at
+ * `theme.breakpoints.DEFAULT_MIN_WIDTH` or wider — the rail, or the desktop
+ * sidebar, which keeps the tablet scale) — the same signal the app already
+ * uses to distinguish phone vs. tablet layout elsewhere. Everything else
+ * (kids, or corporate below that width) resolves the phone scale.
  */
 export default function useTypeRole(role: TypeScaleRole): TypeRoleResult {
   const theme = useTheme();
   const selectedLanguage = useAppSelector(getSelectedLanguage);
-  const { isRail } = useNavShell();
+  const { hasPermanentNav } = useNavShell();
 
-  const formFactor: 'phone' | 'tablet' = isRail ? 'tablet' : 'phone';
+  const formFactor: 'phone' | 'tablet' = hasPermanentNav ? 'tablet' : 'phone';
   // `selectedLanguage` comes back typed `any` (RootState is inferred from a
   // reducer typed `state: any`), so without an explicit narrowing step here
   // `theme.typeScale[selectedLanguage]` indexes with `any` and TS can't catch

@@ -25,7 +25,8 @@
     "teacherTestScore": "ពិន្ទុសិស្ស",
     "teacherStudentList": "រាយបញ្ចីរសិស្ស",
     "teacherDownload": "ទាញទិន្នន័យ",
-    "logout": "ចាកចេញ"
+    "logout": "ចាកចេញ",
+    "profileAndSettings": "ប្រវត្តិរូប និងការកំណត់"
   },
   "offline": {
     "banner": "អ្នកកំពុងនៅក្រៅបណ្ដាញ។ មេរៀនដែលបានទាញយកនៅតែអាចប្រើបាន។"
@@ -59,6 +60,26 @@
       "numOfStudentLabel": "ចំនួនសិស្ស",
       "avgTimeSpentLabel": "ពេលវេលាប្រើប្រាស់ជាមធ្យម",
       "lastLoginLabel": "ការចូលចុងក្រោយ"
+    },
+    "myProgress": {
+      "title": "វឌ្ឍនភាពរបស់ខ្ញុំ",
+      "greeting": "សួស្តី",
+      "greetingWithName": "សួស្តី {{name}}",
+      "overall": "សរុប",
+      "lessonsCompleted": "មេរៀនដែលបានបញ្ចប់",
+      "levelsCompleted": "កម្រិតដែលបានបញ្ចប់",
+      "ofTotal": "ក្នុងចំណោម {{total}}",
+      "byCurriculum": "តាមកម្មវិធីសិក្សា",
+      "viewAll": "មើលទាំងអស់",
+      "showLess": "បង្ហាញតិចជាងនេះ",
+      "lessonsOfTotal": "មេរៀន {{done}} ក្នុងចំណោម {{total}}",
+      "allLevelsComplete": "បានបញ្ចប់គ្រប់កម្រិតហើយ",
+      "noCurricula": "អ្នកមិនទាន់បានចុះឈ្មោះក្នុងកម្មវិធីសិក្សាណាមួយនៅឡើយទេ។",
+      "loading": "កំពុងផ្ទុកវឌ្ឍនភាពរបស់អ្នក",
+      "loadError": "មិនអាចផ្ទុកវឌ្ឍនភាពរបស់អ្នកបានទេ។",
+      "retry": "ព្យាយាមម្តងទៀត",
+      "staleNote": "កំពុងបង្ហាញវឌ្ឍនភាពដែលបានរក្សាទុកពី {{date}}",
+      "overallProgress": "វឌ្ឍនភាពសរុប"
     },
     "subject": {
       "header": "មុខវិជ្ជា",

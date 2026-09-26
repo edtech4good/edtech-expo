@@ -32,6 +32,7 @@ import {
   notifyResultQueued,
 } from '@/services';
 import { NAV_RAIL_WIDTH } from '@/components/ui/NavRail';
+import { NAV_SIDEBAR_WIDTH } from '@/components/ui/NavSidebar';
 import { PASS_PERCENTAGE } from '@/constants';
 import {
   ActivityIndicator,
@@ -70,7 +71,7 @@ export default function QuizScreen() {
   const displayBold = useFont('bold', 'display');
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
-  const { isRail } = useNavShell();
+  const { isRail, isSidebar } = useNavShell();
 
   const dispatch = useAppDispatch();
   const { calculateResult } = useResult();
@@ -128,14 +129,18 @@ export default function QuizScreen() {
       ...(isCorporate
         ? {
             headerTitle: () => (
-              // On the tablet nav rail, the header is narrower than the
-              // window by the rail's fixed width, so subtract it too or the
+              // On the tablet nav rail (or desktop sidebar), the header is
+              // narrower than the window by that nav's fixed width, so subtract it too or the
               // title's max-width overshoots the header's actual space.
               <View
                 style={{
                   maxWidth:
                     windowWidth -
-                    (isRail ? NAV_RAIL_WIDTH : 0) -
+                    (isSidebar
+                      ? NAV_SIDEBAR_WIDTH
+                      : isRail
+                      ? NAV_RAIL_WIDTH
+                      : 0) -
                     2 * HEADER_SIDE_SLOT,
                 }}>
                 <Text
@@ -182,6 +187,7 @@ export default function QuizScreen() {
     questions.length,
     windowWidth,
     isRail,
+    isSidebar,
     isKhmer,
   ]);
 
