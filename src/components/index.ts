@@ -8,6 +8,7 @@ export { default as Divider } from './layouts/Divider';
 export { default as Expanded } from './layouts/Expanded';
 export { default as ExpandedWithLayout } from './layouts/ExpandedWithLayout';
 export { default as ChildImage } from './ChildImage';
+export { default as ProgressRing } from './ProgressRing';
 export { default as LayoutScrollView } from './layouts/LayoutScrollView';
 export { default as Row } from './layouts/Row';
 export { default as SizedBox } from './layouts/SizedBox';

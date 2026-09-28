@@ -12,3 +12,5 @@ export * from './SelectionSlice';
 export * from './StandardSlice';
 export * from './PendingResultSlice';
 export * from './ActivityProgressSlice';
+export * from './LibrarySlice';
+export * from './ProgressSlice';

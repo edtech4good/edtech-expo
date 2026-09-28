@@ -2,7 +2,9 @@ import { BackButton, DrawerButton, LearnerBackButton } from '@/components';
 import { useAppSelector } from '@/redux';
 import { getResourcePath } from '@/redux/slices';
 import { useDesign, useFont, useNavShell, useSetting } from '@/services';
-import { Stack } from 'expo-router';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import type { RouteProp, ParamListBase } from '@react-navigation/native';
+import { Stack, router } from 'expo-router';
 import _ from 'lodash';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -95,33 +97,94 @@ export default function HomeStack() {
       />
       <Stack.Screen
         name="levels"
-        options={{
-          title: t('screen.level.header'),
-          ...learnerBackFor('/home/units'),
-          // Corporate Level Detail (handoff §3, amended 26 Sep): no title
-          // text in the bar, but the back icon is the app's standard
-          // Material arrow — same as everywhere else. Kids keeps the stock
-          // centered title + Material back arrow untouched.
-          ...(isCorporate
-            ? {
-                headerTitle: () => null,
-                ...(Platform.OS !== 'web'
-                  ? {
-                      headerLeft: ({ canGoBack }) =>
-                        canGoBack ? <BackButton /> : null,
-                    }
-                  : {
-                      // Web's learnerBackFor above skips headerLeft for
-                      // corporate, which left the Material arrow instead of
-                      // this screen's chevron. Use the same reload-fallback
-                      // back button.
-                      headerLeft: () => (
-                        <LearnerBackButton fallback="/home/units" />
-                      ),
-                    }),
-              }
-            : {}),
-        }}
+        // expo-router's Screen typing declares `options` as a plain object
+        // (NativeStackNavigationOptions), but at runtime it forwards a
+        // function form straight through to the same underlying
+        // react-navigation Screen, which does support `options` as a
+        // function of `route`/`navigation` — see
+        // node_modules/expo-router/build/useScreens.js. Cast to bridge that
+        // typing gap without changing behavior.
+        options={(({ route }: { route: RouteProp<ParamListBase, string> }) => {
+          // Library isn't part of this drill-down Stack, so a level opened
+          // from it (LibraryScreen's `from: 'library'` param) has no
+          // back-stack entry pointing at Library — this stack's normal back
+          // handling (native default / web's LearnerBackButton fallback
+          // below) would instead pop to /home/units, the drill-down's
+          // parent, or — once the learner has actually browsed Subjects →
+          // Courses → Units — silently back into that history instead of
+          // Library, since LearnerBackButton only falls back when
+          // canGoBack() is false. So when opened `from: 'library'`,
+          // override the header back button with one that unconditionally
+          // navigates to /library — never router.back() — regardless of
+          // what's on this stack underneath, and disable the swipe-back
+          // gesture so it can't sneak past this override (LevelSelection-
+          // Screen's `beforeRemove` listener covers hardware back /
+          // swipe-back attempts that do get through). A normal drill-down
+          // visit (no `from` param) keeps #93/#94's existing options
+          // untouched.
+          const fromLibrary = route.params
+            ? (route.params as { from?: string }).from === 'library'
+            : false;
+          if (fromLibrary) {
+            // Corporate: same title-less bar treatment as the rest of Level
+            // Detail (handoff §3, amended 26 Sep), but back navigates to
+            // Library instead of the drill-down stack. Kids keeps the
+            // original Library back-button treatment (titled bar, standard
+            // BackButton to /library) untouched.
+            return isCorporate
+              ? {
+                  headerTitle: () => null,
+                  gestureEnabled: false,
+                  headerLeft: () => (
+                    <BackButton onPress={() => router.navigate('/library')} />
+                  ),
+                }
+              : {
+                  title: t('screen.level.header'),
+                  gestureEnabled: false,
+                  headerLeft: () => (
+                    <BackButton onPress={() => router.navigate('/library')} />
+                  ),
+                };
+          }
+          return {
+            title: t('screen.level.header'),
+            ...learnerBackFor('/home/units'),
+            // Corporate Level Detail (handoff §3, amended 26 Sep): no title
+            // text in the bar, but the back icon is the app's standard
+            // Material arrow — same as everywhere else. Kids keeps the stock
+            // centered title + Material back arrow untouched.
+            ...(isCorporate
+              ? {
+                  headerTitle: () => null,
+                  ...(Platform.OS !== 'web'
+                    ? {
+                        // Explicitly typed: unlike the plain-object `options`
+                        // on the other Stack.Screens, this object is built
+                        // inside a function whose return value is cast with
+                        // `as unknown as NativeStackNavigationOptions` at the
+                        // end, so it loses the contextual typing that would
+                        // otherwise infer `canGoBack` from
+                        // NativeStackNavigationOptions.
+                        headerLeft: ({
+                          canGoBack,
+                        }: {
+                          canGoBack?: boolean;
+                        }) => (canGoBack ? <BackButton /> : null),
+                      }
+                    : {
+                        // Web's learnerBackFor above skips headerLeft for
+                        // corporate, which left the Material arrow instead of
+                        // this screen's chevron. Use the same reload-fallback
+                        // back button.
+                        headerLeft: () => (
+                          <LearnerBackButton fallback="/home/units" />
+                        ),
+                      }),
+                }
+              : {}),
+          };
+        }) as unknown as NativeStackNavigationOptions}
       />
       <Stack.Screen
         name="lessons/index"

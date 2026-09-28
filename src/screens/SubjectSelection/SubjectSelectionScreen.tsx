@@ -5,7 +5,6 @@ import {
   DefaultBackgroundImage,
   EyebrowText,
   LayoutScrollView,
-  normalizeProgressFraction,
   SizedBox,
 } from '@/components';
 import { router, useNavigation } from 'expo-router';
@@ -17,12 +16,52 @@ import {
   useAuth,
   useBreakpoint,
   useDesign,
+  useProgressSummary,
   useTypeRole,
 } from '@/services';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useSubject } from '@/services';
-import { Subject } from '@/models';
+import { CurriculumProgressRow, Subject } from '@/models';
 import { useTranslation } from 'react-i18next';
+
+// Corporate curricula grid. Each card's % pill and bar come from the same
+// progress summary as My progress (lessons completed / all lessons in the
+// curriculum), matched by curriculumid. No summary row (not loaded yet, or
+// not enrolled) means no pill and no bar; the server's points-based
+// `subject.progress` is no longer shown. Its own component so the summary
+// fetch only runs on the corporate branch.
+function CorporateSubjectGrid({
+  subjects,
+  onPress,
+}: {
+  subjects: Subject[];
+  onPress: (subject: Subject) => void;
+}) {
+  const { summary } = useProgressSummary();
+  const curricula: CurriculumProgressRow[] = summary?.curricula ?? [];
+  const percentByCurriculum = new Map<string, number>(
+    curricula.map(row => [String(row.curriculumId), row.percent]),
+  );
+
+  return (
+    <CorporateCardGrid
+      items={subjects.map(subject => {
+        const remoteUrl = getRemoteResourceUrl(
+          `curriculum-${subject.curriculumid}.jpg`,
+        );
+        const percent = percentByCurriculum.get(String(subject.curriculumid));
+        return {
+          key: subject.curriculumid,
+          title: subject.curriculumname,
+          meta: subject.curriculumdescription,
+          progress: percent === undefined ? undefined : percent / 100,
+          imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+          onPress: () => onPress(subject),
+        };
+      })}
+    />
+  );
+}
 
 export default function CourseSelectionScreen() {
   const theme = useTheme();
@@ -116,20 +155,9 @@ export default function CourseSelectionScreen() {
               placeholder={t('screen.subject.searchPlaceholder')}
             />
           </View>
-          <CorporateCardGrid
-            items={visibleSubjects.map(subject => {
-              const remoteUrl = getRemoteResourceUrl(
-                `curriculum-${subject.curriculumid}.jpg`,
-              );
-              return {
-                key: subject.curriculumid,
-                title: subject.curriculumname,
-                meta: subject.curriculumdescription,
-                progress: normalizeProgressFraction(subject.progress),
-                imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
-                onPress: () => handleItemPress(subject),
-              };
-            })}
+          <CorporateSubjectGrid
+            subjects={visibleSubjects}
+            onPress={handleItemPress}
           />
         </View>
       </LayoutScrollView>

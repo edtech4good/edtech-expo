@@ -3,7 +3,6 @@ import {
   DashboardCard,
   DefaultBackgroundImage,
   LayoutScrollView,
-  normalizeProgressFraction,
   SizedBox,
 } from '@/components';
 import {
@@ -16,13 +15,47 @@ import { useEffect } from 'react';
 import { DashboardCardColors } from '@/constants';
 import { useTheme } from 'styled-components/native';
 import { FlatList, useWindowDimensions } from 'react-native';
-import { useBreakpoint, useDesign } from '@/services';
+import { useBreakpoint, useDesign, useProgressSummary } from '@/services';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useCourse } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedSubject } from '@/redux/slices';
-import { Course } from '@/models';
+import { Course, findGradeProgress } from '@/models';
 import { useTranslation } from 'react-i18next';
+
+// Corporate grade cards. Each card's % pill and bar come from the same
+// progress summary as My progress / Home (lessons completed / all lessons in
+// the grade), matched by gradeid. No summary row (not loaded yet, or the API
+// build predates the grades breakdown) means no pill and no bar; the
+// server's points-based `course.progress` is no longer shown. Its own
+// component so the summary fetch only runs on the corporate branch.
+function CorporateCourseGrid({
+  courses,
+  onPress,
+}: {
+  courses: Course[];
+  onPress: (course: Course) => void;
+}) {
+  const { summary } = useProgressSummary();
+  const curricula = summary?.curricula ?? [];
+
+  return (
+    <CorporateCardGrid
+      items={courses.map(course => {
+        const remoteUrl = getRemoteResourceUrl(`grade-${course.gradeid}.jpg`);
+        const grade = findGradeProgress(curricula, course.gradeid);
+        return {
+          key: course.gradeid,
+          title: course.gradename,
+          meta: course.gradedescription,
+          progress: grade === undefined ? undefined : grade.percent / 100,
+          imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+          onPress: () => onPress(course),
+        };
+      })}
+    />
+  );
+}
 
 export default function CourseSelectionScreen() {
   const theme = useTheme();
@@ -75,21 +108,7 @@ export default function CourseSelectionScreen() {
   if (isCorporate) {
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
-        <CorporateCardGrid
-          items={courses.map(course => {
-            const remoteUrl = getRemoteResourceUrl(
-              `grade-${course.gradeid}.jpg`,
-            );
-            return {
-              key: course.gradeid,
-              title: course.gradename,
-              meta: course.gradedescription,
-              progress: normalizeProgressFraction(course.progress),
-              imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
-              onPress: () => handleItemPress(course),
-            };
-          })}
-        />
+        <CorporateCourseGrid courses={courses} onPress={handleItemPress} />
       </LayoutScrollView>
     );
   }

@@ -2,7 +2,6 @@ import {
   CorporateCardGrid,
   DefaultBackgroundImage,
   LayoutScrollView,
-  normalizeProgressFraction,
   ProgressCard,
   SizedBox,
 } from '@/components';
@@ -11,7 +10,7 @@ import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, useWindowDimensions } from 'react-native';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
-import { useBreakpoint, useDesign } from '@/services';
+import { useBreakpoint, useDesign, useProgressSummary } from '@/services';
 import {
   Redirect,
   router,
@@ -21,8 +20,42 @@ import {
 import { useUnit } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedCourse } from '@/redux/slices';
-import { Unit } from '@/models';
+import { Unit, findLevelProgress } from '@/models';
 import { useTranslation } from 'react-i18next';
+
+// Corporate level cards. Each card's % pill and bar come from the same
+// progress summary as My progress / Home (lessons completed / all lessons in
+// the level), matched by levelid. No summary row (not loaded yet, or the API
+// build predates the grades breakdown) means no pill and no bar; the
+// server's points-based `unit.progress` is no longer shown. Its own
+// component so the summary fetch only runs on the corporate branch.
+function CorporateUnitGrid({
+  units,
+  onPress,
+}: {
+  units: Unit[];
+  onPress: (unit: Unit) => void;
+}) {
+  const { summary } = useProgressSummary();
+  const curricula = summary?.curricula ?? [];
+
+  return (
+    <CorporateCardGrid
+      items={units.map(unit => {
+        const remoteUrl = getRemoteResourceUrl(`level-${unit.levelid}.jpg`);
+        const level = findLevelProgress(curricula, unit.levelid);
+        return {
+          key: unit.levelid,
+          title: unit.levelname,
+          meta: unit.leveldescription,
+          progress: level === undefined ? undefined : level.percent / 100,
+          imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
+          onPress: () => onPress(unit),
+        };
+      })}
+    />
+  );
+}
 
 export default function UnitSelectionScreen() {
   const theme = useTheme();
@@ -74,19 +107,7 @@ export default function UnitSelectionScreen() {
   if (isCorporate) {
     return (
       <LayoutScrollView backgroundColor={theme.colors.background}>
-        <CorporateCardGrid
-          items={units.map(unit => {
-            const remoteUrl = getRemoteResourceUrl(`level-${unit.levelid}.jpg`);
-            return {
-              key: unit.levelid,
-              title: unit.levelname,
-              meta: unit.leveldescription,
-              progress: normalizeProgressFraction(unit.progress),
-              imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
-              onPress: () => handleItemPress(unit),
-            };
-          })}
-        />
+        <CorporateUnitGrid units={units} onPress={handleItemPress} />
       </LayoutScrollView>
     );
   }

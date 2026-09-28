@@ -3,6 +3,7 @@ import {
   CourseIndexResponse,
   CourseResponse,
   CurriculumResponse,
+  ProgressSummaryResponse,
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
@@ -15,6 +16,7 @@ import {
   LevelIndexResponse,
   LevelResponse,
   LevelStepsResponse,
+  LibraryResponse,
   LmsLoginPayload,
   PracticeResult,
   QuizResult,
@@ -295,6 +297,18 @@ export default class Api {
     );
   }
 
+  // Cross-curriculum progress summary (student/progress/summary) -- used
+  // by the "My progress" screen. Envelope is { data, error }; numbers may
+  // arrive as strings/null and still need normalising on the way into the
+  // store.
+  async fetchProgressSummary(): Promise<
+    ApiResponse<ProgressSummaryResponse, ProgressSummaryResponse>
+  > {
+    return this.apiSauceInstance.get<ProgressSummaryResponse>(
+      'student/progress/summary',
+    );
+  }
+
   // Third fetch Unit using CourseId
   async fetchUnits(
     courseId: string,
@@ -316,6 +330,14 @@ export default class Api {
     ApiResponse<CourseIndexResponse, CourseIndexResponse>
   > {
     return this.apiSauceInstance.get<CourseIndexResponse>('grade/all');
+  }
+
+  // Every level the learner has access to, grouped by curriculum → grade —
+  // powers the Library tab. responseTransform above throws on a non-ok
+  // response, so callers must catch (see useLibrary) rather than branch on
+  // response.ok the way useLevel/useUnit do.
+  async fetchLibrary(): Promise<ApiResponse<LibraryResponse, LibraryResponse>> {
+    return this.apiSauceInstance.get<LibraryResponse>('level/library');
   }
 
   // Fourth fetch Level using UnitId
