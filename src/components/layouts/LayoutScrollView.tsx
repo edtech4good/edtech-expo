@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { SafeAreaView, StatusBar } from 'react-native';
+import { SafeAreaView, StatusBar, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTheme } from 'styled-components/native';
 import styled from 'styled-components/native';
@@ -65,22 +65,36 @@ function LayoutScrollView({
         {useScroll && (
           <KeyboardAwareScrollView
             keyboardShouldPersistTaps="handled"
+            enableOnAndroid
+            extraScrollHeight={24}
             style={{ height: '100%', width: '100%', alignSelf: 'stretch' }}
             contentContainerStyle={{
               flexDirection,
               justifyContent,
               alignItems,
               width: '100%',
-              height: '100%',
+              // flexGrow (not height: '100%') lets the content grow past the
+              // viewport so it can actually scroll when the keyboard shrinks
+              // the visible area — a fixed height clips content instead.
+              flexGrow: 1,
               alignSelf: 'stretch',
               paddingHorizontal,
               paddingVertical,
             }}
             showsVerticalScrollIndicator={false}>
             {children}
+            {/* Inside the scroll content (not sibling to it) so the footer
+                scrolls up with the rest of the form when the keyboard opens,
+                instead of the keyboard pushing it off screen. marginTop:
+                'auto' keeps it pinned to the bottom when content is shorter
+                than the viewport. */}
+            {React.isValidElement(footer) && (
+              <View style={{ width: '100%', marginTop: 'auto' }}>
+                {footer}
+              </View>
+            )}
           </KeyboardAwareScrollView>
         )}
-        {useScroll && React.isValidElement(footer) && footer}
         {!useScroll && children}
       </StyledSafeArea>
     </>

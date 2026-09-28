@@ -3,15 +3,16 @@ import {
   KeyboardTypeOptions,
   Platform,
   StyleProp,
+  TextInputProps,
   TextStyle,
   View,
 } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import styled, { useTheme } from 'styled-components/native';
 
-import { useFont } from '@/services';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
+import { useFont } from '@/services';
 
 import AppIconButton from './AppIconButton';
 
@@ -32,6 +33,22 @@ export interface AppTextFieldProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   /** Forwarded to the underlying TextInput. Useful for dev/demo screens. */
   autoFocus?: boolean;
+  /** iOS autofill hint, e.g. 'username' / 'password'. */
+  textContentType?: TextInputProps['textContentType'];
+  /** Android/web autofill hint, e.g. 'username' / 'password'. */
+  autoComplete?: TextInputProps['autoComplete'];
+  testID?: string;
+  /**
+   * When true, draws the 2px error border (and keeps focus/press semantics
+   * from `error`) even if `error` itself is empty — used to mark a field as
+   * part of a combined error state (e.g. a server auth failure) whose
+   * message is shown under a different field. See the v2.1 login handoff:
+   * both username and password get the error border, but the message
+   * renders once, under password only.
+   */
+  showErrorBorder?: boolean;
+  /** testID for the error message row (defaults to `${testID}-error`). */
+  errorTestID?: string;
 }
 
 const HEIGHTS: Record<AppTextFieldVariant, number> = {
@@ -137,15 +154,9 @@ const Field = styled.View<{
   flex-direction: row;
   align-items: center;
   align-self: stretch;
-  /* Khmer's taller input line height (~24px vs. the fixed 52px field
-     height's fit for the English 15px/normal leading) can clip on Android,
-     which doesn't let text overflow a fixed height the way iOS does — so
-     Khmer switches to a min-height + vertical padding instead of a hard
-     height, letting the field grow to fit its line height. */
-  ${p =>
-    p.$isKhmer
-      ? `min-height: ${p.$height}px; padding-vertical: 8px;`
-      : `height: ${p.$height}px;`}
+  min-height: ${p => p.$height}px;
+  /* Khmer's 24px input line height needs room to grow on Android. */
+  ${p => (p.$isKhmer ? 'padding-vertical: 8px;' : '')}
   border-radius: ${p => p.$radius}px;
   background-color: ${p => p.$backgroundColor};
   border-width: ${p => p.$borderWidth}px;
@@ -173,7 +184,7 @@ const Input = styled.TextInput<{
 
 const ErrorRow = styled.View`
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   margin-top: 6px;
 `;
 
@@ -201,6 +212,11 @@ export default function AppTextField({
   onFocus,
   autoCapitalize = 'none',
   autoFocus,
+  textContentType,
+  autoComplete,
+  testID,
+  showErrorBorder = false,
+  errorTestID,
 }: AppTextFieldProps) {
   const theme = useTheme();
   const bodyFontFamily = useFont('normal', 'body');
@@ -209,16 +225,17 @@ export default function AppTextField({
   const [isFocused, setIsFocused] = useState(false);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
 
-  const hasError = Boolean(error) && !disabled;
+  const hasErrorBorder = (Boolean(error) || showErrorBorder) && !disabled;
+  const hasErrorMessage = Boolean(error) && !disabled;
   const isSearch = variant === 'search';
 
-  const borderWidth = hasError || isFocused ? 2 : 1;
+  const borderWidth = hasErrorBorder || isFocused ? 2 : 1;
   // Border grows outward by 1px/side; trim padding to match so text doesn't shift.
   const paddingHorizontal = BASE_HORIZONTAL_PADDING - (borderWidth - 1);
 
   const borderColor = disabled
     ? theme.colors.outline
-    : hasError
+    : hasErrorBorder
     ? theme.colors.error
     : isFocused
     ? theme.colors.primary
@@ -278,6 +295,7 @@ export default function AppTextField({
           </View>
         )}
         <Input
+          testID={testID}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -288,6 +306,8 @@ export default function AppTextField({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
+          textContentType={textContentType}
+          autoComplete={autoComplete}
           onFocus={handleFocus}
           onBlur={handleBlur}
           $fontFamily={bodyFontFamily}
@@ -311,9 +331,11 @@ export default function AppTextField({
           />
         )}
       </Field>
-      {hasError && (
-        <ErrorRow>
-          <AlertGlyph color={theme.colors.error} />
+      {hasErrorMessage && (
+        <ErrorRow testID={errorTestID ?? (testID ? `${testID}-error` : undefined)}>
+          <View style={{ marginTop: 4 }}>
+            <AlertGlyph color={theme.colors.error} />
+          </View>
           <ErrorText $fontFamily={labelFontFamily} $isKhmer={isKhmer}>
             {error}
           </ErrorText>
