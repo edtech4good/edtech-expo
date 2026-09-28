@@ -41,10 +41,12 @@ export default function useAuth() {
   );
   // Machine-readable classification alongside `error`/`errorStatus`, lifted
   // straight from Api.ts's responseTransform (see the `code`/`errormessage`
-  // it attaches to the thrown error). `errorCode` is undefined on the
-  // current rpi-api contract and only starts arriving once #75 ships;
-  // `errorMessage` is the raw, unlocalized `errormessage` body text.
-  // Callers should classify on these, not by parsing `error`'s string.
+  // it attaches to the thrown error). `errorCode` is undefined against an
+  // older student API build that hasn't picked up edtech-lms-rpi-api#75
+  // (merged) yet — e.g. a classroom Pi still on an older image; on those,
+  // `errorMessage` carries the raw, unlocalized `errormessage` body text
+  // instead. Callers should classify on these, not by parsing `error`'s
+  // string.
   const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined,

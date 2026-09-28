@@ -169,9 +169,11 @@ const responseTransform: AsyncResponseTransform = async response => {
     (err as any).problem = response.problem;
     // The APIs' error body is { error, errormessage, data } (their
     // GlobalExceptionFilter); `msg` above is almost always axios' generic
-    // "Request failed with status code N". rpi-api's error-contract PR (#75)
-    // adds `code` alongside it. Attach both, when present, so callers can
-    // classify without re-parsing the stringified error:
+    // "Request failed with status code N". edtech-lms-rpi-api#75 (merged)
+    // adds `code` alongside it; an older student API build that hasn't
+    // picked up #75 yet (e.g. a classroom Pi) may still omit `code` and
+    // rely on `errormessage` text alone. Attach both, when present, so
+    // callers can classify without re-parsing the stringified error:
     // - `code` / `errormessage`: login's wrong-credentials rule (LoginScreen)
     // - `serverMessage`: logged when the offline queue skips a poison item
     (err as any).code = _.get(response.data, 'code');

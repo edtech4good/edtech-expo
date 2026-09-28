@@ -179,13 +179,15 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     modalRef.current.show(t('screen.login.sessionExpiredMessage'));
   }, [isLoggedOut]);
 
-  // A 400 is "wrong credentials" only when it's actually rpi-api's
-  // "User/Password not matching" failure, not any 400. The open
-  // error-contract PR (#75) adds a `code` to the body ('LOGIN_FAILED');
-  // until it lands, rpi-api sends no `code` and the message text lives in
-  // `errormessage` (see Api.ts's responseTransform), so both shapes are
-  // checked here. Any other 400 falls through to the modal below, same as
-  // every non-400 failure.
+  // A 400 is "wrong credentials" only when it's actually the server's
+  // wrong-credentials failure, not any 400. edtech-lms-rpi-api#75 (merged)
+  // added a `code: 'LOGIN_FAILED'` to that response body; the legacy
+  // "User/Password not matching" text-only check remains for an older
+  // student API build (e.g. a classroom Pi that hasn't picked up #75 yet)
+  // that still sends no `code` and puts the message in `errormessage` (see
+  // Api.ts's responseTransform), so both shapes are checked here. Any
+  // other 400 falls through to the modal below, same as every non-400
+  // failure.
   const isWrongCredentialsError =
     errorStatus === 400 &&
     (errorCode === 'LOGIN_FAILED' ||
@@ -218,9 +220,8 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   //
   // The i18n KEY is stored here, not a translated string — storing the
   // translated text would freeze it at whatever language was active when
-  // the error first fired, same bug as the modal re-showing on language
-  // change. The key is re-translated (and re-pushed into react-hook-form)
-  // by the effect below, which does depend on `t`.
+  // the error first fired, same bug the required-field messages had
+  // (FormAppTextField translates it at render; see its doc comment).
   const [wrongCredentialsErrorKey, setWrongCredentialsErrorKey] = useState<
     string | undefined
   >(undefined);
@@ -234,14 +235,13 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
   }, [error, isWrongCredentialsError, isCorporate]);
 
   // Once the learner edits either field, the wrong-credentials state is
-  // over: drop the key so a later language switch (which changes `t` and
-  // re-runs the effect below) can't push the error back onto a field
-  // they've already corrected. Both fields' server errors go together —
-  // it's one combined error, and leaving the password half behind with
-  // no key would freeze its message in the current language. Only
-  // `type === 'change'` counts (a user keystroke through useController's
-  // onChange); setValue/reset don't carry it, and setError emits no
-  // `values`, so RHF 7.88's watch(callback) never fires for it.
+  // over: drop the key so it can't be re-applied later. Both fields'
+  // server errors go together — it's one combined error, and leaving the
+  // password half behind would leave a stale error on a field the learner
+  // already corrected. Only `type === 'change'` counts (a user keystroke
+  // through useController's onChange); setValue/reset don't carry it, and
+  // setError emits no `values`, so RHF 7.88's watch(callback) never fires
+  // for it.
   useEffect(() => {
     if (!wrongCredentialsErrorKey) return;
     const subscription = methods.watch((_values, { type }) => {
@@ -257,39 +257,22 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wrongCredentialsErrorKey]);
 
-  // Which key was last pushed into react-hook-form, so a `t`-only re-run
-  // (language switch) can be told apart from a fresh failure.
-  const appliedWrongCredentialsKeyRef = useRef<string | undefined>(undefined);
-
+  // Pushes the (untranslated) key into react-hook-form as the combined
+  // error state: both fields get the 2px error border, but the message
+  // renders once, under password (username's empty message carries the
+  // border only — see FormAppTextField's doc comment). No `t` dependency
+  // here and no re-push needed on a language switch: FormAppTextField
+  // translates whatever key is stored at render time, so it re-translates
+  // for free the moment `useTranslation()` re-renders it.
   useEffect(() => {
-    if (!wrongCredentialsErrorKey) {
-      appliedWrongCredentialsKeyRef.current = undefined;
-      return;
-    }
-    const isFreshFailure =
-      appliedWrongCredentialsKeyRef.current !== wrongCredentialsErrorKey;
-    // A language switch only re-translates an error that is still on the
-    // field. If it's gone — cleared by an edit or by the next submit's
-    // revalidation while that request is in flight — leave it gone.
-    if (
-      !isFreshFailure &&
-      methods.getFieldState('password').error?.type !== 'server'
-    ) {
-      return;
-    }
-    appliedWrongCredentialsKeyRef.current = wrongCredentialsErrorKey;
+    if (!wrongCredentialsErrorKey) return;
     methods.setError('username', { type: 'server', message: '' });
     methods.setError('password', {
       type: 'server',
-      message: t(wrongCredentialsErrorKey),
+      message: wrongCredentialsErrorKey,
     });
-    // methods is stable enough for this purpose; re-running per keystroke
-    // would fight the revalidation-clears-it flow described above. `t` IS
-    // a dependency on purpose, so the message re-translates on language
-    // switch instead of staying frozen in whatever language was active
-    // when the error first fired.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wrongCredentialsErrorKey, t]);
+  }, [wrongCredentialsErrorKey]);
 
   const handleStorageDirectory = async () => {
     await requestStoragePermission();
@@ -399,9 +382,14 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
                   name="username"
                   label={t('screen.login.usernameLabel')}
                   rules={{
+                    // The message is the i18n KEY, not translated text —
+                    // FormAppTextField translates it at render (see its
+                    // doc comment), so it re-translates on a language
+                    // switch instead of freezing in whatever language was
+                    // active when the `required` validation fired.
                     required: {
                       value: true,
-                      message: t('screen.login.usernameRequiredError'),
+                      message: 'screen.login.usernameRequiredError',
                     },
                   }}
                   autoCapitalize="none"
@@ -416,9 +404,10 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
                   label={t('screen.login.passwordLabel')}
                   secureTextEntry
                   rules={{
+                    // Same i18n-key rule as username above.
                     required: {
                       value: true,
-                      message: t('screen.login.passwordRequiredError'),
+                      message: 'screen.login.passwordRequiredError',
                     },
                   }}
                   textContentType="password"
