@@ -25,32 +25,60 @@ import { isDevPillTouched } from '@/services/devThemeOverride';
 import { flushPendingResults } from '../pendingResults';
 import { setAccessToken, clearAccessToken } from '../secureToken';
 
+// The four pieces of a login failure, held together so they can only ever
+// change in one render. See the `loginError` state below for why: React
+// Native's legacy-architecture root doesn't batch state updates made outside
+// a React event handler (e.g. inside an async catch block after an
+// `await`), so four separate `useState`s here let LoginScreen's
+// modal-visibility effect observe an intermediate render where `message` is
+// set but `status`/`code` aren't — misclassifying a wrong-credentials 400 as
+// a generic failure and popping the modal before the real, correct
+// inline field error renders underneath it.
+interface LoginError {
+  message: string;
+  // HTTP status of the last login failure (set alongside `message`), so
+  // callers can tell a bad-credentials 400 apart from a network/5xx/429
+  // failure without re-parsing the stringified error. undefined for a
+  // network-level failure (Api.ts's responseTransform never sets `status`
+  // on those) or when there's no error at all.
+  status?: number;
+  // Machine-readable classification alongside `message`/`status`, lifted
+  // straight from Api.ts's responseTransform (see the `code`/`errormessage`
+  // it attaches to the thrown error). `code` is undefined against an
+  // older student API build that hasn't picked up edtech-lms-rpi-api#75
+  // (merged) yet — e.g. a classroom Pi still on an older image; on those,
+  // `errormessage` carries the raw, unlocalized `errormessage` body text
+  // instead. Callers should classify on these, not by parsing `message`'s
+  // string.
+  code?: string;
+  errormessage?: string;
+}
+
+const EMPTY_LOGIN_ERROR: LoginError = {
+  message: '',
+  status: undefined,
+  code: undefined,
+  errormessage: undefined,
+};
+
 export default function useAuth() {
   const dispatch = useAppDispatch();
   const api = useApi();
   const profile = useAppSelector(getProfile);
   const [isLogginIn, setIsLogginIn] = useState(false);
-  const [error, setError] = useState('');
-  // HTTP status of the last login failure (set alongside `error`), so
-  // callers can tell a bad-credentials 400 apart from a network/5xx/429
-  // failure without re-parsing the stringified error. undefined for a
-  // network-level failure (Api.ts's responseTransform never sets `status`
-  // on those) or when there's no error at all.
-  const [errorStatus, setErrorStatus] = useState<number | undefined>(
-    undefined,
+  // Held as one object (not four separate useStates) so the catch block
+  // below can update `message`/`status`/`code`/`errormessage` together, in a
+  // single setState call, and LoginScreen's effects can never observe a
+  // render where only some of them have updated. See LoginError above.
+  const [loginError, setLoginError] = useState<LoginError>(
+    EMPTY_LOGIN_ERROR,
   );
-  // Machine-readable classification alongside `error`/`errorStatus`, lifted
-  // straight from Api.ts's responseTransform (see the `code`/`errormessage`
-  // it attaches to the thrown error). `errorCode` is undefined against an
-  // older student API build that hasn't picked up edtech-lms-rpi-api#75
-  // (merged) yet — e.g. a classroom Pi still on an older image; on those,
-  // `errorMessage` carries the raw, unlocalized `errormessage` body text
-  // instead. Callers should classify on these, not by parsing `error`'s
-  // string.
-  const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(
-    undefined,
-  );
+  const {
+    message: error,
+    status: errorStatus,
+    code: errorCode,
+    errormessage: errorMessage,
+  } = loginError;
 
   const { uploadContentToCloud, uploadContentToRpi } = useSyncContent();
 
@@ -71,10 +99,7 @@ export default function useAuth() {
       // await uploadContentToCloud();
       // return;
       setIsLogginIn(true);
-      setError('');
-      setErrorStatus(undefined);
-      setErrorCode(undefined);
-      setErrorMessage(undefined);
+      setLoginError(EMPTY_LOGIN_ERROR);
       const authPayload = toAuthPayload(payload, false) as EdtechLoginPayload;
       const response = await api.login(authPayload);
       const accessToken = _.get(response.data, 'data.accessToken');
@@ -128,13 +153,22 @@ export default function useAuth() {
       if (profile.schooluserrole === 4) router.replace('/home');
       else router.replace('/teacher/dashboard');
     } catch (e) {
-      setError(`${e}`);
+      // Set as one object, in one setState call — see LoginError above.
+      // Splitting this into `setError`/`setErrorStatus`/`setErrorCode`/
+      // `setErrorMessage` calls let LoginScreen's modal-visibility effect
+      // run on an intermediate render (message set, status/code still
+      // undefined) under React Native's unbatched legacy-architecture root,
+      // misfiring the generic-error modal ahead of the correct inline
+      // wrong-credentials field error.
       const err = e as
         | { status?: number; code?: string; errormessage?: string }
         | undefined;
-      setErrorStatus(err?.status);
-      setErrorCode(err?.code);
-      setErrorMessage(err?.errormessage);
+      setLoginError({
+        message: `${e}`,
+        status: err?.status,
+        code: err?.code,
+        errormessage: err?.errormessage,
+      });
     } finally {
       setIsLogginIn(false);
     }
@@ -144,12 +178,10 @@ export default function useAuth() {
   // error modal) must not clear `error` alone: the modal-visibility effect
   // in LoginScreen also reads `errorStatus`/`errorCode`/`errorMessage`, and
   // a leftover value there could feed a stale classification into the next
-  // render before a fresh login attempt overwrites it.
+  // render before a fresh login attempt overwrites it. Setting the single
+  // `loginError` object guarantees that already.
   const resetError = () => {
-    setError('');
-    setErrorStatus(undefined);
-    setErrorCode(undefined);
-    setErrorMessage(undefined);
+    setLoginError(EMPTY_LOGIN_ERROR);
   };
 
   const logout = async () => {
@@ -170,6 +202,16 @@ export default function useAuth() {
     } finally {
       router.replace('/login');
     }
+  };
+
+  // Kept for API compatibility with existing callers of `setError` (none
+  // currently call it with a non-empty message; resetError above already
+  // covers the `setError('')` case). Setting a message alone clears
+  // `status`/`code`/`errormessage` together with it, matching the old
+  // four-setState behavior where those were never set independently of
+  // `error`.
+  const setError = (message: string) => {
+    setLoginError({ ...EMPTY_LOGIN_ERROR, message });
   };
 
   return {
