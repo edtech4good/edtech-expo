@@ -1,12 +1,14 @@
 import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   AuthenticationActions,
+  getPendingResults,
   getProfile,
   getSelectedLanguage,
 } from '@/redux/slices';
 import { getAccessToken } from '@/services/secureToken';
 import { StartScreen } from '@/screens';
 import { useApi, flushPendingResults } from '@/services';
+import { reconnectFlushAction } from '@/services/pendingResultsQueue';
 import NetInfo from '@react-native-community/netinfo';
 import { Stack } from 'expo-router';
 import i18next from 'i18next';
@@ -14,8 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 // Wait for a reconnect to settle before flushing: links flap (captive
-// portals, a Wi-Fi hand-off); only an offline→online transition restarts
-// the wait.
+// portals, a Wi-Fi hand-off); going offline again cancels the wait.
 const RECONNECT_FLUSH_DELAY_MS = 2000;
 
 export default function InitialStack() {
@@ -30,10 +31,8 @@ export default function InitialStack() {
   // current login state rather than the one it closed over at mount.
   const profileRef = useRef(profile);
   profileRef.current = profile;
-  // Last connectivity seen by the reconnect listener; unknown counts as
-  // online, so a launch while online never triggers a reconnect flush (the
-  // start-up flush in handleCheckAuth covers that).
-  const wasConnectedRef = useRef(true);
+  const pendingCountRef = useRef(0);
+  pendingCountRef.current = useAppSelector(getPendingResults).length;
 
   useEffect(() => {
     i18next.changeLanguage(selectedLanguage);
@@ -42,9 +41,11 @@ export default function InitialStack() {
 
   // Flush the offline queue (practice/quiz results, video progress) when the
   // device comes back online — otherwise it waits for the next app start or
-  // the next submit. Acts only on an offline -> online transition (the
-  // previous state is kept in a ref; unknown/null counts as online, as in
-  // useConnectivity), only when someone is logged in, and debounced. No
+  // the next submit. Any online report (unknown/null counts as online, as in
+  // useConnectivity) schedules one debounced flush while something is
+  // queued; an offline report cancels it. See reconnectFlushAction for why
+  // this keeps no "previous state": on web a stale netinfo event used to
+  // mask the real reconnect. Flushes only when someone is logged in. No
   // concurrency guard of its own: flushPendingResults serialises on
   // flushChain, so an overlap with the start-up or a submit flush just
   // queues behind it. Web also listens to window 'online', which netinfo
@@ -53,20 +54,19 @@ export default function InitialStack() {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const onConnectivity = (isConnected: boolean) => {
+    const onConnectivity = (isConnected: boolean | null) => {
       if (cancelled) return;
-      const previous = wasConnectedRef.current;
-      wasConnectedRef.current = isConnected;
-      // Going offline cancels a pending flush; only an offline -> online
-      // transition starts a new wait. An online -> online event must NOT
-      // clear it: on web, netinfo and window 'online' both report the same
-      // reconnect, and the second would otherwise cancel the first's flush.
-      if (!isConnected) {
-        if (timer) clearTimeout(timer);
+      const action = reconnectFlushAction({
+        isConnected,
+        flushScheduled: timer !== undefined,
+        hasPendingItems: pendingCountRef.current > 0,
+      });
+      if (action === 'cancel') {
+        clearTimeout(timer);
         timer = undefined;
         return;
       }
-      if (previous) return;
+      if (action !== 'schedule') return;
       timer = setTimeout(() => {
         timer = undefined;
         if (cancelled || !profileRef.current) return;
@@ -75,11 +75,11 @@ export default function InitialStack() {
     };
 
     const unsubscribe = NetInfo.addEventListener(state => {
-      onConnectivity(state.isConnected !== false);
+      onConnectivity(state.isConnected);
     });
 
     const handleWindowConnectivityChange = () => {
-      onConnectivity(navigator.onLine !== false);
+      onConnectivity(navigator.onLine);
     };
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.addEventListener('online', handleWindowConnectivityChange);
