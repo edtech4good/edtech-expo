@@ -10,10 +10,10 @@ The app talks to two APIs, and the split matters. In `src/services/api/Api.ts` t
 
 | Variable | Points at | Used for |
 |---|---|---|
-| `EXPO_PUBLIC_BASE_URL` | The classroom API, [edtech-lms-rpi-api](https://github.com/edtech4good/edtech-lms-rpi-api) | Student login (`/auth/login`), lessons, quizzes, progress, `GET /export/log`, `PUT /import/master` |
-| `EXPO_PUBLIC_SYNC_URL` | The central API, [edtech-lms-api](https://github.com/edtech4good/edtech-lms-api) | `GET /sync/content`; `PUT /log/import` and school login (`/auth/school/login`) are wired up in the API client but not called by the current app, and the upload route is off by default on central |
+| `EXPO_PUBLIC_BASE_URL` | The classroom API, [edtech-lms-rpi-api](https://github.com/edtech4good/edtech-lms-rpi-api) | Student login (`/auth/login`), lessons, quizzes, progress, `GET /export/log`; `PUT /import/master` is wired up in the API client but not called by the current app |
+| `EXPO_PUBLIC_SYNC_URL` | The central API, [edtech-lms-api](https://github.com/edtech4good/edtech-lms-api) | `GET /sync/content`, `PUT /log/import` and school login (`/auth/school/login`) are wired up but not called by the current app; central's upload route is also off by default |
 
-Sync goes like this today. The app downloads the curriculum zip from the central API and pushes it to the classroom API. It can also pull the student log zip from the classroom API, but the upload step to the central API is currently disabled in the app (and off by default on central). Both APIs issue one access token per user, so a second login anywhere, including from a test run, ends the first session.
+Sync code for both directions is in `src/services/hooks/useSyncContent.ts`, but the current app only uses one part of it: pulling the student log zip from the classroom API (`GET /export/log`). Downloading the curriculum zip from the central API, pushing it to the classroom API, and uploading the log zip to the central API are not called anywhere in the current app. Central's upload route is also off by default. Both APIs issue one access token per user, so a second login anywhere, including from a test run, ends the first session.
 
 The admin and teacher web app is [edtech-lms-ui](https://github.com/edtech4good/edtech-lms-ui). The Playwright smoke suite for this app also lives there, under `e2e/expo-smoke/`.
 
