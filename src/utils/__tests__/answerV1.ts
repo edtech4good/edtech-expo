@@ -11,23 +11,42 @@
  * for a fixture question. Each mirror names the server function it copies.
  */
 import assert from 'node:assert/strict';
+import * as B from '../answerV1';
 import {
   ANSWER_MAX_ENTRIES,
   ANSWER_MAX_STRING,
-  blanksAnswer,
-  choiceAnswer,
   clampText,
-  countsAnswer,
-  fractionAnswer,
-  matchAnswer,
-  orderAnswer,
-  textAnswer,
+  noEmptyStrings,
   type AnswerV1,
 } from '../answerV1';
 import {
   toPracticeQuestionResult,
   toQuizQuestionResult,
 } from '../../transforms/Practice';
+
+// Every answer any test maps goes through these wrappers, which assert the
+// answer never contains an empty string anywhere (the deployed validator
+// rejects '' and would 400 the whole submission).
+function noEmpty(a: AnswerV1 | null): AnswerV1 | null {
+  const walk = (x: unknown): void => {
+    assert.notEqual(x, '', 'mapped answer contains an empty string');
+    if (Array.isArray(x)) x.forEach(walk);
+    else if (x && typeof x === 'object')
+      Object.entries(x).forEach(([k, v]) => {
+        assert.notEqual(k, '', 'mapped answer has an empty key');
+        walk(v);
+      });
+  };
+  walk(a);
+  return a;
+}
+const choiceAnswer = (...a: Parameters<typeof B.choiceAnswer>) => noEmpty(B.choiceAnswer(...a));
+const orderAnswer = (...a: Parameters<typeof B.orderAnswer>) => noEmpty(B.orderAnswer(...a));
+const matchAnswer = (...a: Parameters<typeof B.matchAnswer>) => noEmpty(B.matchAnswer(...a));
+const blanksAnswer = (...a: Parameters<typeof B.blanksAnswer>) => noEmpty(B.blanksAnswer(...a));
+const countsAnswer = (...a: Parameters<typeof B.countsAnswer>) => noEmpty(B.countsAnswer(...a));
+const textAnswer = (...a: Parameters<typeof B.textAnswer>) => noEmpty(B.textAnswer(...a));
+const fractionAnswer = (...a: Parameters<typeof B.fractionAnswer>) => noEmpty(B.fractionAnswer(...a));
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -73,7 +92,10 @@ function serverIsAnswerV1(x: any): boolean {
 
 /** Mirrors the `answerv1` joi schema (result.request.validator.ts): caps. */
 function serverWithinCaps(a: any): boolean {
-  const str = (s: any) => typeof s === 'string' && s.length <= ANSWER_MAX_STRING;
+  // Mirrors joi.string().max(200).strict() (boundedString): joi's string()
+  // REJECTS '' unless .allow('') is set, and the validator does not set it.
+  // isAnswerV1 and the graders accept '', so only this rule catches it.
+  const str = (s: any) => typeof s === 'string' && s.length >= 1 && s.length <= ANSWER_MAX_STRING;
   const arr = (x: any) => x === undefined || (Array.isArray(x) && x.length <= 50 && x.every(str));
   const rec = (x: any, ok: (v: any) => boolean) =>
     x === undefined ||
@@ -283,20 +305,57 @@ check('counts: option id -> tap count (templates 19-20)', () => {
 check('text: keeps Khmer text and Khmer digits as typed (templates 21-23)', () => {
   const typed = { [U(1)]: 'ខ្ញុំស្រឡាញ់កម្ពុជា', [U(2)]: '១២៣' };
   assert.deepEqual(textAnswer(typed), { v: 1, type: 'text', entries: typed });
-  assert.deepEqual(textAnswer({ [U(1)]: undefined }), { v: 1, type: 'text', entries: { [U(1)]: '' } });
 });
 
-check('fraction: typed parts, missing parts become empty strings (template 24)', () => {
+check('text: empty entries are left out; nothing typed -> null (templates 21-23)', () => {
+  // Template 21, one blank left empty: that entry is omitted, the rest kept.
+  assert.deepEqual(textAnswer({ [U(1)]: 'ស្រឡាញ់', [U(2)]: '', [U(3)]: '   ' }), {
+    v: 1, type: 'text', entries: { [U(1)]: 'ស្រឡាញ់' },
+  });
+  // Template 22 submitted without typing: no attempt.
+  assert.equal(textAnswer({ [U(5)]: '' }), null);
+  assert.equal(textAnswer({ [U(5)]: undefined }), null);
+  assert.equal(textAnswer({}), null);
+});
+
+check('empty string is rejected by the server validator mirror', () => {
+  const bad: any = { v: 1, type: 'text', entries: { [U(1)]: '' } };
+  assert.equal(serverIsAnswerV1(bad), true); // shape check alone accepts it...
+  assert.equal(serverWithinCaps(bad), false); // ...the joi rule does not
+  assert.equal(serverWithinCaps({ v: 1, type: 'fraction', parts: { [U(1)]: { numerator: '2', denominator: '' } } }), false);
+  assert.equal(serverWithinCaps({ v: 1, type: 'choice', selected: [''] }), false);
+});
+
+check('guard: an answer containing an empty string is never returned', () => {
+  assert.equal(noEmptyStrings({ v: 1, type: 'text', entries: { [U(1)]: '' } }), null);
+  assert.equal(noEmptyStrings({ v: 1, type: 'choice', selected: [''] }), null);
+  assert.equal(noEmptyStrings({ v: 1, type: 'match', pairs: { '': U(1) } }), null);
+  assert.equal(noEmptyStrings(null), null);
+  const ok: AnswerV1 = { v: 1, type: 'choice', selected: [U(1)] };
+  assert.equal(noEmptyStrings(ok), ok);
+});
+
+check('fraction: typed parts are sent (template 24)', () => {
   assert.deepEqual(
-    fractionAnswer({ [U(1)]: { numerator: '៣', denominator: '4' }, [U(2)]: { numerator: undefined } }),
+    fractionAnswer({ [U(1)]: { numerator: '៣', denominator: '4' }, [U(2)]: { numerator: '1', denominator: '2' } }),
     {
       v: 1, type: 'fraction',
       parts: {
         [U(1)]: { numerator: '៣', denominator: '4' },
-        [U(2)]: { numerator: '', denominator: '' },
+        [U(2)]: { numerator: '1', denominator: '2' },
       },
     },
   );
+});
+
+check('fraction: any empty part -> null, nothing invented (template 24)', () => {
+  // Whole-number input answered correctly, e.g. 2 = ?/3: the renderer holds
+  // denominatorAnswer ''. The answer is not sent (not server-graded yet).
+  assert.equal(fractionAnswer({ [U(1)]: { numerator: '2', denominator: '' } }), null);
+  // A static part stored as null becomes empty the same way.
+  assert.equal(fractionAnswer({ [U(1)]: { numerator: null, denominator: '3' } }), null);
+  assert.equal(fractionAnswer({ [U(1)]: { numerator: '1', denominator: '2' }, [U(2)]: { numerator: undefined } }), null);
+  assert.equal(fractionAnswer({ [U(1)]: { numerator: '  ', denominator: '3' } }), null);
 });
 
 // ---------------------------------------------------------------------------

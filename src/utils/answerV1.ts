@@ -22,6 +22,11 @@
  * at most 50 entries. Ids and structure are never truncated (a cut-off id
  * would name a different option); such an answer is dropped (`null`).
  * Typed text is the only thing shortened.
+ *
+ * The endpoints also reject an empty string anywhere in an answer. So an
+ * empty typed entry is left out (a missing entry grades as empty), and any
+ * other answer that would contain '' (a fraction with an empty part, say)
+ * is sent as `null`, "no attempt". See `noEmptyStrings`.
  */
 
 export type AnswerV1 =
@@ -53,6 +58,24 @@ export function clampText(value: unknown): string {
   return s.slice(0, end);
 }
 
+/**
+ * Final guard on every builder's output: an answer with an empty string
+ * anywhere in it is never returned (it would get the whole submission
+ * rejected). Builders leave empty typed entries out before this runs, so
+ * this only catches what they did not anticipate.
+ */
+export function noEmptyStrings(answer: AnswerV1 | null): AnswerV1 | null {
+  if (!answer) return null;
+  const hasEmpty = (x: unknown): boolean => {
+    if (x === '') return true;
+    if (Array.isArray(x)) return x.some(hasEmpty);
+    if (x && typeof x === 'object')
+      return Object.entries(x).some(([k, v]) => k === '' || hasEmpty(v));
+    return false;
+  };
+  return hasEmpty(answer) ? null : answer;
+}
+
 /** A list of ids, or null when it is not one or is over the limits. */
 function idList(ids: ReadonlyArray<unknown> | null | undefined): string[] | null {
   if (!Array.isArray(ids)) return null;
@@ -77,7 +100,7 @@ export function choiceAnswer(
   selectedIds: ReadonlyArray<string> | null | undefined,
 ): AnswerV1 | null {
   const selected = idList(selectedIds);
-  return selected ? { v: 1, type: 'choice', selected } : null;
+  return selected ? noEmptyStrings({ v: 1, type: 'choice', selected }) : null;
 }
 
 /** Option ids in the order the learner placed them. */
@@ -85,7 +108,7 @@ export function orderAnswer(
   orderedIds: ReadonlyArray<string> | null | undefined,
 ): AnswerV1 | null {
   const order = idList(orderedIds);
-  return order ? { v: 1, type: 'order', order } : null;
+  return order ? noEmptyStrings({ v: 1, type: 'order', order }) : null;
 }
 
 /**
@@ -104,7 +127,7 @@ export function matchAnswer(
     if (!isId(dragged)) return null;
     pairs[target] = dragged;
   }
-  return { v: 1, type: 'match', pairs };
+  return noEmptyStrings({ v: 1, type: 'match', pairs });
 }
 
 /** Tile ids in blank order (first blank first). */
@@ -112,7 +135,7 @@ export function blanksAnswer(
   filledIds: ReadonlyArray<string> | null | undefined,
 ): AnswerV1 | null {
   const filled = idList(filledIds);
-  return filled ? { v: 1, type: 'blanks', filled } : null;
+  return filled ? noEmptyStrings({ v: 1, type: 'blanks', filled }) : null;
 }
 
 /** Option id -> number of taps (non-negative whole numbers only). */
@@ -126,21 +149,35 @@ export function countsAnswer(
     if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) return null;
     out[id] = n;
   }
-  return { v: 1, type: 'counts', counts: out };
+  return noEmptyStrings({ v: 1, type: 'counts', counts: out });
 }
 
-/** Option id -> typed text. Text is shortened to the limit, never dropped. */
+/**
+ * Option id -> typed text. Text is shortened to the limit. Entries that are
+ * empty (or only whitespace) are left out: the server grades a missing entry
+ * as empty, so the grade is the same. Nothing typed at all -> null.
+ */
 export function textAnswer(
   entries: Record<string, string | undefined> | null | undefined,
 ): AnswerV1 | null {
   const list = idKeyedEntries(entries);
   if (!list) return null;
   const out: Record<string, string> = {};
-  for (const [id, value] of list) out[id] = clampText(value);
-  return { v: 1, type: 'text', entries: out };
+  for (const [id, value] of list) {
+    const text = clampText(value);
+    if (text.trim() === '') continue;
+    out[id] = text;
+  }
+  if (Object.keys(out).length === 0) return null;
+  return noEmptyStrings({ v: 1, type: 'text', entries: out });
 }
 
-/** Option id -> typed numerator / denominator. Missing parts become ''. */
+/**
+ * Option id -> typed numerator / denominator. If any part is empty (a
+ * whole-number answer has no denominator, a static part may be missing) the
+ * whole answer is null: no value is invented, and the server does not accept
+ * empty strings.
+ */
 export function fractionAnswer(
   parts:
     | Record<
@@ -154,10 +191,10 @@ export function fractionAnswer(
   if (!list) return null;
   const out: Record<string, { numerator: string; denominator: string }> = {};
   for (const [id, part] of list) {
-    out[id] = {
-      numerator: clampText(part?.numerator),
-      denominator: clampText(part?.denominator),
-    };
+    const numerator = clampText(part?.numerator);
+    const denominator = clampText(part?.denominator);
+    if (numerator.trim() === '' || denominator.trim() === '') return null;
+    out[id] = { numerator, denominator };
   }
-  return { v: 1, type: 'fraction', parts: out };
+  return noEmptyStrings({ v: 1, type: 'fraction', parts: out });
 }
