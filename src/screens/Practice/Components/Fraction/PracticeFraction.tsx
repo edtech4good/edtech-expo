@@ -20,6 +20,7 @@ import {
 } from '@/components';
 import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
+import { fractionAnswer } from '@/utils/answerV1';
 import FractionItem from './Components/FractionItem';
 import { FormProvider, useForm } from 'react-hook-form';
 
@@ -163,7 +164,17 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       );
 
       // console.log('The answer is correct : ', isCorrect);
-      onSubmit(data.tries, isCorrect);
+      onSubmit(
+        data.tries,
+        isCorrect,
+        false,
+        fractionAnswer(
+          _.mapValues(data.selections, s => ({
+            numerator: s.answer?.numeratorAnswer,
+            denominator: s.answer?.denominatorAnswer,
+          })),
+        ),
+      );
     };
 
     return (

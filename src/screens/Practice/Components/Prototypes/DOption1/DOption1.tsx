@@ -21,6 +21,7 @@ import {
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
 import { useResource } from '@/services';
 import _ from 'lodash';
+import { choiceAnswer } from '@/utils/answerV1';
 import {
   forwardRef,
   useEffect,
@@ -78,6 +79,10 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption1(
     onSubmit(
       attempt.tries,
       attempt.selection?.questionoptioniscorrect ?? false,
+      false,
+      choiceAnswer(
+        attempt.selection ? [attempt.selection.questionoptionid] : [],
+      ),
     );
   };
   const handleRetry = () => {

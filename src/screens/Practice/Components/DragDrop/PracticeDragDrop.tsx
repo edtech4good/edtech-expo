@@ -29,6 +29,7 @@ import { FlatList } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
 import { useForm } from 'react-hook-form';
 import _ from 'lodash';
+import { matchAnswer } from '@/utils/answerV1';
 
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeDragDrop(
@@ -113,7 +114,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         true,
       );
 
-      onSubmit(methods.getValues('tries'), isCorrect);
+      // Built before handleRetry() clears `answers`. Keys are drop targets,
+      // values the option placed on each.
+      onSubmit(methods.getValues('tries'), isCorrect, false, matchAnswer(answers));
       handleRetry();
     };
 

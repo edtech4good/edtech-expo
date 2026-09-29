@@ -20,6 +20,7 @@ import {
 } from '@/components';
 import { FlatList } from 'react-native';
 import _ from 'lodash';
+import { choiceAnswer } from '@/utils/answerV1';
 import { KeyExtractorHelper } from '@/utils';
 import {
   PracticeAttempt,
@@ -114,7 +115,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         },
       );
 
-      onSubmit(attempt.tries, isCorrect);
+      onSubmit(
+        attempt.tries,
+        isCorrect,
+        false,
+        choiceAnswer(_.keys(_.pickBy(attempt.selections, v => !_.isEmpty(v)))),
+      );
     };
 
     const handleRetryPress = (chargeAttempt = false) => {

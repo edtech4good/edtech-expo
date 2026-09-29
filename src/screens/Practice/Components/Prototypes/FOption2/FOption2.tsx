@@ -17,6 +17,7 @@ import { FOptionAttempt, PracticeHandler, QuestionHeading } from '@/models';
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
 import { useResource } from '@/services';
 import _ from 'lodash';
+import { textAnswer } from '@/utils/answerV1';
 import {
   forwardRef,
   useEffect,
@@ -69,7 +70,15 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption2(
   const handleSubmit = () => {
     const isCorrect =
       attempt.answer === `${questionOptions[4]?.questionoptionvalue}`;
-    onSubmit(attempt.tries, isCorrect);
+    // The typed value belongs to the option at position 4 (the one the
+    // check above compares against).
+    const answerOptionId = questionOptions[4]?.questionoptionid;
+    onSubmit(
+      attempt.tries,
+      isCorrect,
+      false,
+      answerOptionId ? textAnswer({ [answerOptionId]: attempt.answer }) : null,
+    );
   };
 
   const handleRetry = () => {

@@ -16,6 +16,7 @@ import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
 import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
+import { blanksAnswer } from '@/utils/answerV1';
 import {
   ChildImage,
   Container,
@@ -172,7 +173,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
 
       console.log('FINAL : ', isCorrect);
 
-      onSubmit(attempt.tries, isCorrect);
+      onSubmit(
+        attempt.tries,
+        isCorrect,
+        false,
+        blanksAnswer(_.map(attempt.selections, o => o.questionoptionid)),
+      );
     };
 
     const handleRetry = (chargeAttempt = false) => {
