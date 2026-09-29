@@ -36,6 +36,7 @@ import {
   FillBlankItem,
 } from '@/components';
 import _ from 'lodash';
+import { orderAnswer } from '@/utils/answerV1';
 import { Image } from 'expo-image';
 import { isPointInRect, KeyExtractorHelper } from '@/utils';
 import { FlatList } from 'react-native';
@@ -129,7 +130,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         isCorrect = correct;
       }
 
-      onSubmit(attempt.tries, isCorrect);
+      onSubmit(
+        attempt.tries,
+        isCorrect,
+        false,
+        orderAnswer(_.map(attempt.selections, o => o.questionoptionid)),
+      );
       // console.log('I AM CORRECT? : ', isCorrect);
     };
 

@@ -18,6 +18,7 @@ import {
 import { PracticeProps } from '@/screens/Practice/PracticeScreen';
 import { useResource } from '@/services';
 import _ from 'lodash';
+import { textAnswer } from '@/utils/answerV1';
 import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTheme } from 'styled-components/native';
@@ -115,7 +116,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(function FOption4(
       },
       true,
     );
-    onSubmit(data.tries, isCorrect);
+    onSubmit(
+      data.tries,
+      isCorrect,
+      false,
+      textAnswer(_.mapValues(data.selections, s => s.answer)),
+    );
   };
 
   const handleRetry = () => {

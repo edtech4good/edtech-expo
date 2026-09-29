@@ -48,6 +48,7 @@ import { Modal } from 'react-native';
 import ResultPopUp from './Components/ResultPopUp';
 import { toPracticeQuestionResult } from '@/transforms';
 import { useTranslation } from 'react-i18next';
+import type { AnswerV1 } from '@/utils/answerV1';
 
 // Corporate header side slots (handoff §4, v2.1): the title must never
 // reach the back button on the left or the "N OF total" counter on the
@@ -70,6 +71,8 @@ export interface PracticeProps {
     tries: number,
     isCorrect: boolean,
     isShowingAnswer?: boolean,
+    // The learner's response, sent so the server can grade it.
+    answer?: AnswerV1 | null,
   ) => void;
   // Quiz has no Retry equivalent (answers are scored, not retried), so the
   // corporate footer hides the Retry pill and shows only Submit there.
@@ -261,6 +264,7 @@ export default function PracticeScreen() {
     tries: number,
     isCorrect: boolean,
     isShowingAnswer: boolean,
+    answer?: AnswerV1 | null,
   ) => {
     if (isShowingAnswer) {
       if (question === questions.length - 1) {
@@ -286,6 +290,7 @@ export default function PracticeScreen() {
         isCorrect,
         tries,
         currentQuestion,
+        answer,
       );
       const currentResults = methods.getValues('result');
       methods.setValue('result', [...currentResults, result]);

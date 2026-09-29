@@ -13,6 +13,7 @@ import {
   SizedBox,
 } from '@/components';
 import _ from 'lodash';
+import { countsAnswer } from '@/utils/answerV1';
 import Option3Item from './components/Option3Item';
 import Option3Area from './components/Option3Area';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -96,7 +97,13 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption3(
       true,
     );
 
-    onSubmit(data.tries, isCorrect);
+    // `answers` is keyed by option position; the server wants option ids.
+    const counts: Record<string, number> = {};
+    _.forEach(data.answers, (count, index) => {
+      const id = questionOptions[Number(index)]?.questionoptionid;
+      if (id) counts[id] = count;
+    });
+    onSubmit(data.tries, isCorrect, false, countsAnswer(counts));
   };
 
   const handleRetry = () => {

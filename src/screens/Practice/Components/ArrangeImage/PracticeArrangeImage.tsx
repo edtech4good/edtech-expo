@@ -16,6 +16,7 @@ import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource, useScreenDimension } from '@/services';
 import _ from 'lodash';
+import { orderAnswer } from '@/utils/answerV1';
 import {
   Container,
   Expanded,
@@ -111,7 +112,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         { correct: true, currentSequence: 0 },
       );
 
-      onSubmit(attempt.tries, correct);
+      onSubmit(
+        attempt.tries,
+        correct,
+        false,
+        orderAnswer(_.map(options, o => o.questionoptionid)),
+      );
     };
 
     const handleRetry = (chargeAttempt = false) => {

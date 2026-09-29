@@ -1,4 +1,5 @@
 import { QuestionOption } from './Lesson';
+import type { AnswerV1 } from '../utils/answerV1';
 
 export interface PracticeHandler {
   retry: () => void;
@@ -70,6 +71,8 @@ export interface PracticeQuestionResult {
   lessonpracticequestionid: string;
   questionid: string;
   tries: number;
+  /** The learner's response, for the server to grade. Absent on items queued by older builds. */
+  answer?: AnswerV1 | null;
 }
 
 export interface PracticeResult {
@@ -87,6 +90,8 @@ export interface QuizQuestionResult {
   lessonquizid: string;
   lessonquizquestionid: string;
   questionid: string;
+  /** The learner's response, for the server to grade. Absent on items queued by older builds. */
+  answer?: AnswerV1 | null;
 }
 
 export interface QuizResult {

@@ -56,6 +56,7 @@ import PracticeFillBlank from '../Practice/Components/FillBlank/PracticeFillBlan
 import PracticeArrangeImage from '../Practice/Components/ArrangeImage/PracticeArrangeImage';
 import PracticeDragDrop from '../Practice/Components/DragDrop/PracticeDragDrop';
 import { useTranslation } from 'react-i18next';
+import type { AnswerV1 } from '@/utils/answerV1';
 
 // Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
 // for the full rationale; kept identical here so both screens' headers
@@ -261,8 +262,13 @@ export default function QuizScreen() {
     }
   };
 
-  const handleSubmitPress = async (tries: number, isCorrect: boolean) => {
-    const result = toQuizQuestionResult(isCorrect, currentQuestion);
+  const handleSubmitPress = async (
+    tries: number,
+    isCorrect: boolean,
+    isShowingAnswer?: boolean,
+    answer?: AnswerV1 | null,
+  ) => {
+    const result = toQuizQuestionResult(isCorrect, currentQuestion, answer);
     const currentResults = methods.getValues('result');
     methods.setValue('result', [...currentResults, result]);
     const fb = currentQuestion?.question?.questionobject?.questionfeedback;

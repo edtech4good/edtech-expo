@@ -20,6 +20,7 @@ import { PracticeProps } from '@/screens/Practice/PracticeScreen';
 import { useResource } from '@/services';
 import { Image, ImageSource } from 'expo-image';
 import _ from 'lodash';
+import { countsAnswer } from '@/utils/answerV1';
 import {
   forwardRef,
   useEffect,
@@ -145,7 +146,13 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption4(
 
     const isCorrect = `${totalValue}` === `${question.questioncorrectvalue}`;
 
-    onSubmit(tries, isCorrect);
+    // `answers` is keyed by option position; each entry carries its option.
+    const counts: Record<string, number> = {};
+    _.forEach(answers, a => {
+      if (a?.option?.questionoptionid)
+        counts[a.option.questionoptionid] = a.value;
+    });
+    onSubmit(tries, isCorrect, false, countsAnswer(counts));
   };
   const handleRetry = () => {
     methods.setValue('tries', methods.getValues('tries') + 1);

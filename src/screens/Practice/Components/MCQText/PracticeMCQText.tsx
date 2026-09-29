@@ -20,6 +20,7 @@ import {
 } from 'react';
 import { useTheme } from 'styled-components/native';
 import _ from 'lodash';
+import { choiceAnswer } from '@/utils/answerV1';
 import {
   PracticeAttempt,
   PracticeHandler,
@@ -149,7 +150,12 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
         },
       );
 
-      onSubmit(attempt.tries, isCorrect, isShowingAnswer);
+      onSubmit(
+        attempt.tries,
+        isCorrect,
+        isShowingAnswer,
+        choiceAnswer(_.keys(_.pickBy(attempt.selections, v => !_.isEmpty(v)))),
+      );
     };
 
     const handleRetryPress = (chargeAttempt = false) => {
