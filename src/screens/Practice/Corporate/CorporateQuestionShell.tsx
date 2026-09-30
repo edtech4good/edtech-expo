@@ -6,7 +6,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import {
+  LayoutChangeEvent,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
@@ -20,7 +26,7 @@ import RefreshIcon from '@/components/ui/icons/RefreshIcon';
 import ListenPill from '@/components/kit/ListenPill';
 import QuestionColumn from '@/components/kit/QuestionColumn';
 import ResultStrip from '@/components/kit/ResultStrip';
-import { useSmallText } from '@/components/kit/kitText';
+import { useSmallText, useTileText } from '@/components/kit/kitText';
 import type { PracticeProps } from '../PracticeScreen';
 import {
   effectCall,
@@ -35,7 +41,11 @@ import {
   ShellState,
   stripKind,
 } from './shellLogic';
+import { computeBodyLayout, shellSpacing } from './shellLayout';
 import type { QuestionBody, QuestionBodyReport } from './types';
+
+/** The gap between the result strip and the buttons in the footer. */
+const FOOTER_ROW_GAP = 10;
 
 export interface CorporateQuestionShellProps extends PracticeProps {
   /** The type-specific part: see types.ts and README.md. */
@@ -79,6 +89,7 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     const { t } = useTranslation();
     const headingFont = useFont('bold', 'display');
     const small = useSmallText();
+    const tile = useTileText();
     const insets = useSafeAreaInsets();
     const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
@@ -131,6 +142,20 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
 
     const feedback = question?.questionobject?.questionfeedback;
 
+    // The body's space, measured (shellLayout.ts): the ScrollView's frame,
+    // the question card, and the result strip while it shows. The footer is
+    // outside the ScrollView, so the strip appearing shrinks the viewport
+    // and the body is told the smaller height.
+    const [viewport, setViewport] = useState<{
+      width: number;
+      height: number;
+    } | null>(null);
+    const [cardHeight, setCardHeight] = useState<number | null>(null);
+    const [regularCardHeight, setRegularCardHeight] = useState<number | null>(
+      null,
+    );
+    const [stripBlock, setStripBlock] = useState(0);
+
     const press = (id: ShellActionId) => {
       const result = shellPress(stateRef.current, id, {
         mode,
@@ -161,6 +186,29 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
       leaving: state.leaving,
     });
     const kind = stripKind(state);
+    const layout = computeBodyLayout({
+      viewport,
+      cardHeight,
+      regularCardHeight,
+      stripHeight: kind ? stripBlock : 0,
+      gutter: theme.layouts.pageHorizontalPadding,
+    });
+    const compact = layout?.compact ?? false;
+    const spacing = shellSpacing(compact);
+    const onViewportLayout = (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      setViewport(v =>
+        v && v.width === width && v.height === height ? v : { width, height },
+      );
+    };
+    const onCardLayout = (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      setCardHeight(h);
+      // Compact is decided on the regular card's height (see ShellMeasures).
+      if (!compact) setRegularCardHeight(h);
+    };
+    const onStripLayout = (e: LayoutChangeEvent) =>
+      setStripBlock(e.nativeEvent.layout.height + FOOTER_ROW_GAP);
     const summary = state.evaluation?.summary;
     const message =
       kind === 'correct'
@@ -222,21 +270,33 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
           backgroundColor: theme.colors.background,
         }}>
         <ScrollView
+          testID="question-scroll"
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingVertical: theme.layouts.large }}>
+          onLayout={onViewportLayout}
+          contentContainerStyle={{ paddingVertical: spacing.scrollPadding }}>
           <QuestionColumn>
             <View
               testID="question-card"
-              style={{
-                backgroundColor: theme.colors.surface,
-                borderRadius: theme.radii.card,
-                borderWidth: 1,
-                borderColor: theme.colors.divider,
-                paddingHorizontal: 20,
-                paddingVertical: 20,
-                rowGap: 14,
-                alignItems: 'center',
-              }}>
+              onLayout={onCardLayout}
+              style={[
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderRadius: theme.radii.card,
+                  borderWidth: 1,
+                  borderColor: theme.colors.divider,
+                  alignItems: 'center',
+                },
+                // Compact (a short screen): tighter padding and the Listen
+                // pill inline, before the heading.
+                compact
+                  ? {
+                      flexDirection: 'row',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      columnGap: 12,
+                    }
+                  : { paddingHorizontal: 20, paddingVertical: 20, rowGap: 14 },
+              ]}>
               <ListenPill
                 testID="question-listen"
                 clipId={`question-${_.get(question, 'questionid', '')}`}
@@ -244,20 +304,33 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
               />
               <Text
                 accessibilityRole="header"
-                style={{
-                  fontFamily: headingFont,
-                  fontSize: theme.fontSizes.subtitle,
-                  // Khmer marks need the taller leading (design v2.1).
-                  lineHeight: small.km
-                    ? theme.fontSizes.subtitle * 1.65
-                    : undefined,
-                  color: theme.colors.onBackground,
-                  textAlign: 'center',
-                }}>
+                style={
+                  compact
+                    ? {
+                        // The kit's tile size (17/22, Khmer 17/30), one
+                        // step down from the regular heading.
+                        flex: 1,
+                        fontFamily: headingFont,
+                        fontSize: tile.fontSize,
+                        lineHeight: tile.lineHeight,
+                        color: theme.colors.onBackground,
+                        textAlign: 'left',
+                      }
+                    : {
+                        fontFamily: headingFont,
+                        fontSize: theme.fontSizes.subtitle,
+                        // Khmer marks need the taller leading (design v2.1).
+                        lineHeight: small.km
+                          ? theme.fontSizes.subtitle * 1.65
+                          : undefined,
+                        color: theme.colors.onBackground,
+                        textAlign: 'center',
+                      }
+                }>
                 {heading.headingtext}
               </Text>
             </View>
-            <View style={{ height: 16 }} />
+            <View style={{ height: spacing.cardGap }} />
             <Body
               question={question}
               mode={mode}
@@ -268,11 +341,12 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
               marks={
                 state.resultState === 'correct' ||
                 state.resultState === 'incorrect'
-                  ? state.evaluation?.perItem ?? {}
+                  ? (state.evaluation?.perItem ?? {})
                   : null
               }
               showAnswer={state.resultState === 'revealed'}
               report={report}
+              layout={layout}
             />
           </QuestionColumn>
         </ScrollView>
@@ -285,16 +359,21 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
             paddingBottom: safeBottomPadding,
           }}>
           <QuestionColumn
-            style={{ paddingVertical: theme.layouts.large, rowGap: 10 }}>
+            style={{
+              paddingVertical: theme.layouts.large,
+              rowGap: FOOTER_ROW_GAP,
+            }}>
             {kind ? (
-              <ResultStrip
-                testID="result-strip"
-                kind={kind}
-                correctCount={summary?.correctCount}
-                total={summary?.total}
-                readBack={summary?.readBack}
-                message={message}
-              />
+              <View onLayout={onStripLayout}>
+                <ResultStrip
+                  testID="result-strip"
+                  kind={kind}
+                  correctCount={summary?.correctCount}
+                  total={summary?.total}
+                  readBack={summary?.readBack}
+                  message={message}
+                />
+              </View>
             ) : null}
             <View
               style={{

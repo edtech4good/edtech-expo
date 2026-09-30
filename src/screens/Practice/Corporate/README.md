@@ -10,12 +10,14 @@ schools keep today's renderers and the `ResultPopUp`, unchanged. The design is
 |---|---|---|
 | `MCQText.tsx` | 1, 3 (multiple choice, text) | **Done**: the shell's reference implementation (`McqTextBody.tsx`, `mcqTextLogic.ts`) |
 | `MCQImage.tsx` | 2, 4 (multiple choice, pictures) | Stub (step 6) |
-| `TextOrdering.tsx` | 5 (word ordering) | Stub (step 2) |
+| `TextOrdering.tsx` | 5 (word ordering) | **Done** (`TextOrderingBody.tsx`, `textOrderingLogic.ts`) |
 | `ImageOrdering.tsx` | 6 (picture ordering) | Stub (step 3) |
 | `Matching.tsx` | 7 (matching) | Stub (step 4) |
 | `FillBlank.tsx` | 8 (fill in the blank) | Stub (step 5) |
 | `CorporateQuestionShell.tsx` | all | The shared frame. Do not edit in steps 2 to 6. |
 | `shellLogic.ts` | all | The footer and submit rules (pure). Do not edit in steps 2 to 6. |
+| `shellLayout.ts` | all | The body's measured space and the compact rule (pure). |
+| `selectionMode.ts` | 1 to 4 | Single or multiple selection for multiple choice (pure). |
 | `registry.tsx`, `templateRegistry.ts` | all | Template id and theme to renderer. Do not edit in steps 2 to 6. |
 | `types.ts`, `useReportAnswer.ts` | all | The body contract, below. |
 
@@ -61,6 +63,7 @@ Props the body receives (`QuestionBodyProps` in `types.ts`):
 | `disabled` | True once submitted or revealed. Take no input. |
 | `marks` | After submit, the `perItem` marks from your `evaluate()`: show a ✓ or ✕ on each item. Otherwise null. |
 | `showAnswer` | True after Show answer: render the correct answer. |
+| `layout` | The body's measured space: `{ availableWidth, availableHeight, compact }`, or `null` on the first frame. See [Fitting the screen](#fitting-the-screen-layout). |
 | `report` | Call it through `useReportAnswer(report, ready, evaluate)` on every render. **Mandatory**: until the body reports, the shell treats it as not ready and Submit stays disabled. |
 
 What the body reports (`QuestionBodyReport`):
@@ -78,6 +81,66 @@ What the body reports (`QuestionBodyReport`):
     learner placed or chose, so a wrong answer never reveals the right one.
   - `summary`: `{ correctCount, total, readBack }` for the strip
     ("2 of 4 are in the right place."). Leave it out for a single-part answer.
+
+### Fitting the screen (`layout`)
+
+The shell measures the space the body has and passes it as `layout`:
+
+```ts
+layout: {
+  availableWidth: number;   // the column's content width (760 cap, minus gutters)
+  availableHeight: number;  // from below the question card to the top of the footer
+  compact: boolean;         // a short screen: use the compact layout
+} | null                    // first frame: nothing measured yet
+```
+
+How it is measured (`shellLayout.ts`): the shell's `ScrollView` reports its
+frame with `onLayout`, and so does the question card. `availableHeight` is the
+viewport minus the card, the scroll padding and the gap below the card. The
+footer is outside the `ScrollView`, so when the result strip appears the
+footer grows, the viewport shrinks and `availableHeight` drops by exactly the
+strip's height. A rotation or a window resize updates it the same way.
+
+How a body uses it:
+
+- **Fit to it; don't guess.** Size a picture grid or a tile row from
+  `availableWidth` and `availableHeight`. Never work out the space from the
+  window (`useWindowDimensions`, `measureInWindow` or a constant footer
+  reserve): the body sits inside the shell's `ScrollView` and the footer's
+  height changes after Submit, so a guess hides the bottom row, and the
+  learner's own ✓ and ✕, behind the result strip.
+- **Refit after Submit.** `layout` changes when the strip appears. A body
+  that computes its sizes from `layout` on every render refits on its own:
+  the marks stay in view.
+- **`null` means not measured.** It lasts one frame. A body whose layout
+  depends on the size renders hidden (`opacity: 0`, so it still takes part in
+  layout) until it isn't null. A body that doesn't size itself (text options)
+  can ignore it.
+- **`compact`** is true when the regular layout would leave the body less
+  than 260 points (`COMPACT_BELOW`): in practice a phone on its side. The
+  question, the options and Submit should then fit without scrolling. The
+  shell has already made the card compact (tighter padding, the Listen pill
+  inline with the heading, the kit's 17 pt tile type). The body does its
+  part: captions on the picture rather than under it, tiles down to about 64
+  points, smaller gaps. `compact` is decided with the result strip left out,
+  so it does not change on Submit; only `availableHeight` does.
+- If the options still don't fit, the `ScrollView` scrolls: nothing is ever
+  cut off.
+
+### Single or multiple selection (templates 1 to 4)
+
+`selectionModeFor(templateId, question)` in `selectionMode.ts` returns
+`'single'` for templates 1 and 2 (the single-answer ones) and `'multi'` for 3
+and 4. Apply a tap with `selectOption(selections, id, value, mode)`: single
+replaces the choice (tapping the chosen option keeps it), multi toggles as
+today. `selectionRoles(mode)` gives the accessibility roles: a `radiogroup` of
+`radio`s, or a `group` of `checkbox`es (pass the option role to `QuizOption` as
+`selectionRole`). Grading doesn't change: a single choice is a selections
+object with one key, graded by the same rule.
+
+Safety: a template 1 or 2 question with more than one correct option (bad
+data) stays `'multi'`, so it can still be answered correctly. Kids renderers
+are unchanged: several options can be chosen on every template.
 
 ### Showing the answer (`showAnswer`)
 
@@ -106,6 +169,15 @@ Listen pill and any other clip.
 - In a `ReorderableList`, put it in `renderAccessory` (a sibling of the tile,
   never inside it) and leave room with `MovableTile reserveAudio`. See the
   example in `OptionAudioCircle.tsx`.
+
+### Marks and screen readers in a `ReorderableList`
+
+A tile's content is inside the tile's labelled button, so a mark drawn in
+`renderItem` is never read. Pass `itemStatusFor={item => ...}` to
+`ReorderableList` with the mark's words (`t('kit.mark.correct')` or
+`t('kit.mark.incorrect')`, or undefined while answering). It is appended to
+the tile's label: "Write. Word 3 of 6. Correct". `TextOrderingBody` does this
+with `wordStatusKey`.
 - Anywhere else, put it next to the item, as `McqTextBody` does.
 
 ## What the shell does with it (today's semantics)

@@ -12,15 +12,25 @@ import OptionAudioCircle, {
 import ExpandedWithLayout from '@/components/layouts/ExpandedWithLayout';
 import PracticeFile from '@/components/practices/PracticeFile';
 import { useReplayClip } from '@/components/kit/audio/useReplayClip';
-import { evaluateMcqText, mcqOptionState, toggleSelection } from './mcqTextLogic';
+import {
+  compactColumns,
+  evaluateMcqText,
+  mcqOptionState,
+} from './mcqTextLogic';
+import {
+  selectionModeFor,
+  selectionRoles,
+  selectOption,
+} from './selectionMode';
 import type { QuestionBodyProps } from './types';
 import { useReportAnswer } from './useReportAnswer';
 
 /**
  * Multiple choice, text (templates 1 and 3), for CorporateQuestionShell.
- * Behaviour is today's PracticeMCQText: options are shuffled per attempt,
- * tapping toggles an option (several may be chosen, on both templates),
- * and an attempt starts with nothing chosen.
+ * Options are shuffled per attempt and an attempt starts with nothing
+ * chosen, as today's PracticeMCQText. Selection follows selectionModeFor:
+ * template 1 is single-select (a tap replaces the choice; radios), template
+ * 3 toggles (several may be chosen; checkboxes). Grading is unchanged.
  */
 export default function McqTextBody({
   question,
@@ -30,6 +40,7 @@ export default function McqTextBody({
   marks,
   showAnswer,
   report,
+  layout,
 }: QuestionBodyProps) {
   const theme = useTheme();
   const isGrid =
@@ -46,6 +57,12 @@ export default function McqTextBody({
   );
   // Reshuffled per attempt, as today (keyed on tries).
   const options = useMemo(() => _.shuffle(questionOptions), [tries, questionOptions]);
+
+  const mode = useMemo(
+    () => selectionModeFor(Number(question?.templatetypeid), question),
+    [question],
+  );
+  const roles = selectionRoles(mode);
 
   const [selections, setSelections] = useState<Record<string, QuestionOption>>({});
   // Retry / Try again clear the answer; so does Show answer (as today).
@@ -64,11 +81,31 @@ export default function McqTextBody({
     [question],
   );
   const fileClip = useReplayClip('question-file', fileSource);
+  // The question's picture: 220 as designed, smaller on a short screen so
+  // the options stay in view.
+  const fileHeight = layout?.compact ? 120 : 220;
+
+  // A short screen: as many columns as fit the measured width, and denser
+  // cards, so the options stay above the footer (and the result strip).
+  const COMPACT_GAP = 10;
+  const compactWidth =
+    layout?.compact === true
+      ? (() => {
+          const trailing = anyAudio ? OPTION_AUDIO_SIZE + 8 : 0;
+          const cols = compactColumns(
+            options.length,
+            layout.availableWidth,
+            COMPACT_GAP,
+            trailing,
+          );
+          return (layout.availableWidth - COMPACT_GAP * (cols - 1)) / cols;
+        })()
+      : null;
 
   return (
-    <View style={{ rowGap: 16 }}>
+    <View style={{ rowGap: compactWidth != null ? 10 : 16 }}>
       {!_.isEmpty(fileSource) ? (
-        <View style={{ height: 220 }}>
+        <View style={{ height: fileHeight }}>
           <ExpandedWithLayout
             backgroundColor={theme.colors.surface}
             justifyContent="center"
@@ -83,11 +120,18 @@ export default function McqTextBody({
         </View>
       ) : null}
       <View
-        accessibilityRole="radiogroup"
+        role={roles.group}
         style={
-          isGrid
-            ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 14 }
-            : { rowGap: 12 }
+          compactWidth != null
+            ? {
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                columnGap: COMPACT_GAP,
+                rowGap: COMPACT_GAP,
+              }
+            : isGrid
+              ? { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 14 }
+              : { rowGap: 12 }
         }>
         {options.map((item, index) => (
           <McqTextOption
@@ -95,7 +139,9 @@ export default function McqTextBody({
             option={item}
             index={index}
             grid={isGrid}
+            width={compactWidth}
             reserveAudio={anyAudio}
+            selectionRole={roles.option}
             state={mcqOptionState(item, {
               selected: !_.isEmpty(selections[item.questionoptionid]),
               marks,
@@ -103,7 +149,9 @@ export default function McqTextBody({
             })}
             disabled={disabled}
             onPress={() =>
-              setSelections(s => toggleSelection(s, item.questionoptionid, item))
+              setSelections(s =>
+                selectOption(s, item.questionoptionid, item, mode),
+              )
             }
           />
         ))}
@@ -116,7 +164,9 @@ function McqTextOption({
   option,
   index,
   grid,
+  width,
   reserveAudio,
+  selectionRole,
   state,
   disabled,
   onPress,
@@ -124,7 +174,10 @@ function McqTextOption({
   option: QuestionOption;
   index: number;
   grid: boolean;
+  /** Compact: the measured width of this option's cell; else null. */
+  width: number | null;
   reserveAudio: boolean;
+  selectionRole: 'radio' | 'checkbox';
   state: ReturnType<typeof mcqOptionState>;
   disabled: boolean;
   onPress: () => void;
@@ -137,7 +190,11 @@ function McqTextOption({
     <View
       style={[
         { flexDirection: 'row', alignItems: 'center', columnGap: 8 },
-        grid ? { flexBasis: '45%', flexGrow: 1, maxWidth: '50%' } : null,
+        width != null
+          ? { width }
+          : grid
+            ? { flexBasis: '45%', flexGrow: 1, maxWidth: '50%' }
+            : null,
       ]}>
       <View style={{ flex: 1 }}>
         <QuizOption
@@ -146,6 +203,8 @@ function McqTextOption({
           state={state}
           disabled={disabled}
           onPress={onPress}
+          selectionRole={selectionRole}
+          dense={width != null}
         />
       </View>
       {audio ? (

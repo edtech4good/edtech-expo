@@ -160,6 +160,14 @@ export interface ReorderableListProps<T extends ReorderItem> {
    * doesn't advertise a move that no longer works.
    */
   frameFor?: (item: T) => ViewStyle | undefined;
+  /**
+   * A per-item status appended to the tile's accessibility label, e.g. the
+   * result mark after Submit ("Write. Word 3 of 6. Correct"). The tile's
+   * own content is inside the labelled button, so a label drawn in
+   * renderItem is never read; this is how a mark reaches a screen reader.
+   * Return undefined for no status (the label is unchanged).
+   */
+  itemStatusFor?: (item: T) => string | undefined;
   /** Horizontal / vertical space between tiles. */
   gapX?: number;
   gapY?: number;
@@ -267,6 +275,8 @@ interface TileProps {
   count: number;
   label: string;
   noun: string;
+  /** Appended to the accessibility label (itemStatusFor). */
+  status?: string;
   picked: boolean;
   somethingPicked: boolean;
   ghost: boolean;
@@ -295,6 +305,7 @@ const Tile = memo(function Tile({
   count,
   label,
   noun,
+  status,
   picked,
   somethingPicked,
   ghost,
@@ -470,7 +481,7 @@ const Tile = memo(function Tile({
         collapsable={false}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={itemAccessibilityLabel(label, noun, index, count, t)}
+        accessibilityLabel={itemAccessibilityLabel(label, noun, index, count, t, status)}
         accessibilityHint={hint}
         accessibilityState={{ selected: picked, disabled }}
         accessibilityActions={actions}
@@ -501,6 +512,7 @@ function ReorderableListInner<T extends ReorderItem>({
   onStatusChange,
   disabled = false,
   frameFor,
+  itemStatusFor,
   gapX = layout === 'grid' ? 12 : 10,
   gapY = 12,
   style,
@@ -966,6 +978,7 @@ function ReorderableListInner<T extends ReorderItem>({
                   count={order.length}
                   label={item.label}
                   noun={noun}
+                  status={itemStatusFor?.(item)}
                   picked={state.picked}
                   somethingPicked={picked !== null}
                   ghost={isGhost}

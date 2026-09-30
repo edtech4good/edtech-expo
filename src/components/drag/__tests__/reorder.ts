@@ -256,6 +256,10 @@ check('tap to swap: pick, swap, cancel', () => {
 
 check('labels and announcements', () => {
   assert.equal(itemAccessibilityLabel('Write', 'Word', 2, 6), 'Write. Word 3 of 6');
+  // A status (the result mark) is appended; none leaves the label as it was.
+  assert.equal(itemAccessibilityLabel('Write', 'Word', 2, 6, undefined, 'Correct'), 'Write. Word 3 of 6. Correct');
+  assert.equal(itemAccessibilityLabel('Write', 'Word', 2, 6, undefined, undefined), 'Write. Word 3 of 6');
+  assert.equal(itemAccessibilityLabel('Write', 'Word', 2, 6, undefined, ''), 'Write. Word 3 of 6');
   assert.equal(
     moveAnnouncement('Write', 'Word', 0, ['Write', 'sale', 'in', 'book', 'every', 'your']),
     'Write moved to word 1. Write sale in book every your.',

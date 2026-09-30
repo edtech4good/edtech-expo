@@ -30,7 +30,8 @@
     "test:matching": "tsx src/screens/Practice/Corporate/__tests__/matching.ts && tsx src/screens/Practice/Corporate/__tests__/matchingRender.tsx",
     "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx",
     "test:ordering": "tsx src/screens/Practice/Corporate/__tests__/textOrdering.ts",
-    "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts"
+    "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts",
+    "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.21.0",
