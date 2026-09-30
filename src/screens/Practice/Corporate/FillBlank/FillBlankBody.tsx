@@ -22,6 +22,7 @@ import {
   emptyBlanks,
   evaluateFillBlank,
   fillActive,
+  groupUnit,
   isReady,
   isUsed,
   parseSentence,
@@ -162,32 +163,40 @@ export default function FillBlankBody({
             key={u}
             style={{
               flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
               alignItems: 'center',
               maxWidth: '100%',
               minHeight: wide ? 60 : 52,
             }}>
-            {unit.map((piece, p) =>
-              piece.kind === 'text' ? (
-                <Text key={p} style={[sentenceStyle, { flexShrink: 1 }]}>
-                  {piece.text}
-                </Text>
-              ) : (
-                <BlankSlot
-                  key={p}
-                  index={piece.index}
-                  tile={tileById.get(view.filled[piece.index] ?? '')}
-                  slotState={blankSlotState({
-                    tileId: view.filled[piece.index] ?? null,
-                    index: piece.index,
-                    active: view.active,
-                    marks,
-                    showAnswer,
-                  })}
-                  locked={locked}
-                  onPress={() => setState(s => tapBlank(s, piece.index))}
-                />
-              ),
-            )}
+            {groupUnit(unit).map((group, g) => (
+              <View
+                key={g}
+                style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '100%' }}>
+                {group.map((piece, p) =>
+                  piece.kind === 'text' ? (
+                    <Text key={p} style={[sentenceStyle, { flexShrink: 1 }]}>
+                      {piece.text}
+                    </Text>
+                  ) : (
+                    <BlankSlot
+                      key={p}
+                      index={piece.index}
+                      tile={tileById.get(view.filled[piece.index] ?? '')}
+                      slotState={blankSlotState({
+                        tileId: view.filled[piece.index] ?? null,
+                        index: piece.index,
+                        active: view.active,
+                        marks,
+                        showAnswer,
+                      })}
+                      locked={locked}
+                      onPress={() => setState(s => tapBlank(s, piece.index))}
+                    />
+                  ),
+                )}
+              </View>
+            ))}
           </View>
         ))}
       </View>

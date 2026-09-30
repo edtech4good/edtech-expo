@@ -77,6 +77,31 @@ export function parseSentence(text: string | null | undefined, blankCount: numbe
   return units;
 }
 
+/** A short text right after a blank (a full stop, a Khmer particle) stays with it. */
+export const GLUE_MAX = 3;
+
+/**
+ * Within a unit, the pieces that must not be split across lines: a blank with
+ * the short text that follows it. Everything else is its own group. Khmer has
+ * no spaces, so a whole sentence can be one unit; its groups wrap like words.
+ */
+export function groupUnit(unit: SentenceUnit): SentencePiece[][] {
+  const groups: SentencePiece[][] = [];
+  for (const piece of unit) {
+    const last = groups[groups.length - 1];
+    if (
+      piece.kind === 'text' &&
+      last &&
+      last.length === 1 &&
+      last[0].kind === 'blank' &&
+      Array.from(piece.text).length <= GLUE_MAX
+    ) {
+      last.push(piece);
+    } else groups.push([piece]);
+  }
+  return groups;
+}
+
 // ---------------------------------------------------------------------------
 // Filling and emptying the blanks
 // ---------------------------------------------------------------------------

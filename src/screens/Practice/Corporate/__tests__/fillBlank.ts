@@ -18,6 +18,7 @@ import {
   emptyBlanks,
   evaluateFillBlank,
   fillActive,
+  groupUnit,
   isReady,
   isUsed,
   parseSentence,
@@ -389,6 +390,15 @@ check('markers beyond the blanks stay as text; missing markers add blanks at the
 check('every blank appears exactly once, numbered in order', () => {
   const idx = parseSentence('x ----- y ----- z -----', 3).flat().filter(p => p.kind === 'blank').map(p => (p as any).index);
   assert.deepEqual(idx, [0, 1, 2]);
+});
+
+check('a blank keeps the short text after it; long text and other blanks are separate groups', () => {
+  const g = (t: string, n: number) =>
+    parseSentence(t, n).map(u => groupUnit(u).map(x => x.map(p => (p.kind === 'blank' ? `[${p.index}]` : p.text)).join('')));
+  assert.deepEqual(g('ប្រាក់ចំណេញរបស់អ្នកគឺ-----ដក-----។', 2), [['ប្រាក់ចំណេញរបស់អ្នកគឺ', '[0]ដក', '[1]។']]);
+  assert.deepEqual(g('a -----.', 1), [['a'], ['[0].']]);
+  assert.deepEqual(g('-----abcdef', 1), [['[0]', 'abcdef']], 'longer text is not glued');
+  assert.deepEqual(g('----------', 2), [['[0]', '[1]']], 'two blanks stay apart');
 });
 
 console.log(`fillBlank: ${passed} checks passed`);
