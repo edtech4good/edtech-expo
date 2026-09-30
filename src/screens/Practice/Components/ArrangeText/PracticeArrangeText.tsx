@@ -36,7 +36,7 @@ import {
   FillBlankItem,
 } from '@/components';
 import _ from 'lodash';
-import { orderAnswer } from '@/utils/answerV1';
+import { gradeArrangeText } from './arrangeTextGrade';
 import { Image } from 'expo-image';
 import { isPointInRect, KeyExtractorHelper } from '@/utils';
 import { FlatList } from 'react-native';
@@ -107,35 +107,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         onSubmit(attempt.tries, false, true);
         return;
       }
-      let isCorrect = true;
-      if (Object.values(attempt.selections).length !== options.length)
-        isCorrect = false;
-      else {
-        const answers = Object.values(attempt.selections);
-
-        const { correct } = _.reduce(
-          answers,
-          (result, value, index) => {
-            // if (value.questionoptionsequence > answers[index + 1] && !_.isEmpty(answers[index + 1])) result = false;
-
-            console.log('Current Seq: ', value.questionoptionsequence);
-            console.log('Seq: ', result.currentSequence);
-            if (value.questionoptionsequence < result.currentSequence)
-              result.correct = false;
-            result.currentSequence = value.questionoptionsequence;
-            return result;
-          },
-          { correct: true, currentSequence: 0 },
-        );
-        isCorrect = correct;
-      }
-
-      onSubmit(
-        attempt.tries,
-        isCorrect,
-        false,
-        orderAnswer(_.map(attempt.selections, o => o.questionoptionid)),
+      const { isCorrect, answer } = gradeArrangeText(
+        options,
+        attempt.selections,
       );
+
+      onSubmit(attempt.tries, isCorrect, false, answer);
       // console.log('I AM CORRECT? : ', isCorrect);
     };
 

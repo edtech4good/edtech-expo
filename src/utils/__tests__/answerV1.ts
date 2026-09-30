@@ -29,6 +29,8 @@ import {
   evaluateMcqText,
   toggleSelection,
 } from '../../screens/Practice/Corporate/mcqTextLogic';
+import { gradeArrangeText } from '../../screens/Practice/Components/ArrangeText/arrangeTextGrade';
+import { evaluateTextOrdering } from '../../screens/Practice/Corporate/textOrderingLogic';
 import { gradeFillBlank } from '../../screens/Practice/Components/FillBlank/fillBlankGrade';
 import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../screens/Practice/Corporate/FillBlank/fillBlankLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
@@ -555,6 +557,99 @@ check('corporate MCQ text marks: chosen options only, by their own correctness',
   const right = corporateSelections([multiChoice[2], multiChoice[0]]);
   assert.deepEqual(evaluateMcqText(multiChoice, right).perItem, { [U(6)]: 'correct', [U(4)]: 'correct' });
 });
+
+// ---------------------------------------------------------------------------
+// Corporate word ordering (template 5): for the same final order, the
+// corporate shell sends exactly what the kids renderer sends. Every
+// permutation of 3 and 4 words is tried, plus a fixture with equal sequences.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeArrangeText's submit, as it was written inline before it moved to
+ * arrangeTextGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsOrderSubmitAsBefore(options: Opt[], selections: Opt[]) {
+  let isCorrect = true;
+  if (Object.values(selections).length !== options.length) isCorrect = false;
+  else {
+    const answers = Object.values(selections);
+    const { correct } = _.reduce(
+      answers,
+      (result, value) => {
+        if ((value.questionoptionsequence as number) < result.currentSequence) result.correct = false;
+        result.currentSequence = value.questionoptionsequence as number;
+        return result;
+      },
+      { correct: true, currentSequence: 0 },
+    );
+    isCorrect = correct;
+  }
+  return { isCorrect, answer: B.orderAnswer(_.map(selections, o => o.questionoptionid)) };
+}
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(p => [x, ...p]));
+}
+
+const ordering3 = ordering.slice(0, 3);
+const orderingTied = [opt(30, 'ក', true, 1), opt(31, 'ខ', true, 2), opt(32, 'គ', true, 2), opt(33, 'ឃ', true, 3)];
+
+for (const [label, options] of [['3 words', ordering3], ['4 words', ordering], ['4 words, two with equal sequence', orderingTied]] as const) {
+  check(`corporate word ordering, ${label}: answer and iscorrect equal the kids path for every order`, () => {
+    let n = 0;
+    let right = 0;
+    for (const perm of permutations([...options] as Opt[])) {
+      const ids = perm.map(o => o.questionoptionid);
+      const kids = kidsOrderSubmitAsBefore(options as Opt[], perm);
+      const shared = gradeArrangeText(options, perm as never);
+      const corp = evaluateTextOrdering(options as never, ids);
+      assert.deepEqual(shared, kids, 'the shared rule is the old inline one');
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.deepEqual(corp.answer, { v: 1, type: 'order', order: ids });
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(5, options as Opt[], corp.answer), corp.iscorrect);
+      // What the shell hands the screen is what the kids renderer handed it.
+      const practice = shellPress({ ...INITIAL_SHELL_STATE, tries: 2 }, 'submit', {
+        mode: 'practice',
+        ready: true,
+        evaluate: () => evaluateTextOrdering(options as never, ids),
+      });
+      const quiz = shellPress(INITIAL_SHELL_STATE, 'submit', {
+        mode: 'quiz',
+        ready: true,
+        evaluate: () => evaluateTextOrdering(options as never, ids),
+      });
+      assert.equal(practice.effect.kind, 'submit');
+      assert.equal(quiz.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, 2, practiceRes, kids.answer),
+      );
+      assert.deepEqual(
+        toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+        toQuizQuestionResult(kids.isCorrect, quizRes, kids.answer),
+      );
+      if (corp.iscorrect) right++;
+      n++;
+    }
+    assert.ok(n >= 6, `tried ${n} orders`);
+    assert.ok(right >= 1 && right < n, `${right} of ${n} orders grade correct`);
+  });
+}
+
+check('the shared word-ordering rule equals the old inline one for partial and empty placements too', () => {
+  for (const options of [ordering, orderingTied] as Opt[][]) {
+    const seqs = options.flatMap(o => permutations(options).flatMap(p => [p.slice(0, 0), p.slice(0, 2), p.slice(0, 3)]));
+    for (const sel of seqs) {
+      assert.deepEqual(gradeArrangeText(options, sel as never), kidsOrderSubmitAsBefore(options, sel));
+    }
+  }
+});
+
 
 // ---------------------------------------------------------------------------
 // Corporate fill in the blank (template 8): for the same final filling, the

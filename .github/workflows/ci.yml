@@ -69,6 +69,8 @@ jobs:
       - name: Corporate question shell, registry and one audio player
         run: yarn test:shell
 
+      - name: Corporate word ordering (marks, read-back)
+        run: yarn test:ordering
       - name: Corporate fill in the blank
         run: yarn test:fillblank
 
