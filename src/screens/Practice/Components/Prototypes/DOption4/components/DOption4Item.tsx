@@ -1,7 +1,6 @@
-import { ShakingWrapper } from '@/components';
+import { OptionImage, ShakingWrapper } from '@/components';
 import { ShakingHandler } from '@/models';
 import { useResource } from '@/services';
-import { Image } from 'expo-image';
 import _ from 'lodash';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Pressable } from 'react-native';
@@ -10,12 +9,14 @@ import { useTheme } from 'styled-components/native';
 interface Props {
   id: string;
   source: string;
+  /** The option's text, shown when the picture is missing. */
+  label?: string;
   disabled?: boolean;
   onPress: () => void;
 }
 
 export default forwardRef<ShakingHandler, Props>(function DOption4Item(
-  { id, source, onPress, disabled = false }: Props,
+  { id, source, label, onPress, disabled = false }: Props,
   ref,
 ) {
   const theme = useTheme();
@@ -43,13 +44,15 @@ export default forwardRef<ShakingHandler, Props>(function DOption4Item(
   return (
     <ShakingWrapper ref={shakingRef}>
       <Pressable onPress={onPress}>
-        <Image
+        <OptionImage
           source={fileSource}
+          label={label}
+          tappable
           focusable={false}
+          contentFit="contain"
           style={{
             width: 222,
             height: 111,
-            resizeMode: 'contain',
             shadowColor: theme.colors.shadow,
             shadowOffset: {
               width: 0,

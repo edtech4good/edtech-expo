@@ -1,8 +1,7 @@
 import { Images } from '@/assets';
-import { H4, SizedBox } from '@/components';
+import { H4, OptionImage, SizedBox } from '@/components';
 import { QuestionOption } from '@/models';
 import { useResource } from '@/services';
-import { Image } from 'expo-image';
 import _ from 'lodash';
 import { useMemo } from 'react';
 import { Pressable } from 'react-native';
@@ -58,7 +57,13 @@ export default function DOption1Item({
         padding: theme.layouts.medium,
       }}>
       {!_.isEmpty(source) && (
-        <Image source={source} style={{ width: 100, height: 100 }} />
+        <OptionImage
+          source={source}
+          label={option.questionoptiontext}
+          tappable
+          contentFit="contain"
+          style={{ width: 100, height: 100 }}
+        />
       )}
       {_.isEmpty(source) && <H4>{option.questionoptiontext}</H4>}
     </Pressable>

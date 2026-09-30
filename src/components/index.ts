@@ -50,6 +50,7 @@ export { default as FormAppTextField } from './forms/FormAppTextField';
 export { default as PracticeHeading } from './practices/PracticeHeading';
 export { default as PracticeFooter } from './practices/PracticeFooter';
 export { default as PracticeFile } from './practices/PracticeFile';
+export { default as OptionImage } from './practices/OptionImage';
 export { default as MCQImageItem } from './practices/MCQImageItem';
 export { default as MCQTextItem } from './practices/MCQTextItem';
 export { default as MatchingItem } from './practices/MatchingItem';

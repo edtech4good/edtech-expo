@@ -173,6 +173,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(function DOption4(
         key={`${item.questionoptionid}`}
         id={`${index}`}
         source={_.get(item, 'questionoptionfile.filename', '')}
+        label={item.questionoptiontext}
         ref={r => {
           if (!r) return;
           matchingItemRefs.current[`${index}`] = r;

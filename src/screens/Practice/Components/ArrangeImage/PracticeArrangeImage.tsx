@@ -22,13 +22,13 @@ import {
   Expanded,
   H2,
   H4,
+  OptionImage,
   PracticeFooter,
   PracticeHeading,
   Row,
   SH3,
   SizedBox,
 } from '@/components';
-import { Image } from 'expo-image';
 import { Pressable } from 'react-native';
 import { changeColorOpacity } from '@/utils';
 
@@ -178,9 +178,11 @@ export default forwardRef<PracticeHandler, PracticeProps>(
                   shadowRadius: 7,
                 },
           ]}>
-          <Image
+          <OptionImage
             focusable={false}
             source={imageSource}
+            label={item.questionoptiontext}
+            tappable
             contentFit="contain"
             style={{
               width: itemWidth,

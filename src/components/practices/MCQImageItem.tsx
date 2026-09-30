@@ -1,5 +1,5 @@
 import { QuestionOption } from '@/models';
-import { Image } from 'expo-image';
+import OptionImage from './OptionImage';
 import _ from 'lodash';
 import styled, { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource } from '@/services';
@@ -66,8 +66,10 @@ export default function MCQImageItem({
       isSelected={isSelected || highlightItem}
       disabled={disabled || isShowingAnswer}
       onPress={handleImagePress}>
-      <Image
+      <OptionImage
         source={imageSource}
+        label={option.questionoptiontext}
+        tappable
         contentFit="fill"
         style={{
           width: itemWidth,

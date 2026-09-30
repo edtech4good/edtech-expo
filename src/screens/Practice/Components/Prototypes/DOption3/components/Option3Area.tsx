@@ -1,8 +1,7 @@
 import { Images } from '@/assets';
-import { BouncyWrapper, H3, H4, Row } from '@/components';
+import { BouncyWrapper, H3, H4, OptionImage, Row } from '@/components';
 import { File, QuestionOption } from '@/models';
 import { useResource } from '@/services';
-import { Image } from 'expo-image';
 import { useEffect } from 'react';
 import { useController } from 'react-hook-form';
 import { Pressable } from 'react-native';
@@ -52,9 +51,12 @@ export default function Option3Area({
           alignItems: 'center',
         }}>
         {count.field.value > 0 && (
-          <Image
+          <OptionImage
             source={source}
-            style={{ width: 100, height: 100, resizeMode: 'contain' }}
+            label={option.questionoptiontext}
+            tappable
+            contentFit="contain"
+            style={{ width: 100, height: 100 }}
           />
         )}
         {count.field.value > 1 && <H4>{` x ${count.field.value}`}</H4>}

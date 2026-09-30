@@ -4,6 +4,7 @@ import Row from '../layouts/Row';
 import { Pressable } from 'react-native';
 import { Images } from '@/assets';
 import { Image } from 'expo-image';
+import OptionImage from './OptionImage';
 import { useTheme } from 'styled-components/native';
 import { useParentLayout, useResource } from '@/services';
 import { useMemo } from 'react';
@@ -38,7 +39,7 @@ export default function PracticeFile({
 
   if (file.filetype === 6)
     return (
-      <Image
+      <OptionImage
         source={imageSource}
         contentFit="contain"
         style={{

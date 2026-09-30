@@ -1,4 +1,5 @@
-import { Image, ImageProps, ImageSource, ImageStyle } from 'expo-image';
+import { ImageProps, ImageStyle } from 'expo-image';
+import OptionImage from './practices/OptionImage';
 import { Pressable, StyleProp, ViewProps } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import Row from './layouts/Row';
@@ -13,6 +14,8 @@ interface Props extends ViewProps {
   maxStackToDisplay?: number;
   numOfStack?: number;
   image: string;
+  /** The option's text, shown when the picture is missing. */
+  label?: string;
   imageWidth: number;
   imageHeight: number;
   imageProps?: ImageProps;
@@ -28,6 +31,7 @@ export default function StackImage({
   imageHeight,
   imageWidth,
   image,
+  label,
   imageStyle,
 }: Props) {
   const theme = useTheme();
@@ -53,15 +57,16 @@ export default function StackImage({
         .fill(null)
         .map((_, index) => {
           return (
-            <Image
+            <OptionImage
               key={index}
               source={source}
+              label={label}
+              contentFit="contain"
               style={[
                 imageStyle,
                 {
                   width: imageWidth,
                   height: imageHeight,
-                  resizeMode: 'contain',
                 },
                 {
                   position: 'absolute',
@@ -71,7 +76,7 @@ export default function StackImage({
             />
           );
         }),
-    [image, finalStackSize],
+    [image, label, source, finalStackSize],
   );
 
   const handlePress = () => {

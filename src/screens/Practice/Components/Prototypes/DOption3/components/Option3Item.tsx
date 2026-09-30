@@ -1,8 +1,7 @@
 import { Images } from '@/assets';
-import { H3, ShakingWrapper } from '@/components';
+import { H3, OptionImage, ShakingWrapper } from '@/components';
 import { Question, ShakingHandler } from '@/models';
 import { useResource } from '@/services';
-import { Image } from 'expo-image';
 import _ from 'lodash';
 import { useRef } from 'react';
 import { Pressable } from 'react-native';
@@ -56,9 +55,11 @@ export default function Option3Item({
           // shadowOpacity: 0.25,
           // shadowRadius: 15,
         }}>
-        <Image
+        <OptionImage
           source={source}
-          style={{ width: 100, height: 100, resizeMode: 'contain' }}
+          tappable
+          contentFit="contain"
+          style={{ width: 100, height: 100 }}
         />
       </Pressable>
     </ShakingWrapper>

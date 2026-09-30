@@ -31,6 +31,7 @@ export default function DOption4Area({ onPress }: Props) {
       <StackImage
         maxStackToDisplay={MAX_STACK}
         image={_.get(item, 'option.questionoptionfile.filename', '')}
+        label={item.option.questionoptiontext}
         imageWidth={222}
         imageHeight={111}
         numOfStack={item.value}

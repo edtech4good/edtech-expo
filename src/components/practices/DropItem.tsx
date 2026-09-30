@@ -13,6 +13,7 @@ import Expanded from '../layouts/Expanded';
 import _ from 'lodash';
 import H6 from '../texts/H6';
 import { Image } from 'expo-image';
+import OptionImage from './OptionImage';
 import { Audio } from 'expo-av';
 import { Pressable } from 'react-native';
 import { Images } from '@/assets';
@@ -130,8 +131,9 @@ export default forwardRef<DropItemHandler, DropItemProps>(function DropItem(
         <Expanded justifyContent="center" alignItems="flex-start">
           {!_.isEmpty(option.questionoptionfile) &&
             _.get(option, 'questionoptionfile.filetype', 0) === 6 && (
-              <Image
+              <OptionImage
                 source={source}
+                label={option.questionoptiontext}
                 style={{ height: 100, width: 200 }}
                 contentFit="cover"
               />
@@ -174,8 +176,9 @@ export default forwardRef<DropItemHandler, DropItemProps>(function DropItem(
       <Expanded justifyContent="center">
         {!_.isEmpty(option.questionoptionfile) &&
           _.get(option, 'questionoptionfile.filetype', 0) === 6 && (
-            <Image
+            <OptionImage
               source={source}
+              label={option.questionoptiontext}
               style={{ height: 100, width: 200 }}
               contentFit="cover"
             />
