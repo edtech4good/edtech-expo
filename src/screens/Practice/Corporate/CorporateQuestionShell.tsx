@@ -23,7 +23,9 @@ import ResultStrip from '@/components/kit/ResultStrip';
 import { useSmallText } from '@/components/kit/kitText';
 import type { PracticeProps } from '../PracticeScreen';
 import {
+  effectCall,
   INITIAL_SHELL_STATE,
+  pressArmed,
   retried,
   revealed,
   ShellAction,
@@ -81,6 +83,18 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
     const [state, setState] = useState<ShellState>(INITIAL_SHELL_STATE);
+    // The latest state, updated synchronously on every press. Presses read
+    // this, not the render-time `state`, so two taps before React re-renders
+    // see the first tap's result (a second Submit or Next is then refused).
+    const stateRef = useRef<ShellState>(INITIAL_SHELL_STATE);
+    const commit = (next: ShellState) => {
+      if (next === stateRef.current) return;
+      stateRef.current = next;
+      setState(next);
+    };
+    // This shell mounts per question (see the key above): taps in its first
+    // ARM_MS are the tail of a double tap on the previous question's Next.
+    const mountedAt = useRef(Date.now());
     const [ready, setReady] = useState(false);
     const reportRef = useRef<QuestionBodyReport | null>(null);
 
@@ -94,13 +108,13 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
       ref,
       () => ({
         retry() {
-          setState(s => retried(s));
+          commit(retried(stateRef.current));
         },
         submit() {
           press('submit');
         },
         revealAnswer() {
-          setState(s => revealed(s));
+          commit(revealed(stateRef.current));
         },
       }),
     );
@@ -118,32 +132,24 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     const feedback = question?.questionobject?.questionfeedback;
 
     const press = (id: ShellActionId) => {
-      const result = shellPress(state, id, {
+      const result = shellPress(stateRef.current, id, {
         mode,
         ready,
         hideRetry,
+        armed: pressArmed(mountedAt.current, Date.now()),
         evaluate: () =>
           reportRef.current
             ? reportRef.current.evaluate()
             : { iscorrect: false, answer: null, perItem: {} },
       });
-      if (result.state !== state) setState(result.state);
-      const effect = result.effect;
-      switch (effect.kind) {
-        case 'submit':
-          onSubmit(effect.tries, effect.iscorrect, false, effect.answer, {
-            inlineResult: true,
-          });
-          break;
-        case 'skipRevealed':
-          onSubmit(effect.tries, false, true);
-          break;
-        case 'continue':
-          onContinue();
-          break;
-        default:
-          break;
+      commit(result.state);
+      const call = effectCall(result.effect);
+      if (call?.fn === 'onSubmit') {
+        const a = call.args;
+        if (a.length === 5) onSubmit(a[0], a[1], a[2], a[3], a[4]);
+        else onSubmit(a[0], a[1], a[2]);
       }
+      else if (call?.fn === 'onContinue') onContinue();
     };
 
     const actions = shellFooterActions({
@@ -152,6 +158,7 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
       tries: state.tries,
       ready,
       hideRetry,
+      leaving: state.leaving,
     });
     const kind = stripKind(state);
     const summary = state.evaluation?.summary;

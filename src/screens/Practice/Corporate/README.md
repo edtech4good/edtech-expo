@@ -61,7 +61,7 @@ Props the body receives (`QuestionBodyProps` in `types.ts`):
 | `disabled` | True once submitted or revealed. Take no input. |
 | `marks` | After submit, the `perItem` marks from your `evaluate()`: show a ✓ or ✕ on each item. Otherwise null. |
 | `showAnswer` | True after Show answer: render the correct answer. |
-| `report` | Call it through `useReportAnswer(report, ready, evaluate)` on every render. |
+| `report` | Call it through `useReportAnswer(report, ready, evaluate)` on every render. **Mandatory**: until the body reports, the shell treats it as not ready and Submit stays disabled. |
 
 What the body reports (`QuestionBodyReport`):
 
@@ -78,6 +78,35 @@ What the body reports (`QuestionBodyReport`):
     learner placed or chose, so a wrong answer never reveals the right one.
   - `summary`: `{ correctCount, total, readBack }` for the strip
     ("2 of 4 are in the right place."). Leave it out for a single-part answer.
+
+### Showing the answer (`showAnswer`)
+
+After "Show answer" the shell sets `resultState: 'revealed'`, `showAnswer: true`,
+`marks: null` and `disabled: true`. Render the correct answer, not the learner's:
+
+- Multiple choice: tint every correct option as correct, with no marks on the
+  others (`McqTextBody` does this).
+- Ordering: show the items in their correct order (by `questionoptionsequence`),
+  each tile in the `correct` state. Do not animate the learner's order into it and
+  do not mark which ones moved. For `ReorderableList`, pass the sorted items and
+  `frameFor` returning `tileFrameStyle(colors, 'correct')`, and `disabled`.
+- Matching and fill in the blank: fill every slot or blank with its right
+  answer, in the `correct` state, and empty the bank.
+
+The learner's answer is cleared when `showAnswer` turns on, as today's renderers
+do, and the next `resetKey` never comes (Next moves on).
+
+### Per-item audio
+
+Per-item audio needs no contract change. The body draws the control itself with
+the kit's `OptionAudioCircle`, using `clipId` set to the option id and `source`
+from `useResource`. It plays on the shared player, so it stops the heading's
+Listen pill and any other clip.
+
+- In a `ReorderableList`, put it in `renderAccessory` (a sibling of the tile,
+  never inside it) and leave room with `MovableTile reserveAudio`. See the
+  example in `OptionAudioCircle.tsx`.
+- Anywhere else, put it next to the item, as `McqTextBody` does.
 
 ## What the shell does with it (today's semantics)
 
@@ -101,6 +130,12 @@ by `yarn test:shell`.
     footer does.
 - **Quiz**: Submit, then Next after either result. There is no retry.
 - The shell remounts for every question, keyed on the question index.
+- Double taps. Next can be pressed once: after it, every button is disabled
+  until the next question mounts, so a practice or quiz is never saved twice.
+  Submit can be pressed once: presses read the state synchronously, not the
+  last render. A new question ignores taps for its first 500 ms (`ARM_MS`), so
+  the second tap of a double tap on Next can't submit a blank answer on the
+  question that replaced it. Bodies don't need to guard against any of this.
 - `ref` keeps today's `PracticeHandler` (`retry`, `revealAnswer`, `submit`).
 
 Corporate schools only: the registry never gives these renderers to a kids-theme

@@ -29,11 +29,34 @@ import type {
 /** Today's cap: the popup forces "Show answer" once tries > 2. */
 export const MAX_PRACTICE_TRIES = 3;
 
+/**
+ * How long a freshly shown question ignores taps. The second tap of a quick
+ * double tap on Next lands where the next question's Submit now sits (the
+ * footer does not move), and multiple choice is ready at once, so without
+ * this it would submit a blank answer on the new question. Readiness cannot
+ * be the guard: a body may be ready immediately. 500 ms covers a double tap
+ * (OS double-tap windows are 300 to 500 ms) and is shorter than anyone
+ * reads a new question and answers it.
+ */
+export const ARM_MS = 500;
+
+/** Whether a question shown at `mountedAt` accepts taps at `now`. */
+export function pressArmed(mountedAt: number, now: number): boolean {
+  return now - mountedAt >= ARM_MS;
+}
+
 export interface ShellState {
   tries: number;
   resetKey: number;
   resultState: ResultState;
   evaluation: QuestionEvaluation | null;
+  /**
+   * Next was pressed: the screen is moving on (and may be saving the whole
+   * practice or quiz). Every button is disabled and every press ignored
+   * until the next question mounts a fresh shell, so a second tap can
+   * never save twice or advance twice.
+   */
+  leaving: boolean;
 }
 
 export const INITIAL_SHELL_STATE: ShellState = {
@@ -41,6 +64,7 @@ export const INITIAL_SHELL_STATE: ShellState = {
   resetKey: 0,
   resultState: 'answering',
   evaluation: null,
+  leaving: false,
 };
 
 export type ShellActionId = 'submit' | 'retry' | 'next' | 'showAnswer' | 'tryAgain';
@@ -61,6 +85,8 @@ export interface FooterInput {
   ready: boolean;
   /** Today's prop: quiz passes it to hide the Retry pill. */
   hideRetry?: boolean;
+  /** ShellState.leaving: after Next, everything is disabled. */
+  leaving?: boolean;
 }
 
 /** Whether "Try again" is still offered after a wrong answer (practice). */
@@ -70,6 +96,11 @@ export function canTryAgain(mode: QuestionMode, tries: number): boolean {
 
 /** The footer buttons for a state, in reading order. */
 export function shellFooterActions(input: FooterInput): ShellAction[] {
+  const actions = footerActionsFor(input);
+  return input.leaving ? actions.map(a => ({ ...a, disabled: true })) : actions;
+}
+
+function footerActionsFor(input: FooterInput): ShellAction[] {
   const { mode, resultState, tries, ready, hideRetry = false } = input;
   const next: ShellAction = {
     id: 'next',
@@ -132,6 +163,8 @@ export interface PressContext {
   hideRetry?: boolean;
   /** The body's evaluate(); only called for Submit. */
   evaluate: () => QuestionEvaluation;
+  /** False while the question is still inside ARM_MS (see pressArmed). */
+  armed?: boolean;
 }
 
 /**
@@ -150,9 +183,10 @@ export function shellPress(
     tries: state.tries,
     ready: ctx.ready,
     hideRetry: ctx.hideRetry,
+    leaving: state.leaving,
   }).find(a => a.id === id && !a.disabled);
   const none = { state, effect: { kind: 'none' } as ShellEffect };
-  if (!offered) return none;
+  if (!offered || ctx.armed === false) return none;
 
   switch (id) {
     case 'submit': {
@@ -176,10 +210,12 @@ export function shellPress(
       return { state: retried(state), effect: { kind: 'none' } };
     case 'showAnswer':
       return { state: revealed(state), effect: { kind: 'none' } };
-    case 'next':
+    case 'next': {
+      const leaving = { ...state, leaving: true };
       if (state.resultState === 'revealed')
-        return { state, effect: { kind: 'skipRevealed', tries: state.tries } };
-      return { state, effect: { kind: 'continue' } };
+        return { state: leaving, effect: { kind: 'skipRevealed', tries: state.tries } };
+      return { state: leaving, effect: { kind: 'continue' } };
+    }
     default:
       return none;
   }
@@ -192,6 +228,7 @@ export function retried(state: ShellState): ShellState {
     resetKey: state.resetKey + 1,
     resultState: 'answering',
     evaluation: null,
+    leaving: false,
   };
 }
 
@@ -205,4 +242,38 @@ export function stripKind(state: ShellState): 'correct' | 'incorrect' | null {
   if (state.resultState === 'correct') return 'correct';
   if (state.resultState === 'incorrect') return 'incorrect';
   return null;
+}
+
+/** The screen callback an effect becomes, with its exact arguments. */
+export type ShellCall =
+  | {
+      fn: 'onSubmit';
+      args:
+        | [number, boolean, boolean, QuestionEvaluation['answer'], { inlineResult: true }]
+        | [number, boolean, boolean];
+    }
+  | { fn: 'onContinue'; args: [] }
+  | null;
+
+/**
+ * What the component calls for an effect: today's renderer calls, exactly.
+ * - submit: onSubmit(tries, iscorrect, false, answer, { inlineResult: true })
+ * - skipRevealed: onSubmit(tries, false, true), as PracticeMCQText's submit
+ *   does while the answer is shown (no answer: nothing is recorded)
+ * - continue: onContinue(), the popup button's action
+ */
+export function effectCall(effect: ShellEffect): ShellCall {
+  switch (effect.kind) {
+    case 'submit':
+      return {
+        fn: 'onSubmit',
+        args: [effect.tries, effect.iscorrect, false, effect.answer, { inlineResult: true }],
+      };
+    case 'skipRevealed':
+      return { fn: 'onSubmit', args: [effect.tries, false, true] };
+    case 'continue':
+      return { fn: 'onContinue', args: [] };
+    default:
+      return null;
+  }
 }
