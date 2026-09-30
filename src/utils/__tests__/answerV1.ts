@@ -30,6 +30,8 @@ import {
   toggleSelection,
 } from '../../screens/Practice/Corporate/mcqTextLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
+import { gradeArrangeImage } from '../../screens/Practice/Components/ArrangeImage/arrangeImageGrade';
+import { evaluateImageOrdering } from '../../screens/Practice/Corporate/ImageOrdering/imageOrderingLogic';
 
 // Every answer any test maps goes through these wrappers, which assert the
 // answer never contains an empty string anywhere (the deployed validator
@@ -553,5 +555,76 @@ check('corporate MCQ text marks: chosen options only, by their own correctness',
   const right = corporateSelections([multiChoice[2], multiChoice[0]]);
   assert.deepEqual(evaluateMcqText(multiChoice, right).perItem, { [U(6)]: 'correct', [U(4)]: 'correct' });
 });
+
+// ---------------------------------------------------------------------------
+// Corporate picture ordering (template 6): for the same final order, the
+// corporate shell sends exactly what the kids renderer sends. Every
+// permutation of the fixtures is tried, including one with equal sequences.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeArrangeImage's submit, as it was written inline before it moved to
+ * arrangeImageGrade.ts (its console.logs dropped). Kept verbatim here so a
+ * change to the shared rule shows.
+ */
+function kidsArrangeAsBefore(options: Opt[]) {
+  const { correct } = _.reduce(
+    options,
+    (result, value) => {
+      if ((value.questionoptionsequence as number) < result.currentSequence) result.correct = false;
+      result.currentSequence = value.questionoptionsequence as number;
+      return result;
+    },
+    { correct: true, currentSequence: 0 },
+  );
+  return { correct, answer: B.orderAnswer(_.map(options, o => o.questionoptionid)) };
+}
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(rest => [x, ...rest]));
+}
+
+const sixPictures = [1, 2, 3, 4, 5, 6].map(n => opt(60 + n, `រូបភាព ${n}`, true, n));
+const tiedPictures = [opt(70, 'ក', true, 1), opt(71, 'ខ', true, 2), opt(72, 'គ', true, 2), opt(73, 'ឃ', true, 3)];
+
+for (const [name, options] of [['4 pictures', ordering], ['6 pictures', sixPictures], ['equal sequences', tiedPictures]] as const) {
+  check(`corporate picture ordering, ${name}: answer and iscorrect equal the kids path for every order`, () => {
+    let n = 0;
+    for (const perm of permutations([...options] as Opt[])) {
+      const ids = perm.map(o => o.questionoptionid);
+      const kids = kidsArrangeAsBefore(perm);
+      const shared = gradeArrangeImage(perm as any);
+      const corp = evaluateImageOrdering(options as any, ids);
+      assert.deepEqual(shared, kids, 'the shared rule is the old inline one');
+      assert.equal(corp.iscorrect, kids.correct);
+      assert.deepEqual(corp.answer, kids.answer);
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(6, options as Opt[], corp.answer), corp.iscorrect);
+
+      // What the shell hands the screen is what the kids renderer handed it.
+      for (const tries of [1, 2, 3]) {
+        const practice = shellPress({ ...INITIAL_SHELL_STATE, tries }, 'submit', {
+          mode: 'practice', ready: true, evaluate: () => evaluateImageOrdering(options as any, ids),
+        });
+        const quiz = shellPress({ ...INITIAL_SHELL_STATE }, 'submit', {
+          mode: 'quiz', ready: true, evaluate: () => evaluateImageOrdering(options as any, ids),
+        });
+        if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') throw new Error('no submit');
+        assert.deepEqual(
+          toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+          toPracticeQuestionResult(kids.correct, tries, practiceRes, kids.answer),
+        );
+        assert.deepEqual(
+          toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+          toQuizQuestionResult(kids.correct, quizRes, kids.answer),
+        );
+      }
+      n++;
+    }
+    assert.equal(n, _.range(1, options.length + 1).reduce((a, b) => a * b, 1));
+  });
+}
 
 console.log(`answerV1: ${passed} checks passed`);
