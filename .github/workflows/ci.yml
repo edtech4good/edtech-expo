@@ -73,6 +73,8 @@ jobs:
         run: yarn test:ordering
       - name: Corporate fill in the blank
         run: yarn test:fillblank
+      - name: Corporate matching logic
+        run: yarn test:matching
 
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
