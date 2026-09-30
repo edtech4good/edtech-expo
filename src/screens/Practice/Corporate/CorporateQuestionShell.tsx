@@ -41,7 +41,11 @@ import {
   ShellState,
   stripKind,
 } from './shellLogic';
-import { computeBodyLayout, shellSpacing } from './shellLayout';
+import {
+  computeBodyLayout,
+  shellSpacing,
+  stripUnderViewport,
+} from './shellLayout';
 import type { QuestionBody, QuestionBodyReport } from './types';
 
 /** The gap between the result strip and the buttons in the footer. */
@@ -154,7 +158,13 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     const [regularCardHeight, setRegularCardHeight] = useState<number | null>(
       null,
     );
+    const [cardWidth, setCardWidth] = useState<number | null>(null);
+    const [regularCardWidth, setRegularCardWidth] = useState<number | null>(
+      null,
+    );
     const [stripBlock, setStripBlock] = useState(0);
+    // Whether the strip was showing when the viewport was last measured.
+    const [viewportHasStrip, setViewportHasStrip] = useState(false);
 
     const press = (id: ShellActionId) => {
       const result = shellPress(stateRef.current, id, {
@@ -189,8 +199,10 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     const layout = computeBodyLayout({
       viewport,
       cardHeight,
+      cardWidth,
       regularCardHeight,
-      stripHeight: kind ? stripBlock : 0,
+      regularCardWidth,
+      stripHeight: stripUnderViewport(viewportHasStrip, stripBlock),
       gutter: theme.layouts.pageHorizontalPadding,
     });
     const compact = layout?.compact ?? false;
@@ -200,12 +212,20 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
       setViewport(v =>
         v && v.width === width && v.height === height ? v : { width, height },
       );
+      // This viewport was measured with the strip showing, or not: the
+      // compact decision adds the strip back only for such a viewport.
+      setViewportHasStrip(kind !== null);
     };
     const onCardLayout = (e: LayoutChangeEvent) => {
-      const h = e.nativeEvent.layout.height;
-      setCardHeight(h);
-      // Compact is decided on the regular card's height (see ShellMeasures).
-      if (!compact) setRegularCardHeight(h);
+      const { width, height } = e.nativeEvent.layout;
+      setCardHeight(height);
+      setCardWidth(width);
+      // Compact is decided on the regular card's height, at the width it
+      // was measured (see ShellMeasures).
+      if (!compact) {
+        setRegularCardHeight(height);
+        setRegularCardWidth(width);
+      }
     };
     const onStripLayout = (e: LayoutChangeEvent) =>
       setStripBlock(e.nativeEvent.layout.height + FOOTER_ROW_GAP);

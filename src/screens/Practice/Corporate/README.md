@@ -123,7 +123,9 @@ How a body uses it:
   inline with the heading, the kit's 17 pt tile type). The body does its
   part: captions on the picture rather than under it, tiles down to about 64
   points, smaller gaps. `compact` is decided with the result strip left out,
-  so it does not change on Submit; only `availableHeight` does.
+  so it does not change on Submit or on Retry; only `availableHeight` does.
+  After a rotation or resize the shell measures the regular card again at the
+  new width (one regular frame) before deciding.
 - If the options still don't fit, the `ScrollView` scrolls: nothing is ever
   cut off.
 

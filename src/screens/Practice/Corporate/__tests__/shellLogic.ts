@@ -28,8 +28,10 @@ import {
   COMPACT_SPACING,
   computeBodyLayout,
   REGULAR_SPACING,
+  regularCardStale,
   ShellMeasures,
   SHELL_COLUMN_WIDTH,
+  stripUnderViewport,
 } from '../shellLayout';
 import { COMPACT_OPTION_MIN_WIDTH, compactColumns } from '../mcqTextLogic';
 import {
@@ -381,6 +383,44 @@ check(`layout: compact below ${COMPACT_BELOW} for the body with the regular card
   const drawnCompact = computeBodyLayout(measures({ viewport: { width: 812, height: edge - 1 }, cardHeight: 70 }))!;
   assert.equal(drawnCompact.compact, true);
   assert.equal(drawnCompact.availableHeight, edge - 1 - COMPACT_SPACING.scrollPadding * 2 - 70 - COMPACT_SPACING.cardGap);
+});
+
+check('layout: after a rotation while compact, the regular card is measured again at the new width, then compact is decided on it', () => {
+  // Landscape, compact: the regular card was measured at 684 wide (one line, 110 high).
+  const landscape = measures({ viewport: { width: 812, height: 230 }, cardHeight: 70, cardWidth: 684, regularCardHeight: 110, regularCardWidth: 684 });
+  assert.equal(computeBodyLayout(landscape)!.compact, true);
+  // Rotated to a short portrait window: the card now reports 350 wide.
+  // The 684-wide regular height is stale, so the layout goes regular for
+  // a frame to measure the regular card at 350.
+  const rotated = { ...landscape, viewport: { width: 390, height: 420 }, cardWidth: 350 };
+  assert.equal(regularCardStale(rotated), true);
+  assert.equal(computeBodyLayout(rotated)!.compact, false);
+  // The regular card at 350 wraps to three lines (190 high): 420 - 32 - 190 - 16 = 182 < 260, so compact.
+  const measured = { ...rotated, cardHeight: 190, regularCardHeight: 190, regularCardWidth: 350 };
+  assert.equal(regularCardStale(measured), false);
+  assert.equal(computeBodyLayout(measured)!.compact, true);
+  // The compact card that follows (70 high, same width) changes nothing: no flapping.
+  assert.equal(computeBodyLayout({ ...measured, cardHeight: 70 })!.compact, true);
+  // Without the re-measure, the stale one-line height would have said regular (420 - 32 - 110 - 16 = 262).
+  assert.equal(computeBodyLayout({ ...measured, regularCardHeight: 110 })!.compact, false);
+  // Sub-pixel differences are not a rotation.
+  assert.equal(regularCardStale({ ...measured, cardWidth: 350.4 }), false);
+});
+
+check('layout: on Retry the strip is added back until the viewport has grown, so compact does not flip for a frame', () => {
+  const edge = 150 + REGULAR_SPACING.scrollPadding * 2 + REGULAR_SPACING.cardGap + COMPACT_BELOW;
+  const strip = 90;
+  // Frames: answering; submitted (viewport shrunk, measured with the strip);
+  // Retry pressed, strip gone but the viewport not yet re-measured; re-measured.
+  const frames: Array<[number, boolean]> = [[edge, false], [edge - strip, true], [edge - strip, true], [edge, false]];
+  for (const [height, hasStrip] of frames) {
+    const l = computeBodyLayout(measures({ viewport: { width: 390, height }, stripHeight: stripUnderViewport(hasStrip, strip) }))!;
+    assert.equal(l.compact, false, `frame ${height}/${hasStrip}`);
+  }
+  // Keying on "strip shown" instead would flip on the Retry frame.
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 390, height: edge - strip }, stripHeight: 0 }))!.compact, true);
+  assert.equal(stripUnderViewport(false, strip), 0);
+  assert.equal(stripUnderViewport(true, strip), strip);
 });
 
 check('compact multiple choice: as many columns as fit the measured width, audio circles included', () => {

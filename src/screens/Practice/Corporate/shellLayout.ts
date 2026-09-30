@@ -49,6 +49,12 @@ export interface ShellMeasures {
   /** The question card's height as it is drawn now (onLayout), or null. */
   cardHeight: number | null;
   /**
+   * The question card's width as it is drawn now (onLayout), or null. The
+   * card is the column's full width in both layouts, so a change means the
+   * window was resized or rotated.
+   */
+  cardWidth?: number | null;
+  /**
    * The card's height the last time it was drawn in the regular layout.
    * Compact is decided on this, never on the compact card's height:
    * deciding on the card as drawn would loop (a compact card is shorter,
@@ -58,15 +64,48 @@ export interface ShellMeasures {
    */
   regularCardHeight: number | null;
   /**
+   * The card's width when regularCardHeight was measured. When it differs
+   * from cardWidth (a rotation while compact), the heading may wrap
+   * differently, so regularCardHeight is stale: the layout goes regular for
+   * a frame, the regular card is measured at the new width, and compact is
+   * decided again on that. It cannot flap: the next decision uses a fresh
+   * regular height at the same width, and a compact card never updates it.
+   */
+  regularCardWidth?: number | null;
+  /**
    * The height the result strip adds to the footer while it shows (the
    * strip's onLayout plus the footer's row gap), else 0. Compact is decided
    * as if the strip were not there, so Submit never switches the card to
    * compact under the learner's finger: the body is told the smaller
    * height and refits, and the card stays as it was.
+   *
+   * It must describe the same frame as `viewport`: pass the strip's height
+   * while the measured viewport still has the strip under it (see
+   * stripUnderViewport), not while the strip is merely shown. Otherwise,
+   * on Retry the strip goes before the viewport grows back, and for one
+   * frame the room looks too small and compact flips.
    */
   stripHeight: number;
   /** The gutter QuestionColumn puts on each side. */
   gutter: number;
+}
+
+/** Whether the regular card was measured at another width (see ShellMeasures). */
+export function regularCardStale(m: ShellMeasures): boolean {
+  if (m.regularCardHeight == null || m.cardWidth == null || m.regularCardWidth == null)
+    return false;
+  return Math.round(m.cardWidth) !== Math.round(m.regularCardWidth);
+}
+
+/**
+ * The strip height to pass as ShellMeasures.stripHeight: the strip's
+ * measured block while the measured viewport has it underneath, else 0.
+ * `viewportHasStrip` is recorded in the ScrollView's onLayout (was the
+ * strip showing when this viewport was measured?), so the strip and the
+ * viewport always describe the same frame, on Submit and on Retry alike.
+ */
+export function stripUnderViewport(viewportHasStrip: boolean, stripBlock: number): number {
+  return viewportHasStrip ? stripBlock : 0;
 }
 
 /**
@@ -88,7 +127,8 @@ export function computeBodyLayout(m: ShellMeasures): BodyLayout | null {
     regular.scrollPadding * 2 -
     regularCard -
     regular.cardGap;
-  const compact = roomIfRegular < COMPACT_BELOW;
+  const compact =
+    !regularCardStale(m) && roomIfRegular < COMPACT_BELOW;
 
   // Available: what is really left, below the card as it is drawn. (For
   // the one frame after compact switches, cardHeight is the previous

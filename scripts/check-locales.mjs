@@ -129,10 +129,12 @@ export function flatten(tree, prefix = '', out = {}) {
   return out;
 }
 
-// i18next plural forms. Languages have different numbers of them (Khmer
-// has one, so km.json has no "_plural"), so a plural form is not required
-// in the other file when the other file has the base key.
-const PLURAL = /_(plural|zero|one|two|few|many|other|\d+)$/;
+// i18next plural forms (compatibilityJSON v3, app/_layout.tsx): English has
+// "key" and "key_plural"; Khmer has one form, so km.json has only "key".
+// Exactly that is allowed: a "_plural" key in the reference (en) that the
+// other file lacks, when the other file has the base key. Nothing else is
+// (no other suffix, and not the other way round).
+const PLURAL = /_plural$/;
 const pluralBase = k => k.replace(PLURAL, '');
 const pluralCovered = (k, other) => PLURAL.test(k) && pluralBase(k) in other;
 
@@ -168,7 +170,7 @@ export function checkLocales(files) {
       if (!(k in flat) && !pluralCovered(k, flat))
         problems.push(`${name}: missing key "${k}" (in ${refName})`);
     for (const k of Object.keys(flat))
-      if (!(k in refFlat) && !pluralCovered(k, refFlat))
+      if (!(k in refFlat))
         problems.push(`${name}: extra key "${k}" (not in ${refName})`);
     // Placeholders: each key against the same key, or a plural form against
     // the other file's base key.
@@ -223,6 +225,18 @@ function selfTest() {
       expect: /extra key "z"/,
     },
     {
+      name: 'a suffixed key missing from km that is not an en-only "_plural"',
+      en: '{"a": "x", "a_2": "y", "b_other": "z"}',
+      km: '{"a": "k", "b": "q"}',
+      expect: [/missing key "a_2"/, /missing key "b_other"/],
+    },
+    {
+      name: 'a "_plural" key only in km',
+      en: '{"n": "x"}',
+      km: '{"n": "ក", "n_plural": "ខ"}',
+      expect: /extra key "n_plural"/,
+    },
+    {
       name: 'a placeholder renamed in km',
       en: '{"a": "{{count}} of {{total}}"}',
       km: '{"a": "{{count}} ក្នុង {{all}}"}',
@@ -237,7 +251,8 @@ function selfTest() {
       write(`${i}/en.json`, c.en),
       write(`${i}/km.json`, c.km),
     ]);
-    const ok = problems.some(p => c.expect.test(p));
+    const expects = Array.isArray(c.expect) ? c.expect : [c.expect];
+    const ok = expects.every(re => problems.some(p => re.test(p)));
     if (!ok) failed++;
     console.log(`${ok ? 'ok  ' : 'FAIL'} self-test: ${c.name} is reported`);
   });
