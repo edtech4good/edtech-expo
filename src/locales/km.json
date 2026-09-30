@@ -263,11 +263,17 @@
       "instruction": "ចុចចម្លើយ រួចចុចពាក្យដែលត្រូវនឹងវា។",
       "pickedHint": "បានជ្រើស «{{label}}»។ ចុចពាក្យដែលត្រូវនឹងវា។",
       "slotHint": "ចុចចម្លើយសម្រាប់ «{{label}}»។",
-      "slotHintNoLabel": "ចុចចម្លើយដែលត្រូវនឹងកន្លែងនេះ។",
       "answers": "ចម្លើយ",
       "promptSound": "សំឡេង {{n}}",
-      "answerSound": "សំឡេងចម្លើយ {{n}}",
-      "answerPicture": "រូបភាព {{n}}"
+      "answerSound": "សំឡេងចម្លើយ {{letter}}",
+      "answerPicture": "រូបភាព {{letter}}",
+      "instructionPrompt": "ចុចចម្លើយ រួចចុចធាតុដែលត្រូវនឹងវា។",
+      "pickedHintPrompt": "បានជ្រើស «{{label}}»។ ចុចធាតុដែលត្រូវនឹងវា។",
+      "promptPicture": "រូបភាព {{n}}",
+      "slotEmpty": "{{prompt}}៖ ទទេ",
+      "slotActive": "{{prompt}}៖ ទទេ កំពុងរង់ចាំចម្លើយ",
+      "slotTarget": "{{prompt}}៖ ដាក់ «{{chip}}» នៅទីនេះ",
+      "slotFilled": "{{prompt}}៖ {{answer}} បានដាក់ហើយ។ ចុចដើម្បីយកវាមកវិញ។"
     }
   }
 }

@@ -16,16 +16,25 @@ import { slotFrame, CORRECT_TINT_ALPHA, INCORRECT_TINT_ALPHA } from '@/component
 import OptionImage, { useOptionImageSlot } from '@/components/practices/OptionImage';
 import hexAlpha from '@/utils/hexAlpha';
 import {
+  answerLetters,
+  answerName,
+  answerParts,
+  bankOrder,
   chipState,
-  contentKind,
   correctPlacement,
   EMPTY_MATCH,
   evaluateMatching,
+  instructionText,
   isReady,
   MatchSlotState,
   pressChip,
   pressSlot,
+  promptName,
+  promptParts,
+  promptVisual,
+  slotA11yLabel,
   slotState,
+  Tr,
 } from '../matchingLogic';
 import type { QuestionBodyProps } from '../types';
 import { useReportAnswer } from '../useReportAnswer';
@@ -57,8 +66,15 @@ export default function MatchingBody({
     [question],
   );
   const slotIds = useMemo(() => questionOptions.map(o => o.questionoptionid), [questionOptions]);
-  // Reshuffled per attempt, as the contract asks (keyed on tries).
-  const bank = useMemo(() => _.shuffle(questionOptions), [tries, questionOptions]);
+  // Reshuffled per attempt, as the contract asks (keyed on tries). No answer
+  // sits at its own prompt's position, and each answer's letter (for a label
+  // it needs when it has no words) follows its bank position, so neither
+  // gives the pairing away.
+  const bank = useMemo(() => {
+    const byId = new Map(questionOptions.map(o => [o.questionoptionid, o]));
+    return bankOrder(slotIds).map(id => byId.get(id)!);
+  }, [tries, questionOptions, slotIds]);
+  const letters = useMemo(() => answerLetters(bank.map(o => o.questionoptionid)), [bank]);
 
   const [tap, setTap] = useState(EMPTY_MATCH);
   // Retry / Try again clear the answer; so does Show answer (as today).
@@ -78,18 +94,19 @@ export default function MatchingBody({
   const showBank = !locked;
 
   // The line above the list says what to do next.
-  const pickedLabel =
-    tap.pickedChip !== null ? answerLabel(optionById.get(tap.pickedChip)!.option, optionById.get(tap.pickedChip)!.n, t) : '';
-  const activePrompt =
-    tap.activeSlot !== null ? promptLabel(optionById.get(tap.activeSlot)!.option, optionById.get(tap.activeSlot)!.n, t) : '';
-  const instruction =
-    tap.pickedChip !== null
-      ? t('corporate.matching.pickedHint', { label: pickedLabel })
-      : tap.activeSlot !== null
-        ? activePrompt
-          ? t('corporate.matching.slotHint', { label: activePrompt })
-          : t('corporate.matching.slotHintNoLabel')
-        : t('corporate.matching.instruction');
+  const tr = t as Tr;
+  const nameOfChip = (id: string) => answerName(optionById.get(id)!.option, letters[id], tr);
+  const nameOfPrompt = (id: string) => promptName(optionById.get(id)!.option, optionById.get(id)!.n, tr);
+  const pickedName = tap.pickedChip !== null ? nameOfChip(tap.pickedChip) : '';
+  const instruction = instructionText(
+    {
+      tap,
+      allText: questionOptions.every(o => promptParts(o).kind === 'text'),
+      pickedName,
+      activePrompt: tap.activeSlot !== null ? nameOfPrompt(tap.activeSlot) : '',
+    },
+    tr,
+  );
 
   return (
     <View style={{ rowGap: 14 }}>
@@ -122,6 +139,8 @@ export default function MatchingBody({
             index={index}
             chipId={placed[option.questionoptionid]}
             chip={optionById.get(placed[option.questionoptionid])}
+            letters={letters}
+            pickedName={pickedName}
             state={slotState(option.questionoptionid, { ...tap, placed }, { marks, showAnswer })}
             locked={locked}
             onPress={() => setTap(s => pressSlot(s, option.questionoptionid))}
@@ -159,6 +178,7 @@ export default function MatchingBody({
                   key={option.questionoptionid}
                   option={option}
                   index={entry.n - 1}
+                  letter={letters[option.questionoptionid]}
                   state={chipState(option.questionoptionid, tap)}
                   onPress={() => setTap(s => pressChip(s, option.questionoptionid))}
                 />
@@ -173,32 +193,6 @@ export default function MatchingBody({
 
 // ---- labels ---------------------------------------------------------------
 
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-function promptParts(option: QuestionOption) {
-  return contentKind({ text: option.questionoptiontext, file: option.questionoptionfile });
-}
-function answerParts(option: QuestionOption) {
-  return contentKind({
-    text: option.questionassociate?.questionassociatetext,
-    file: option.questionassociate?.questionassociatefile,
-  });
-}
-/** The prompt's words; a sound-only prompt is "Sound 2", a picture-only one has none. */
-function promptLabel(option: QuestionOption, n: number, t: T): string {
-  const p = promptParts(option);
-  if (p.hasText) return option.questionoptiontext;
-  return p.kind === 'audio' ? t('corporate.matching.promptSound', { n }) : '';
-}
-/** The answer's words; sound-only is "Answer sound 2", picture-only is "Picture 2". */
-function answerLabel(option: QuestionOption, n: number, t: T): string {
-  const a = answerParts(option);
-  if (a.hasText) return option.questionassociate.questionassociatetext;
-  if (a.kind === 'audio') return t('corporate.matching.answerSound', { n });
-  if (a.kind === 'image') return t('corporate.matching.answerPicture', { n });
-  return '';
-}
-
 // ---- one joined row: prompt | slot ---------------------------------------
 
 function MatchRow({
@@ -206,6 +200,8 @@ function MatchRow({
   index,
   chipId,
   chip,
+  letters,
+  pickedName,
   state,
   locked,
   onPress,
@@ -214,6 +210,8 @@ function MatchRow({
   index: number;
   chipId: string | undefined;
   chip: { option: QuestionOption; n: number } | undefined;
+  letters: Record<string, string>;
+  pickedName: string;
   state: MatchSlotState;
   locked: boolean;
   onPress: () => void;
@@ -228,7 +226,8 @@ function MatchRow({
     [option.questionoptionid],
   );
   const imageSlot = useOptionImageSlot(promptSrc, option.questionoptiontext);
-  const label = promptLabel(option, n, t);
+  const label = promptVisual(option, n, t as Tr);
+  const promptA11y = promptName(option, n, t as Tr);
 
   const result = state === 'correct' || state === 'incorrect';
   const tint =
@@ -239,7 +238,7 @@ function MatchRow({
         : { borderColor: theme.colors.divider, backgroundColor: theme.colors.surface };
 
   const answer = chip ? answerParts(chip.option) : null;
-  const answerLabelText = chip ? answerLabel(chip.option, chip.n, t) : '';
+  const answerLabelText = chip ? answerName(chip.option, letters[chip.option.questionoptionid], t as Tr) : '';
   const answerSrc = useResource(
     { name: chip ? _.get(chip.option, 'questionassociate.questionassociatefile.filename', '') : '' },
     [chipId],
@@ -266,47 +265,77 @@ function MatchRow({
             label={label}
           />
         ) : null}
-        {p.kind === 'image' ? (
-          <OptionImage
-            source={promptSrc}
-            label={option.questionoptiontext}
-            slot={imageSlot}
-            style={{ width: 56, height: 56, borderRadius: theme.radii.imageWell }}
-            contentFit="cover"
-          />
-        ) : null}
-        {p.kind !== 'image' || p.hasText ? (
-          <Text
-            testID={`match-prompt-${index}`}
-            style={{
-              flexShrink: 1,
-              fontFamily: tile.fontFamily,
-              fontSize: 16,
-              lineHeight: tile.km ? 28 : 21,
-              fontWeight: '700',
-              color: theme.colors.onBackground,
-            }}>
-            {label}
-          </Text>
-        ) : null}
+        {/* One screen-reader stop for the prompt itself (its words, else "Picture 2"),
+            with the picture's own label hidden inside; the audio circle stays its own stop. */}
+        <View
+          accessible
+          accessibilityLabel={
+            p.kind === 'image' && imageSlot.showPlaceholder
+              ? `${promptA11y}. ${t('image.unavailable')}`
+              : promptA11y
+          }
+          style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, flexShrink: 1 }}>
+          {p.kind === 'image' ? (
+            <OptionImage
+              source={promptSrc}
+              label={option.questionoptiontext}
+              slot={imageSlot}
+              style={{ width: 56, height: 56, borderRadius: theme.radii.imageWell }}
+              contentFit="cover"
+            />
+          ) : null}
+          {p.kind !== 'image' || p.hasText ? (
+            <Text
+              testID={`match-prompt-${index}`}
+              style={{
+                flexShrink: 1,
+                fontFamily: tile.fontFamily,
+                fontSize: 16,
+                lineHeight: tile.km ? 28 : 21,
+                fontWeight: '700',
+                color: theme.colors.onBackground,
+              }}>
+              {label}
+            </Text>
+          ) : null}
+        </View>
       </View>
       <View style={styles.slotCell}>
-        {chip && answer?.kind === 'image' ? (
-          <PlacedPicture
-            testID={`match-slot-${index}`}
-            state={state}
-            label={answerLabelText}
-            source={answerSrc}
-            onPress={locked ? undefined : onPress}
-          />
-        ) : (
-          <Slot
-            testID={`match-slot-${index}`}
-            state={state}
-            label={answerLabelText}
-            onPress={locked ? undefined : onPress}
-          />
-        )}
+        {/* The slot is one screen-reader stop that names its prompt; the inner
+            Slot is hidden so it is not read twice. Same press as a tap. */}
+        <View
+          accessible
+          accessibilityRole={locked ? undefined : 'button'}
+          accessibilityLabel={slotA11yLabel(
+            { prompt: promptA11y, answer: answerLabelText, state, pickedName },
+            t as Tr,
+          )}
+          accessibilityActions={locked ? undefined : [{ name: 'activate' }]}
+          onAccessibilityAction={locked ? undefined : () => onPress()}
+          style={{ flex: 1, flexDirection: 'row' }}>
+          <View
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            aria-hidden
+            style={{ flex: 1, flexDirection: 'row' }}>
+            {chip && answer?.kind === 'image' ? (
+              <PlacedPicture
+                testID={`match-slot-${index}`}
+                state={state}
+                label={answerLabelText}
+                source={answerSrc}
+                onPress={locked ? undefined : onPress}
+              />
+            ) : (
+              <Slot
+                testID={`match-slot-${index}`}
+                state={state}
+                label={answerLabelText}
+                onPress={locked ? undefined : onPress}
+              />
+            )}
+          </View>
+        </View>
         {chip && answer?.kind === 'audio' ? (
           <OptionAudioCircle
             testID={`match-slot-audio-${index}`}
@@ -410,11 +439,13 @@ function PlacedPicture({
 function BankChip({
   option,
   index,
+  letter,
   state,
   onPress,
 }: {
   option: QuestionOption;
   index: number;
+  letter: string;
   state: 'default' | 'picked' | 'used';
   onPress: () => void;
 }) {
@@ -425,7 +456,7 @@ function BankChip({
     { name: _.get(option, 'questionassociate.questionassociatefile.filename', '') },
     [option.questionoptionid],
   );
-  const label = answerLabel(option, index + 1, t);
+  const label = answerName(option, letter, t as Tr);
   const isImage = a.kind === 'image';
   const used = state === 'used';
   const tile = (
