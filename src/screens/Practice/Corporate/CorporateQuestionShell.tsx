@@ -54,9 +54,8 @@ export interface CorporateQuestionShellProps extends PracticeProps {
 export default forwardRef<PracticeHandler, CorporateQuestionShellProps>(
   function CorporateQuestionShell(props, ref) {
     // A fresh shell (tries, result, the body's answer) for every question.
-    // The screens key the renderer on `questionnid`, which the student API
-    // does not send, so the same renderer instance can see the next
-    // question; today's renderers reset on the index for the same reason.
+    // PracticeContent now keys every renderer on the question's position
+    // (questionKey.ts), so this is belt and braces; kept as it was.
     return (
       <QuestionShell key={props.currentQuestionIndex} ref={ref} {...props} />
     );

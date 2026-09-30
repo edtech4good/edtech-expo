@@ -76,6 +76,9 @@ jobs:
       - name: Corporate matching logic
         run: yarn test:matching
 
+      - name: Question renderer key (fresh renderer per question)
+        run: yarn test:questionkey
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

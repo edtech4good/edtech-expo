@@ -402,7 +402,6 @@ export default function PracticeScreen() {
         )}
         <PracticeContent
           ref={practiceRef}
-          key={currentQuestion.question.questionnid}
           question={currentQuestion.question}
           currentQuestionIndex={question + 1}
           maxQuestion={questions.length}
