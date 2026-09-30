@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { useTheme } from 'styled-components/native';
 import _ from 'lodash';
-import { choiceAnswer } from '@/utils/answerV1';
+import { gradeMcqText } from './mcqTextGrade';
 import {
   PracticeAttempt,
   PracticeHandler,
@@ -28,8 +28,7 @@ import {
   QuestionOption,
 } from '@/models';
 import { KeyExtractorHelper } from '@/utils';
-
-import { Audio } from 'expo-av';
+import { useReplayClip } from '@/components/kit/audio/useReplayClip';
 
 interface MCQTextProps extends PracticeProps {
   multipleChoice?: boolean;
@@ -75,7 +74,8 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
       [currentQuestionIndex],
     );
 
-    const playbackObject = useMemo(() => new Audio.Sound(), []);
+    // The question file's audio, on the shared player (one clip at a time).
+    const questionClip = useReplayClip('question-file', source);
 
     const questionOptions = useMemo(
       () => _.get(question, 'questionobject.questionoptions'),
@@ -109,53 +109,20 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
     }, [currentQuestionIndex]);
 
     useEffect(() => {
-      if (_.isEmpty(source)) return;
-      handleLoadAudio();
-    }, [source]);
-
-    useEffect(() => {
       setAttempt(val => ({ ...val, selections: {} }));
     }, [isShowingAnswer]);
-
-    const handleLoadAudio = async () => {
-      await playbackObject.unloadAsync();
-      await playbackObject.loadAsync(
-        { uri: source },
-        { shouldPlay: false, isLooping: false },
-      );
-    };
 
     const handleSubmit = () => {
       if (isShowingAnswer) {
         onSubmit(attempt.tries, false, isShowingAnswer);
         return;
       }
-      const { isCorrect } = _.reduce(
+      const { isCorrect, answer } = gradeMcqText(
         questionOptions,
-        (result, value) => {
-          if (
-            value.questionoptioniscorrect &&
-            _.isEmpty(attempt.selections[value.questionoptionid])
-          )
-            result.isCorrect = false;
-          else if (
-            !value.questionoptioniscorrect &&
-            !_.isEmpty(attempt.selections[value.questionoptionid])
-          )
-            result.isCorrect = false;
-          return result;
-        },
-        {
-          isCorrect: true,
-        },
+        attempt.selections,
       );
 
-      onSubmit(
-        attempt.tries,
-        isCorrect,
-        isShowingAnswer,
-        choiceAnswer(_.keys(_.pickBy(attempt.selections, v => !_.isEmpty(v)))),
-      );
+      onSubmit(attempt.tries, isCorrect, isShowingAnswer, answer);
     };
 
     const handleRetryPress = (chargeAttempt = false) => {
@@ -169,7 +136,7 @@ export default forwardRef<PracticeHandler, MCQTextProps>(
 
     const handleQuestionFilePress = async () => {
       if (_.isEmpty(source)) return;
-      await playbackObject.playFromPositionAsync(0);
+      await questionClip.play();
     };
 
     const handleItemPress = (qp: QuestionOption) => {

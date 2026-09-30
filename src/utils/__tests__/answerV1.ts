@@ -23,6 +23,13 @@ import {
   toPracticeQuestionResult,
   toQuizQuestionResult,
 } from '../../transforms/Practice';
+import _ from 'lodash';
+import { gradeMcqText } from '../../screens/Practice/Components/MCQText/mcqTextGrade';
+import {
+  evaluateMcqText,
+  toggleSelection,
+} from '../../screens/Practice/Corporate/mcqTextLogic';
+import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
 
 // Every answer any test maps goes through these wrappers, which assert the
 // answer never contains an empty string anywhere (the deployed validator
@@ -430,6 +437,121 @@ check('no answer given: the field is omitted; null is kept as "no attempt"', () 
 check('an old queued item (no answer) is unchanged by a JSON round trip', () => {
   const old = { iscorrect: true, tries: 1, lessonpracticeid: U(1), lessonpracticequestionid: U(2), questionid: U(3) };
   assert.deepEqual(JSON.parse(JSON.stringify(old)), old);
+});
+
+// ---------------------------------------------------------------------------
+// Corporate multiple choice, text (templates 1 and 3): for the same taps,
+// the corporate shell sends exactly what the kids renderer sends. Every
+// ordered selection sequence over the fixtures is tried.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeMCQText's submit, as it was written inline before it moved to
+ * mcqTextGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsSubmitAsBefore(questionOptions: Opt[], selections: Record<string, unknown>) {
+  const { isCorrect } = _.reduce(
+    questionOptions,
+    (result, value) => {
+      if (value.questionoptioniscorrect && _.isEmpty(selections[value.questionoptionid]))
+        result.isCorrect = false;
+      else if (!value.questionoptioniscorrect && !_.isEmpty(selections[value.questionoptionid]))
+        result.isCorrect = false;
+      return result;
+    },
+    { isCorrect: true },
+  );
+  return { isCorrect, answer: B.choiceAnswer(_.keys(_.pickBy(selections, v => !_.isEmpty(v)))) };
+}
+
+/** Every ordered sequence of distinct taps (a tap selects; the tapped option is the value). */
+function tapSequences(options: Opt[]): Opt[][] {
+  const out: Opt[][] = [[]];
+  const walk = (prefix: Opt[], rest: Opt[]) => {
+    rest.forEach((o, i) => {
+      const seq = [...prefix, o];
+      out.push(seq);
+      walk(seq, [...rest.slice(0, i), ...rest.slice(i + 1)]);
+    });
+  };
+  walk([], options);
+  return out;
+}
+
+/** The selections each path holds after a sequence of taps (a second tap unselects). */
+function kidsSelections(taps: Opt[]) {
+  // PracticeMCQText.handleItemPress
+  let selections: Record<string, Opt> = {};
+  for (const qp of taps) {
+    if (!_.isEmpty(selections[qp.questionoptionid])) {
+      const old = selections;
+      delete old[qp.questionoptionid];
+      selections = old;
+    } else selections = { ...selections, [qp.questionoptionid]: qp };
+  }
+  return selections;
+}
+function corporateSelections(taps: Opt[]) {
+  let selections: Record<string, Opt> = {};
+  for (const qp of taps) selections = toggleSelection(selections, qp.questionoptionid, qp);
+  return selections;
+}
+
+const pressSubmit = (selections: Record<string, Opt>, options: Opt[], mode: 'practice' | 'quiz', tries: number) =>
+  shellPress({ ...INITIAL_SHELL_STATE, tries }, 'submit', {
+    mode,
+    ready: true,
+    evaluate: () => evaluateMcqText(options, selections),
+  });
+
+for (const [templateId, options] of [[1, singleChoice], [3, multiChoice]] as const) {
+  check(`corporate MCQ text, template ${templateId}: answer and iscorrect equal the kids path for every tap sequence`, () => {
+    const sequences = tapSequences(options as Opt[]);
+    // Taps that also unselect: tap the first option again at the end.
+    const withUntap = sequences.filter(s => s.length > 1).map(s => [...s, s[0]]);
+    let n = 0;
+    for (const taps of [...sequences, ...withUntap]) {
+      const kSel = kidsSelections(taps);
+      const cSel = corporateSelections(taps);
+      assert.deepEqual(Object.keys(cSel), Object.keys(kSel), 'same selection order');
+      const kids = kidsSubmitAsBefore(options as Opt[], kSel);
+      const shared = gradeMcqText(options as Opt[], kSel);
+      const corp = evaluateMcqText(options as Opt[], cSel);
+      assert.deepEqual(shared, kids, 'the shared rule is the old inline one');
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(templateId, options as Opt[], corp.answer), corp.iscorrect);
+
+      // What the shell hands the screen is what the kids renderer handed it,
+      // so the result items the screens build are identical too.
+      for (const tries of [1, 2, 3]) {
+        const practice = pressSubmit(cSel, options as Opt[], 'practice', tries);
+        const quiz = pressSubmit(cSel, options as Opt[], 'quiz', 1);
+        assert.equal(practice.effect.kind, 'submit');
+        assert.equal(quiz.effect.kind, 'submit');
+        if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') return;
+        assert.deepEqual(
+          toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+          toPracticeQuestionResult(kids.isCorrect, tries, practiceRes, kids.answer),
+        );
+        assert.deepEqual(
+          toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+          toQuizQuestionResult(kids.isCorrect, quizRes, kids.answer),
+        );
+      }
+      n++;
+    }
+    assert.ok(n > 10, `tried ${n} sequences`);
+  });
+}
+
+check('corporate MCQ text marks: chosen options only, by their own correctness', () => {
+  const sel = corporateSelections([singleChoice[1]]);
+  assert.deepEqual(evaluateMcqText(singleChoice, sel).perItem, { [U(2)]: 'incorrect' });
+  const right = corporateSelections([multiChoice[2], multiChoice[0]]);
+  assert.deepEqual(evaluateMcqText(multiChoice, right).perItem, { [U(6)]: 'correct', [U(4)]: 'correct' });
 });
 
 console.log(`answerV1: ${passed} checks passed`);

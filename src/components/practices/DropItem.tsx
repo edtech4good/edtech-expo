@@ -14,12 +14,12 @@ import _ from 'lodash';
 import H6 from '../texts/H6';
 import { Image } from 'expo-image';
 import OptionImage from './OptionImage';
-import { Audio } from 'expo-av';
 import { Pressable } from 'react-native';
 import { Images } from '@/assets';
 import DragItem from './DragItem';
 import { useBreakpoint, useResource } from '@/services';
 import Column from '../layouts/Column';
+import { useReplayClip } from '../kit/audio/useReplayClip';
 
 const DropArea = styled.Pressable`
   width: 300px;
@@ -63,7 +63,8 @@ export default forwardRef<DropItemHandler, DropItemProps>(function DropItem(
     tablet: 'row',
   });
 
-  const playbackObject = useMemo(() => new Audio.Sound(), []);
+  // The option's audio on the shared player (one clip at a time).
+  const clip = useReplayClip('drop-option', source);
 
   useImperativeHandle(
     ref,
@@ -84,36 +85,13 @@ export default forwardRef<DropItemHandler, DropItemProps>(function DropItem(
   );
 
   useEffect(() => {
-    if (_.isEmpty(source)) return;
-    handleLoadAudio();
-
-    return () => {
-      playbackObject.unloadAsync();
-    };
-  }, [source]);
-
-  useEffect(() => {
     if (!isShowingAnswer) setAnswer(undefined);
     else setAnswer(option);
   }, [isShowingAnswer]);
 
-  const handleLoadAudio = async () => {
-    await playbackObject.unloadAsync();
-    await playbackObject.loadAsync(
-      { uri: source },
-      { shouldPlay: false, isLooping: false },
-    );
-  };
-
   const handlePlayAudio = async () => {
     if (_.isEmpty(option.questionoptionfile)) return;
-    // const { sound: playbackObject } = await Audio.Sound.createAsync(
-    //   {
-    //     uri: source,
-    //   },
-    //   { shouldPlay: true },
-    // );
-    await playbackObject.playFromPositionAsync(0);
+    await clip.play();
   };
 
   if (flexDirection === 'column')

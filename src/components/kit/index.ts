@@ -12,6 +12,7 @@ export { default as ListenPill } from './ListenPill';
 export { default as OptionAudioCircle, OPTION_AUDIO_SIZE } from './OptionAudioCircle';
 export { audioManager, AudioManager } from './audio/audioManager';
 export { useAudioClip } from './audio/useAudioClip';
+export { useReplayClip } from './audio/useReplayClip';
 export { tileFrame, tileFrameStyle, slotFrame, TILE_STATES, SLOT_STATES } from './tileStyle';
 export type { TileState, SlotState, TileFrame, SlotFrame } from './tileStyle';
 export { footerActions, resultSummary, resultTitle, resultAnnouncement } from './resultLogic';

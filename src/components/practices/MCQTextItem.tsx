@@ -1,9 +1,10 @@
 import { Expanded, H4, IconButton, SizedBox } from '@/components';
 import QuizOption, { QuizOptionState } from '../ui/QuizOption';
 import { useDesign, useResource } from '@/services';
-import { Audio } from 'expo-av';
 import _ from 'lodash';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+// Direct path, not the kit barrel: the barrel pulls in every kit component.
+import { useReplayClip } from '../kit/audio/useReplayClip';
 import { View } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 
@@ -69,39 +70,19 @@ export default function MCQTextItem({
   const theme = useTheme();
   const { isCorporate } = useDesign();
 
-  const playbackObject = new Audio.Sound();
   const audioSource = useResource({ name: audioUrl ?? '' }, [audioUrl]);
+  // The shared player (one clip at a time). This used to create a new
+  // Audio.Sound on every render, so each re-render leaked a loaded sound.
+  const clip = useReplayClip('option', audioSource);
   const highlight = useMemo(() => {
     if (isSelected) return true;
     if (isShowingAnswer && isCorrect) return true;
     return false;
   }, [isSelected, isShowingAnswer]);
 
-  useEffect(() => {
-    if (_.isEmpty(audioSource)) return;
-    handleLoadAudio();
-
-    return () => {
-      playbackObject.unloadAsync();
-    };
-  }, [audioSource]);
-
-  const handleLoadAudio = async () => {
-    await playbackObject.unloadAsync();
-    await playbackObject.loadAsync(
-      { uri: audioSource },
-      { shouldPlay: false, isLooping: false },
-    );
-  };
-
   const handlePlayAudio = async () => {
     if (_.isEmpty(audioUrl)) return;
-    // const playbackObject = new Audio.Sound();
-    // const { sound: playbackObject } = await Audio.Sound.createAsync(
-    //   { uri: audioSource },
-    //   { shouldPlay: true },
-    // );
-    await playbackObject.playFromPositionAsync(0);
+    await clip.play();
   };
 
   if (isCorporate) {

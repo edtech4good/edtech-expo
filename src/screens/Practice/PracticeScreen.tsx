@@ -8,7 +8,7 @@ import {
 } from '@/components';
 import EyebrowText from '@/components/ui/EyebrowText';
 import ProgressBar from '@/components/ui/ProgressBar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { useAppDispatch, useAppSelector } from '@/redux';
@@ -49,6 +49,8 @@ import ResultPopUp from './Components/ResultPopUp';
 import { toPracticeQuestionResult } from '@/transforms';
 import { useTranslation } from 'react-i18next';
 import type { AnswerV1 } from '@/utils/answerV1';
+import type { QuestionMode, SubmitOptions } from './Corporate/types';
+import { AnnouncerProvider } from '@/components/kit/Announcer';
 
 // Corporate header side slots (handoff §4, v2.1): the title must never
 // reach the back button on the left or the "N OF total" counter on the
@@ -73,11 +75,21 @@ export interface PracticeProps {
     isShowingAnswer?: boolean,
     // The learner's response, sent so the server can grade it.
     answer?: AnswerV1 | null,
+    // { inlineResult: true } from renderers that show the result inline
+    // (the corporate question shell): record it, but don't open the popup.
+    options?: SubmitOptions,
   ) => void;
   // Quiz has no Retry equivalent (answers are scored, not retried), so the
   // corporate footer hides the Retry pill and shows only Submit there.
   // Practice (unscored) keeps Retry — this defaults to false/undefined.
   hideRetry?: boolean;
+  // Which screen hosts the question. Today's renderers ignore it; the
+  // corporate question shell picks its footer from it.
+  mode?: QuestionMode;
+  // What the ResultPopUp's button does, for renderers that show the result
+  // inline instead: the next question, or finishing the practice or quiz.
+  // Called after a correct practice answer, and after any quiz answer.
+  onContinue?: () => void;
 }
 
 export default function PracticeScreen() {
@@ -265,6 +277,7 @@ export default function PracticeScreen() {
     isCorrect: boolean,
     isShowingAnswer: boolean,
     answer?: AnswerV1 | null,
+    options?: SubmitOptions,
   ) => {
     if (isShowingAnswer) {
       if (question === questions.length - 1) {
@@ -305,7 +318,9 @@ export default function PracticeScreen() {
         : undefined;
     setModal(val => ({
       isCorrect,
-      isVisible: true,
+      // An inline result (corporate question shell) replaces the popup; the
+      // renderer calls onContinue for the popup's button instead.
+      isVisible: !options?.inlineResult,
       tries,
       customMessages,
     }));
@@ -346,6 +361,15 @@ export default function PracticeScreen() {
     }
   };
 
+  // PracticeContent memoises the renderer, so it would keep the first
+  // render's handleModalPress (and its stale isCorrect/tries). Hand it a
+  // stable function that always runs the current one.
+  const modalPressRef = useRef(handleModalPress);
+  modalPressRef.current = handleModalPress;
+  const handleContinue = useCallback(() => {
+    void modalPressRef.current();
+  }, []);
+
   if (_.isEmpty(currentQuestion)) {
     if (isCorporate) {
       return (
@@ -364,40 +388,45 @@ export default function PracticeScreen() {
   }
 
   return (
-    <LayoutScrollView backgroundColor={theme.colors.background}>
-      {isCorporate && (
-        <ProgressBar
-          testID="practice-progress-track"
-          variant="quiz"
-          progress={
-            questions.length > 0 ? (question + 1) / questions.length : 0
-          }
-        />
-      )}
-      <PracticeContent
-        ref={practiceRef}
-        key={currentQuestion.question.questionnid}
-        question={currentQuestion.question}
-        currentQuestionIndex={question + 1}
-        maxQuestion={questions.length}
-        onSubmit={handleSubmitPress}
-        onRetry={handleRetryPress}
-      />
-      <Modal
-        animationType="fade"
-        transparent={true}
-        presentationStyle="overFullScreen"
-        visible={isVisible}>
-        <BlackVeil opacity={0.8} />
-        <Expanded justifyContent="center" alignItems="center">
-          <ResultPopUp
-            isCorrect={isCorrect ?? true}
-            showAnswer={tries > 2}
-            customMessages={customMessages}
-            onPress={handleModalPress}
+    // One announcer per screen: the corporate result strip speaks through it.
+    <AnnouncerProvider>
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        {isCorporate && (
+          <ProgressBar
+            testID="practice-progress-track"
+            variant="quiz"
+            progress={
+              questions.length > 0 ? (question + 1) / questions.length : 0
+            }
           />
-        </Expanded>
-      </Modal>
-    </LayoutScrollView>
+        )}
+        <PracticeContent
+          ref={practiceRef}
+          key={currentQuestion.question.questionnid}
+          question={currentQuestion.question}
+          currentQuestionIndex={question + 1}
+          maxQuestion={questions.length}
+          onSubmit={handleSubmitPress}
+          onRetry={handleRetryPress}
+          mode="practice"
+          onContinue={handleContinue}
+        />
+        <Modal
+          animationType="fade"
+          transparent={true}
+          presentationStyle="overFullScreen"
+          visible={isVisible}>
+          <BlackVeil opacity={0.8} />
+          <Expanded justifyContent="center" alignItems="center">
+            <ResultPopUp
+              isCorrect={isCorrect ?? true}
+              showAnswer={tries > 2}
+              customMessages={customMessages}
+              onPress={handleModalPress}
+            />
+          </Expanded>
+        </Modal>
+      </LayoutScrollView>
+    </AnnouncerProvider>
   );
 }

@@ -2,12 +2,11 @@ import { Images } from '@/assets';
 import { DropAreaWrapper, Expanded, H6, OptionImage, Row } from '@/components';
 import { DropAreaProps, QuestionOption } from '@/models';
 import { useResource } from '@/services';
-import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import _ from 'lodash';
-import { useEffect, useMemo } from 'react';
 import { Pressable } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
+import { useReplayClip } from '../kit/audio/useReplayClip';
 
 const DropArea = styled.View`
   width: 300px;
@@ -28,40 +27,17 @@ export default function MatchingDropArea({ option, onLayout }: Props) {
   const theme = useTheme();
 
   const source = useResource(
-    // { name: _.get(option, 'questionoptionfile.filename', '') },
-    { name: 'alice1.png' },
+    { name: _.get(option, 'questionoptionfile.filename', '') },
     [option],
   );
+  // The option's audio on the shared player (one clip at a time). The
+  // source used to be a hard-coded placeholder picture, so the sound button
+  // loaded an image and played nothing.
+  const clip = useReplayClip('match-option', source);
 
-  const playbackObject = useMemo(() => new Audio.Sound(), []);
-
-  useEffect(() => {
-    if (_.isEmpty(source)) return;
-    handleLoadAudio();
-
-    return () => {
-      playbackObject.unloadAsync();
-    };
-  }, [source]);
-
-  const handleLoadAudio = async () => {
-    await playbackObject.unloadAsync();
-    await playbackObject.loadAsync(
-      { uri: source },
-      { shouldPlay: false, isLooping: false },
-    );
-  };
-
-  console.log('Drop Area: ', source);
   const handlePlayAudio = async () => {
     if (_.isEmpty(option.questionoptionfile)) return;
-    // const { sound: playbackObject } = await Audio.Sound.createAsync(
-    //   {
-    //     uri: source,
-    //   },
-    //   { shouldPlay: true },
-    // );
-    await playbackObject.playFromPositionAsync(0);
+    await clip.play();
   };
 
   return (

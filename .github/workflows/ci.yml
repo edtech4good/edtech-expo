@@ -66,6 +66,9 @@ jobs:
       - name: Corporate question kit logic
         run: yarn test:kit
 
+      - name: Corporate question shell, registry and one audio player
+        run: yarn test:shell
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 
