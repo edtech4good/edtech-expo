@@ -22,13 +22,14 @@ import {
   Expanded,
   H2,
   H4,
+  OptionImage,
+  useOptionImageSlot,
   PracticeFooter,
   PracticeHeading,
   Row,
   SH3,
   SizedBox,
 } from '@/components';
-import { Image } from 'expo-image';
 import { Pressable } from 'react-native';
 import { changeColorOpacity } from '@/utils';
 
@@ -148,10 +149,18 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         { name: _.get(item, 'questionoptionfile.filename', '') },
         [index, item],
       );
+      const slot = useOptionImageSlot(imageSource, item.questionoptiontext);
       return (
         <Pressable
           key={item.questionoptionid}
           disabled={isShowingAnswer}
+          accessibilityRole="button"
+          accessibilityLabel={slot.accessibilityLabel}
+          aria-pressed={indexToSwap === index}
+          accessibilityState={{
+            selected: indexToSwap === index,
+            disabled: isShowingAnswer,
+          }}
           onPress={() => handleItemPress(item, index)}
           style={[
             {
@@ -178,9 +187,10 @@ export default forwardRef<PracticeHandler, PracticeProps>(
                   shadowRadius: 7,
                 },
           ]}>
-          <Image
+          <OptionImage
             focusable={false}
             source={imageSource}
+            slot={slot}
             contentFit="contain"
             style={{
               width: itemWidth,

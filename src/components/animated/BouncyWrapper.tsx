@@ -13,6 +13,8 @@ interface BouncyWrapperProps {
   onPress?: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
+  /** Announced for the whole pressable (children may be non-accessible art). */
+  accessibilityLabel?: string;
 
   animateOnPressIn?: boolean;
   animateOnPressOut?: boolean;
@@ -27,6 +29,7 @@ export default forwardRef<BouncingHandler, BouncyWrapperProps>(
       onPress = () => undefined,
       onPressIn = () => undefined,
       onPressOut = () => undefined,
+      accessibilityLabel,
     },
     ref,
   ) {
@@ -97,7 +100,9 @@ export default forwardRef<BouncingHandler, BouncyWrapperProps>(
       <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        onPress={handlePress}>
+        onPress={handlePress}
+        accessibilityRole={accessibilityLabel ? 'button' : undefined}
+        accessibilityLabel={accessibilityLabel}>
         <Animated.View
           style={[
             {

@@ -1,5 +1,5 @@
 import { Images } from '@/assets';
-import { DropAreaWrapper, Expanded, H6, Row } from '@/components';
+import { DropAreaWrapper, Expanded, H6, OptionImage, Row } from '@/components';
 import { DropAreaProps, QuestionOption } from '@/models';
 import { useResource } from '@/services';
 import { Audio } from 'expo-av';
@@ -75,8 +75,9 @@ export default function MatchingDropArea({ option, onLayout }: Props) {
       <Expanded justifyContent="center">
         {!_.isEmpty(option.questionoptionfile) &&
           _.get(option, 'questionoptionfile.filetype', 0) === 6 && (
-            <Image
+            <OptionImage
               source={source}
+              label={option.questionoptiontext}
               style={{ height: 100, width: 200 }}
               contentFit="contain"
             />
