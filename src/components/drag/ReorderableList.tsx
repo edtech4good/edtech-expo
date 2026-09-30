@@ -25,6 +25,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 
 import {
@@ -38,13 +39,13 @@ import {
   isNoopGap,
   itemAccessibilityLabel,
   keyboardAction,
-  MOVE_ACTION_LABELS,
   moveActionTarget,
   moveAnnouncement,
   moveItem,
   MoveAction,
   Rect,
   swapAnnouncement,
+  Translate,
   targetIndexForGap,
 } from './reorder';
 
@@ -100,8 +101,10 @@ import {
  * - The live region only speaks when its text changes: the same
  *   announcement twice in a row (e.g. two identical swaps) is read once.
  * - Escape on a tile that is not picked does nothing (keyboardAction).
- * - Strings (hints, announcements, action labels) are English only; their
- *   i18n belongs to the step 1 kit.
+ * - Strings (hints, announcements, action labels, "Word 3 of 6") come from
+ *   the `reorder.*` keys in en.json and km.json through react-i18next; the
+ *   Khmer is a draft that still needs a native speaker's review. `noun` is
+ *   passed in by the caller, already translated.
  */
 
 export interface ReorderItem {
@@ -149,6 +152,14 @@ export interface ReorderableListProps<T extends ReorderItem> {
   onOrderChange?: (ids: string[]) => void;
   onStatusChange?: (status: ReorderStatus) => void;
   disabled?: boolean;
+  /**
+   * Restyles one tile's frame after the drag and pick styles, e.g. the
+   * mint or orange result tint from the corporate kit (`tileFrame` in
+   * src/components/kit). Return undefined for the default frame. While
+   * `disabled` is true the grip glyph is hidden too, so a locked tile
+   * doesn't advertise a move that no longer works.
+   */
+  frameFor?: (item: T) => ViewStyle | undefined;
   /** Horizontal / vertical space between tiles. */
   gapX?: number;
   gapY?: number;
@@ -163,6 +174,13 @@ export interface ReorderableListProps<T extends ReorderItem> {
 }
 
 const CARET_WIDTH = 4;
+
+/** Props that take a view and everything in it out of the accessibility tree. */
+const HIDDEN_FROM_A11Y = {
+  importantForAccessibility: 'no-hide-descendants',
+  accessibilityElementsHidden: true,
+  'aria-hidden': true,
+} as const;
 
 /**
  * A touch screen on the web. There the browser, not the gesture system, owns
@@ -257,6 +275,7 @@ interface TileProps {
   frameStyle: ViewStyle;
   pickedStyle: ViewStyle;
   ghostStyle: ViewStyle;
+  toneStyle?: ViewStyle;
   drag: DragValues;
   onTap: (id: string) => void;
   onMove: (from: number, to: number) => void;
@@ -266,6 +285,7 @@ interface TileProps {
   onHoldTap: (index: number) => void;
   onKey: (id: string, key: string) => boolean;
   setRef: (id: string, node: View | null) => void;
+  t: Translate;
   children: ReactNode;
 }
 
@@ -282,6 +302,7 @@ const Tile = memo(function Tile({
   frameStyle,
   pickedStyle,
   ghostStyle,
+  toneStyle,
   drag,
   onTap,
   onMove,
@@ -291,6 +312,7 @@ const Tile = memo(function Tile({
   onHoldTap,
   onKey,
   setRef,
+  t,
   children,
 }: TileProps) {
   const gesture = useMemo(() => {
@@ -400,10 +422,10 @@ const Tile = memo(function Tile({
       { name: 'activate' },
       ...availableMoveActions(index, count).map(a => ({
         name: a,
-        label: MOVE_ACTION_LABELS[a],
+        label: t(`reorder.${a}`),
       })),
     ],
-    [index, count],
+    [index, count, t],
   );
 
   const handleAction = useCallback(
@@ -433,10 +455,10 @@ const Tile = memo(function Tile({
       : {};
 
   const hint = picked
-    ? 'Picked. Double-tap again to cancel, or use the move actions.'
+    ? t('reorder.hint.picked')
     : somethingPicked
-      ? 'Double-tap to swap with the picked item.'
-      : 'Double-tap to pick, then double-tap another to swap.';
+      ? t('reorder.hint.swapWith')
+      : t('reorder.hint.idle');
 
   return (
     <GestureDetector gesture={gesture}>
@@ -448,7 +470,7 @@ const Tile = memo(function Tile({
         collapsable={false}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={itemAccessibilityLabel(label, noun, index, count)}
+        accessibilityLabel={itemAccessibilityLabel(label, noun, index, count, t)}
         accessibilityHint={hint}
         accessibilityState={{ selected: picked, disabled }}
         accessibilityActions={actions}
@@ -458,6 +480,7 @@ const Tile = memo(function Tile({
         style={[
           frameStyle,
           picked ? pickedStyle : null,
+          toneStyle,
           ghost ? ghostStyle : null,
         ]}>
         <View style={{ opacity: ghost ? 0 : 1 }}>
@@ -477,6 +500,7 @@ function ReorderableListInner<T extends ReorderItem>({
   onOrderChange,
   onStatusChange,
   disabled = false,
+  frameFor,
   gapX = layout === 'grid' ? 12 : 10,
   gapY = 12,
   style,
@@ -484,6 +508,8 @@ function ReorderableListInner<T extends ReorderItem>({
 }: ReorderableListProps<T>) {
   const theme = useTheme();
   const colors = theme.colors;
+  const { t: i18nT } = useTranslation();
+  const t = i18nT as unknown as Translate;
 
   const byId = useMemo(() => {
     const m: Record<string, T> = {};
@@ -674,22 +700,22 @@ function ReorderableListInner<T extends ReorderItem>({
       const r = applyTap(orderRef.current, pickedRef.current, id);
       const label = byId[id]?.label ?? id;
       if (r.event === 'picked') {
-        announce(`${label} picked. Choose another to swap with.`);
+        announce(t('reorder.announce.picked', { label }));
         statusRef.current?.({ kind: 'picked', id, label });
       } else if (r.event === 'cancelled') {
-        announce(`${label} put back.`);
+        announce(t('reorder.announce.putBack', { label }));
         statusRef.current?.({ kind: 'idle' });
       } else {
         const a = byId[pickedRef.current as string]?.label ?? '';
         commitOrder(r.order);
         focusAfterMove.current = id;
-        announce(swapAnnouncement(a, label, labelsOf(r.order)));
+        announce(swapAnnouncement(a, label, labelsOf(r.order), t));
         statusRef.current?.({ kind: 'idle' });
       }
       pickedRef.current = r.picked;
       setPicked(r.picked);
     },
-    [disabled, byId, announce, commitOrder, labelsOf],
+    [disabled, byId, announce, commitOrder, labelsOf, t],
   );
 
   const onMove = useCallback(
@@ -700,9 +726,9 @@ function ReorderableListInner<T extends ReorderItem>({
       const next = moveItem(current, from, to);
       commitOrder(next);
       focusAfterMove.current = id;
-      announce(moveAnnouncement(byId[id]?.label ?? id, noun, to, labelsOf(next)));
+      announce(moveAnnouncement(byId[id]?.label ?? id, noun, to, labelsOf(next), t));
     },
-    [byId, noun, announce, commitOrder, labelsOf],
+    [byId, noun, announce, commitOrder, labelsOf, t],
   );
 
   const onKey = useCallback(
@@ -763,10 +789,10 @@ function ReorderableListInner<T extends ReorderItem>({
         kind: 'dragging',
         id,
         label: byId[id]?.label ?? id,
-        target: describeGap(index, gap, labelsOf(orderRef.current)),
+        target: describeGap(index, gap, labelsOf(orderRef.current), t),
       });
     },
-    [byId, labelsOf],
+    [byId, labelsOf, t],
   );
 
   const endDrag = useCallback(() => {
@@ -898,7 +924,9 @@ function ReorderableListInner<T extends ReorderItem>({
   const tileContent = (item: T, state: TileState) =>
     layout === 'inline' ? (
       <View style={styles.inlineContent}>
-        <GripGlyph color={state.picked ? colors.primary : colors.placeholder} />
+        {disabled ? null : (
+          <GripGlyph color={state.picked ? colors.primary : colors.placeholder} />
+        )}
         {renderItem(item, state)}
       </View>
     ) : (
@@ -946,6 +974,7 @@ function ReorderableListInner<T extends ReorderItem>({
                   frameStyle={frameStyle}
                   pickedStyle={pickedStyle}
                   ghostStyle={ghostStyle}
+                  toneStyle={frameFor?.(item)}
                   drag={stableDrag}
                   onTap={onTap}
                   onMove={onMove}
@@ -954,12 +983,17 @@ function ReorderableListInner<T extends ReorderItem>({
                   onDrop={onDrop}
                   onHoldTap={onHoldTap}
                   onKey={onKey}
-                  setRef={setRef}>
+                  setRef={setRef}
+                  t={t}>
                   {tileContent(item, state)}
                 </Tile>
                 {renderAccessory ? (
                   <View
-                    pointerEvents="box-none"
+                    // While this tile is being dragged, its accessory is
+                    // hidden from touches and screen readers, not only
+                    // faded: the ghost is a placeholder, not a control.
+                    pointerEvents={isGhost ? 'none' : 'box-none'}
+                    {...(isGhost ? HIDDEN_FROM_A11Y : null)}
                     style={[StyleSheet.absoluteFill, isGhost ? styles.hidden : null]}>
                     {renderAccessory(item, state)}
                   </View>
@@ -999,7 +1033,7 @@ function ReorderableListInner<T extends ReorderItem>({
               {tileContent(draggingItem, tileState(draggingItem, order.indexOf(draggingItem.id), true))}
             </View>
             {renderAccessory ? (
-              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <View pointerEvents="none" {...HIDDEN_FROM_A11Y} style={StyleSheet.absoluteFill}>
                 {renderAccessory(
                   draggingItem,
                   tileState(draggingItem, order.indexOf(draggingItem.id), true),

@@ -193,12 +193,44 @@ export function gridItemWidth(containerWidth: number, columns: number, gap: numb
 
 export type MoveAction = 'moveEarlier' | 'moveLater' | 'moveToStart' | 'moveToEnd';
 
-export const MOVE_ACTION_LABELS: Record<MoveAction, string> = {
-  moveEarlier: 'Move earlier',
-  moveLater: 'Move later',
-  moveToStart: 'Move to start',
-  moveToEnd: 'Move to end',
+/**
+ * A translate function with i18next's shape (key, options) -> string. The
+ * words in this module take one so the app can pass `t` from react-i18next;
+ * without one they read the English defaults below, which is what the logic
+ * tests use. The keys live under `reorder.*` in en.json / km.json, and a
+ * test keeps the English defaults and en.json identical.
+ */
+export type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** English defaults, keyed exactly like `reorder.*` in the locale files. */
+export const REORDER_EN: Record<string, string> = {
+  'reorder.moveEarlier': 'Move earlier',
+  'reorder.moveLater': 'Move later',
+  'reorder.moveToStart': 'Move to start',
+  'reorder.moveToEnd': 'Move to end',
+  'reorder.hint.idle': 'Double-tap to pick, then double-tap another to swap.',
+  'reorder.hint.picked': 'Picked. Double-tap again to cancel, or use the move actions.',
+  'reorder.hint.swapWith': 'Double-tap to swap with the picked item.',
+  'reorder.itemLabel': '{{label}}. {{noun}} {{position}} of {{count}}',
+  'reorder.announce.picked': '{{label}} picked. Choose another to swap with.',
+  'reorder.announce.putBack': '{{label}} put back.',
+  'reorder.announce.moved': '{{label}} moved to {{noun}} {{position}}. {{order}}.',
+  'reorder.announce.swapped': '{{label}} and {{other}} swapped. {{order}}.',
+  'reorder.gap.before': 'before “{{label}}”',
+  'reorder.gap.after': 'after “{{label}}”',
+  'reorder.noun.word': 'Word',
+  'reorder.noun.photo': 'Photo',
 };
+
+/** Fills {{name}} placeholders; the same substitution i18next does. */
+export function interpolate(template: string, options: Record<string, unknown> = {}): string {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
+    name in options ? String(options[name]) : '',
+  );
+}
+
+export const englishTranslate: Translate = (key, options) =>
+  interpolate(REORDER_EN[key] ?? key, options);
 
 const MOVE_ACTIONS: MoveAction[] = ['moveEarlier', 'moveLater', 'moveToStart', 'moveToEnd'];
 
@@ -320,8 +352,14 @@ export function applyTap<T>(order: ReadonlyArray<T>, picked: T | null, tapped: T
 // Words for screen readers and the instruction line.
 
 /** "Write. Word 3 of 6" */
-export function itemAccessibilityLabel(label: string, noun: string, index: number, length: number): string {
-  return `${label}. ${noun} ${index + 1} of ${length}`;
+export function itemAccessibilityLabel(
+  label: string,
+  noun: string,
+  index: number,
+  length: number,
+  t: Translate = englishTranslate,
+): string {
+  return t('reorder.itemLabel', { label, noun, position: index + 1, count: length });
 }
 
 /** "Write moved to word 1. Write sale in book every your." */
@@ -330,13 +368,24 @@ export function moveAnnouncement(
   noun: string,
   to: number,
   labelsInNewOrder: ReadonlyArray<string>,
+  t: Translate = englishTranslate,
 ): string {
-  return `${movedLabel} moved to ${noun.toLowerCase()} ${to + 1}. ${labelsInNewOrder.join(' ')}.`;
+  return t('reorder.announce.moved', {
+    label: movedLabel,
+    noun: noun.toLowerCase(),
+    position: to + 1,
+    order: labelsInNewOrder.join(' '),
+  });
 }
 
 /** "Write and sale swapped. sale in Write book every your." */
-export function swapAnnouncement(a: string, b: string, labelsInNewOrder: ReadonlyArray<string>): string {
-  return `${a} and ${b} swapped. ${labelsInNewOrder.join(' ')}.`;
+export function swapAnnouncement(
+  a: string,
+  b: string,
+  labelsInNewOrder: ReadonlyArray<string>,
+  t: Translate = englishTranslate,
+): string {
+  return t('reorder.announce.swapped', { label: a, other: b, order: labelsInNewOrder.join(' ') });
 }
 
 /**
@@ -348,8 +397,9 @@ export function describeGap(
   from: number,
   gap: number,
   labels: ReadonlyArray<string>,
+  t: Translate = englishTranslate,
 ): string | null {
   if (gap < 0 || gap > labels.length || isNoopGap(from, gap)) return null;
-  if (gap === labels.length) return `after “${labels[labels.length - 1]}”`;
-  return `before “${labels[gap]}”`;
+  if (gap === labels.length) return t('reorder.gap.after', { label: labels[labels.length - 1] });
+  return t('reorder.gap.before', { label: labels[gap] });
 }

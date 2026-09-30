@@ -18,6 +18,66 @@
   "image": {
     "unavailable": "Image unavailable"
   },
+  "reorder": {
+    "moveEarlier": "Move earlier",
+    "moveLater": "Move later",
+    "moveToStart": "Move to start",
+    "moveToEnd": "Move to end",
+    "hint": {
+      "idle": "Double-tap to pick, then double-tap another to swap.",
+      "picked": "Picked. Double-tap again to cancel, or use the move actions.",
+      "swapWith": "Double-tap to swap with the picked item."
+    },
+    "itemLabel": "{{label}}. {{noun}} {{position}} of {{count}}",
+    "announce": {
+      "picked": "{{label}} picked. Choose another to swap with.",
+      "putBack": "{{label}} put back.",
+      "moved": "{{label}} moved to {{noun}} {{position}}. {{order}}.",
+      "swapped": "{{label}} and {{other}} swapped. {{order}}."
+    },
+    "gap": {
+      "before": "before “{{label}}”",
+      "after": "after “{{label}}”"
+    },
+    "noun": {
+      "word": "Word",
+      "photo": "Photo"
+    }
+  },
+  "kit": {
+    "audio": {
+      "listen": "Listen",
+      "listenA11y": "Listen to the question",
+      "pauseA11y": "Pause the question audio",
+      "playOption": "Play audio for {{label}}",
+      "pauseOption": "Pause audio for {{label}}",
+      "playOptionNoLabel": "Play audio",
+      "pauseOptionNoLabel": "Pause audio",
+      "unavailable": "Audio unavailable",
+      "unavailableRetry": "Audio unavailable. Tap to try again."
+    },
+    "result": {
+      "correctTitle": "Correct",
+      "incorrectTitle": "Not quite",
+      "summaryAll": "All {{total}} are in the right place.",
+      "summaryPartial": "{{correct}} of {{total}} are in the right place.",
+      "summarySingleRight": "Your answer is right.",
+      "summaryWrong": "That is not the right answer.",
+      "readBack": "Read back: {{text}}",
+      "announce": "{{title}}. {{summary}}"
+    },
+    "mark": {
+      "correct": "Correct",
+      "incorrect": "Incorrect"
+    },
+    "slot": {
+      "placeholder": "Place an answer",
+      "target": "Place here",
+      "a11yEmpty": "Empty",
+      "a11yActive": "Empty, next to fill",
+      "a11yFilled": "{{label}}, placed. Tap to take it back."
+    }
+  },
   "resumeVideo": {
     "question": "Would you like to resume from your previous session?"
   },

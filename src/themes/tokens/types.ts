@@ -36,10 +36,14 @@ export interface ThemeColors {
   shadow: string;
 
   error: string;
+  /** Text in the error hue on the 8% error tint (the "Not quite" title): `error` is 4.46:1 there, this is 5.05:1. */
+  errorText: string;
   customAppBar: string;
   customHeaderTitle: string;
 
   selection: string;
+  /** Text on a selected option (the label beside the selection ring). `selection` itself is 4.14:1 on white, fine for the ring (3:1) but under 4.5:1 for 14px text; this darker teal is 4.77:1. */
+  selectionText: string;
   success: string;
   onSuccess: string;
   /** Text-only "Done" color for status words (lesson row status, step-dot labels) — a darker green than the `success` disc fill so 14/12px text stays readable on white. Also used as the done step dot's fill (LessonStepDots), not just the "Done" label text. */
