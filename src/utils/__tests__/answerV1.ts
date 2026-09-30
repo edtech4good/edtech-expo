@@ -35,6 +35,7 @@ import { gradeFillBlank } from '../../screens/Practice/Components/FillBlank/fill
 import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../screens/Practice/Corporate/FillBlank/fillBlankLogic';
 import { gradeMatching } from '../../screens/Practice/Components/DragDrop/matchingGrade';
 import { evaluateMatching } from '../../screens/Practice/Corporate/matchingLogic';
+import { evaluateMcqImage } from '../../screens/Practice/Corporate/imageChoice/imageChoiceLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
 import {
   selectionModeFor,
@@ -916,5 +917,34 @@ check('corporate single-select fallback: a template 1 question with two correct 
   // Had it been single-select, no selection could be correct.
   assert.equal(evaluateMcqText(bad, corporateSingleSelections([bad[1], bad[0]], 'single')).iscorrect, false);
 });
+
+// ---------------------------------------------------------------------------
+// Corporate multiple choice, pictures (templates 2 and 4): the same rule and
+// answer as the kids renderer (PracticeMCQImage's submit is the text one word
+// for word), for the same FINAL selection. Template 2 is single-select in
+// corporate (last tap wins); template 4 keeps every tap sequence, un-taps
+// included. The exhaustive version, with the layout and sizing, is
+// `yarn test:mcqimage`; this is the round trip through the server mirror.
+// ---------------------------------------------------------------------------
+for (const [templateId, options] of [[2, singleChoice], [4, multiChoice]] as const) {
+  check(`corporate MCQ pictures, template ${templateId}: answer and iscorrect equal the kids path for the same final selection, and the server agrees`, () => {
+    const q = { questionobject: { questionoptions: options } };
+    const mode = selectionModeFor(templateId, q);
+    assert.equal(mode, templateId === 2 ? 'single' : 'multi');
+    const sequences = tapSequences(options as Opt[]);
+    for (const taps of [...sequences, ...sequences.filter(s => s.length > 1).map(s => [...s, s[0]])]) {
+      const cSel = corporateSingleSelections(taps, mode);
+      // Multi: the kids path holds the very same selection. Single: kids arrives
+      // at the same final choice (the last option tapped, once).
+      const kSel: Record<string, Opt> = mode === 'multi' ? kidsSelections(taps) : kidsSelections(taps.length ? [taps[taps.length - 1]] : []);
+      assert.deepEqual(Object.keys(cSel), Object.keys(kSel));
+      const corp = evaluateMcqImage(options as Opt[], cSel);
+      const kids = kidsSubmitAsBefore(options as Opt[], kSel);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.equal(serverGrade(templateId, options as Opt[], corp.answer), corp.iscorrect);
+    }
+  });
+}
 
 console.log(`answerV1: ${passed} checks passed`);

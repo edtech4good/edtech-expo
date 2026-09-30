@@ -79,6 +79,9 @@ jobs:
       - name: Corporate matching logic
         run: yarn test:matching
 
+      - name: Corporate picture multiple choice
+        run: yarn test:mcqimage
+
       - name: Question renderer key (fresh renderer per question)
         run: yarn test:questionkey
 
