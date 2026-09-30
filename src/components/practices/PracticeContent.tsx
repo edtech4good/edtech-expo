@@ -5,6 +5,7 @@ import { useDesign } from '@/services';
 import _ from 'lodash';
 import { forwardRef, useEffect, useMemo } from 'react';
 import SizedBox from '../layouts/SizedBox';
+import { questionRenderKey } from './questionKey';
 
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeContent(
@@ -33,6 +34,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       [question.templatetypeid, isCorporate],
     );
 
+    // Keyed on the question's position, so every question gets a fresh
+    // renderer (see questionKey.ts).
+    //
     // Memoised on the question, as before: the renderer is not re-rendered
     // when the screen re-renders (the result popup opening, for one), and it
     // keeps the callbacks it was first given. `onContinue` is stable.
@@ -41,7 +45,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         Module ? (
           <Module
             ref={ref}
-            key={question.questionnid}
+            key={questionRenderKey(currentQuestionIndex)}
             question={question}
             currentQuestionIndex={currentQuestionIndex}
             maxQuestion={maxQuestion}

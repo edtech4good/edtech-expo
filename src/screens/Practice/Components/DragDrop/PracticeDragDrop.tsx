@@ -29,7 +29,7 @@ import { FlatList } from 'react-native';
 import { KeyExtractorHelper } from '@/utils';
 import { useForm } from 'react-hook-form';
 import _ from 'lodash';
-import { matchAnswer } from '@/utils/answerV1';
+import { gradeMatching } from './matchingGrade';
 
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeDragDrop(
@@ -98,25 +98,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
 
       const answers = methods.getValues('answers');
       console.log('ALL : ', answers);
-      const isCorrect = _.reduce(
-        questionOptions,
-        (result, value) => {
-          console.log('Key: ', value.questionoptionid);
-          console.log('Value: ', answers[value.questionoptionid]);
-          if (
-            _.isEmpty(answers[value.questionoptionid]) ||
-            answers[value.questionoptionid] !== value.questionoptionid
-          )
-            result = false;
-
-          return result;
-        },
-        true,
-      );
-
-      // Built before handleRetry() clears `answers`. Keys are drop targets,
-      // values the option placed on each.
-      onSubmit(methods.getValues('tries'), isCorrect, false, matchAnswer(answers));
+      // Built before handleRetry() clears `answers`.
+      const { isCorrect, answer } = gradeMatching(questionOptions, answers);
+      onSubmit(methods.getValues('tries'), isCorrect, false, answer);
       handleRetry();
     };
 

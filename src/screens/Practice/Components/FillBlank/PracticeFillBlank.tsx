@@ -16,7 +16,7 @@ import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
 import { useDesign, useResource } from '@/services';
 import _ from 'lodash';
-import { blanksAnswer } from '@/utils/answerV1';
+import { gradeFillBlank } from './fillBlankGrade';
 import {
   ChildImage,
   Container,
@@ -131,54 +131,13 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         return;
       }
 
-      let isCorrect = false;
-
-      if (attempt.selections.length < requiredNumberOfAnswer) isCorrect = false;
-      else {
-        const { correct } = _.reduce(
-          attempt.selections,
-          (result, value, index) => {
-            console.log('Val : ', value);
-            console.log('CurSeq: ', result.currentSequence);
-
-            if (
-              (!_.isBoolean(value.questionoptioniscorrect) &&
-                questionOptions.length > 1) ||
-              !_.isNumber(value.questionoptionsequence)
-            ) {
-              console.log(`%cCurrent Option is invalid`, 'color:red');
-              result.correct = false;
-            } else if (value.questionoptionsequence < result.currentSequence) {
-              console.log(`%cCurrent Option wrong sequence`, 'color:red');
-              result.correct = false;
-            } else if (
-              !value.questionoptioniscorrect &&
-              questionOptions.length > 1
-            ) {
-              console.log(`%cCurrent Option is wrong`, 'color:red');
-              result.correct = false;
-            }
-
-            result.currentSequence = value.questionoptionsequence;
-            return result;
-          },
-          {
-            correct: true,
-            currentSequence: 0,
-          },
-        );
-
-        isCorrect = correct;
-      }
-
-      console.log('FINAL : ', isCorrect);
-
-      onSubmit(
-        attempt.tries,
-        isCorrect,
-        false,
-        blanksAnswer(_.map(attempt.selections, o => o.questionoptionid)),
+      // Today's rule, shared with the corporate renderer (fillBlankGrade.ts).
+      const { isCorrect, answer } = gradeFillBlank(
+        questionOptions,
+        attempt.selections,
       );
+
+      onSubmit(attempt.tries, isCorrect, false, answer);
     };
 
     const handleRetry = (chargeAttempt = false) => {

@@ -1,31 +1,44 @@
 /**
  * Corporate multiple choice, pictures (templates 2 and 4):
- *  - grading: for every tap sequence (including un-taps) on 2 to 4 options,
- *    the corporate path sends the same `iscorrect` and answerV1 (same ids,
- *    same order) as today's PracticeMCQImage, and the server's rules grade
- *    that answer the way the device did;
- *  - selection state and the option's look after a result and Show answer;
- *  - the tile sizing helper (measured width and height, no minHeight);
- *  - which file is an option's picture and which its audio.
+ *  - selection: template 2 is single-select in corporate (with the
+ *    multi-correct fallback), template 4 multi; roles follow;
+ *  - grading: for the same final selection the corporate path sends the same
+ *    `iscorrect` and answerV1 as today's PracticeMCQImage, and the server's
+ *    rules grade that answer the way the device did. Multi (template 4):
+ *    every tap sequence, un-taps included, over 2 to 4 options;
+ *  - selection state, `checked` and the option's look after a result and
+ *    Show answer;
+ *  - the tile sizing from the shell's measured layout (regular and compact);
+ *  - which file is an option's picture and which its audio, and the
+ *    accessible name of an option with no text.
  *
  * Plain script run by `tsx` (package.json `test:mcqimage`).
  */
 import assert from 'node:assert/strict';
 import _ from 'lodash';
 import { choiceAnswer } from '../../../../../utils/answerV1';
-import { MIN_TILE_SIZE } from '../../../Components/MCQImage/layout';
 import { INITIAL_SHELL_STATE, shellPress } from '../../shellLogic';
 import {
   CARD_CAPTION,
   CARD_FRAME,
+  COMPACT_CARD_FRAME,
+  COMPACT_GRID_GAP,
+  COMPACT_MIN_TILE,
   GRID_GAP,
-  availableGridHeight,
+  REGULAR_MIN_TILE,
   evaluateMcqImage,
   imageOptionState,
-  isMultiTemplate,
+  indicatorKind,
+  isChecked,
+  optionAccessibleName,
+  optionLetter,
   optionMediaNames,
+  planHeight,
   planImageGrid,
   planWidth,
+  selectOption,
+  selectionModeFor,
+  selectionRoles,
   toggleSelection,
 } from '../imageChoiceLogic';
 
@@ -46,6 +59,7 @@ interface Opt {
   questionoptioniscorrect: boolean;
 }
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const q = (options: Opt[]) => ({ questionobject: { questionoptions: options } });
 const mk = (n: number, correct: boolean): Opt => ({ questionoptionid: U(n), questionoptioniscorrect: correct });
 
 // Fixtures: 2, 3 and 4 options; template 2 has one right answer, template 4 several.
@@ -87,9 +101,9 @@ function kidsSelections(taps: Opt[]) {
   }
   return selections;
 }
-function corporateSelections(taps: Opt[]) {
+function corporateSelections(taps: Opt[], mode: 'single' | 'multi' = 'multi') {
   let selections: Record<string, Opt> = {};
-  for (const qp of taps) selections = toggleSelection(selections, qp.questionoptionid, qp);
+  for (const qp of taps) selections = selectOption(selections, qp.questionoptionid, qp, mode);
   return selections;
 }
 
@@ -113,42 +127,67 @@ function* tapWords(options: Opt[], maxLen: number): Generator<Opt[]> {
   yield* walk([]);
 }
 
-for (const [templateId, fixtures] of [[2, SINGLE], [4, MULTI]] as const) {
-  for (const n of [2, 3, 4]) {
-    check(`template ${templateId}, ${n} options: every tap sequence (un-taps included) grades and sends what the kids renderer does`, () => {
-      const options = fixtures[n];
-      let count = 0;
-      let unselected = 0;
-      for (const taps of tapWords(options, n === 4 ? 6 : 7)) {
-        const kSel = kidsSelections(taps);
-        const cSel = corporateSelections(taps);
-        assert.deepEqual(Object.keys(cSel), Object.keys(kSel), 'same selection, same order');
-        const kids = kidsSubmit(options, kSel);
-        const corp = evaluateMcqImage(options, cSel);
-        assert.equal(corp.iscorrect, kids.isCorrect);
-        assert.deepEqual(corp.answer, kids.answer);
-        // The server grades the sent answer as the device graded it.
-        assert.equal(serverGradeChoice(options, (corp.answer as { selected: string[] }).selected), corp.iscorrect);
-        // What the shell sends the screen (practice and quiz) is that answer.
-        for (const mode of ['practice', 'quiz'] as const) {
-          const r = shellPress({ ...INITIAL_SHELL_STATE, tries: 2 }, 'submit', {
-            mode,
-            ready: true,
-            evaluate: () => corp,
-          });
-          assert.equal(r.effect.kind, 'submit');
-          if (r.effect.kind === 'submit') {
-            assert.equal(r.effect.iscorrect, kids.isCorrect);
-            assert.deepEqual(r.effect.answer, kids.answer);
-          }
-        }
-        if (taps.length > new Set(taps.map(t => t.questionoptionid)).size) unselected++;
-        count++;
-      }
-      assert.ok(count > 50, `tried ${count} sequences`);
-      assert.ok(unselected > 0, 'some sequences un-tap');
+function assertSendsWhatKidsSend(templateId: number, options: Opt[], cSel: Record<string, Opt>) {
+  const kids = kidsSubmit(options, cSel);
+  const corp = evaluateMcqImage(options, cSel);
+  assert.equal(corp.iscorrect, kids.isCorrect);
+  assert.deepEqual(corp.answer, kids.answer);
+  assert.equal(serverGradeChoice(options, (corp.answer as { selected: string[] }).selected), corp.iscorrect);
+  assert.ok(templateId === 2 || templateId === 4);
+  // What the shell sends the screen (practice and quiz) is that answer.
+  for (const mode of ['practice', 'quiz'] as const) {
+    const r = shellPress({ ...INITIAL_SHELL_STATE, tries: 2 }, 'submit', {
+      mode,
+      ready: true,
+      evaluate: () => corp,
     });
+    assert.equal(r.effect.kind, 'submit');
+    if (r.effect.kind === 'submit') {
+      assert.equal(r.effect.iscorrect, kids.isCorrect);
+      assert.deepEqual(r.effect.answer, kids.answer);
+    }
   }
+}
+
+// Template 4 (multi): every tap sequence, un-taps included, is the kids path.
+for (const n of [2, 3, 4]) {
+  check(`template 4, ${n} options: every tap sequence (un-taps included) selects, grades and sends what the kids renderer does`, () => {
+    const options = MULTI[n];
+    let count = 0;
+    let untaps = 0;
+    for (const taps of tapWords(options, n === 4 ? 6 : 7)) {
+      const kSel = kidsSelections(taps);
+      const cSel = corporateSelections(taps, selectionModeFor(4, q(options)));
+      assert.deepEqual(Object.keys(cSel), Object.keys(kSel), 'same selection, same order');
+      assertSendsWhatKidsSend(4, options, cSel);
+      if (taps.length > new Set(taps.map(t => t.questionoptionid)).size) untaps++;
+      count++;
+    }
+    assert.ok(count > 50, `tried ${count} sequences`);
+    assert.ok(untaps > 0, 'some sequences un-tap');
+  });
+}
+
+// Template 2 (single-select): the final selection is the last option tapped,
+// and for that final selection corporate = kids = server. (Kids would hold
+// several after the same taps; the comparison is on the final selection.)
+for (const n of [2, 3, 4]) {
+  check(`template 2, ${n} options: every tap sequence ends on the last option tapped, and that selection grades and sends what the kids path does`, () => {
+    const options = SINGLE[n];
+    const mode = selectionModeFor(2, q(options));
+    assert.equal(mode, 'single');
+    let count = 0;
+    for (const taps of tapWords(options, n === 4 ? 6 : 7)) {
+      const cSel = corporateSelections(taps, mode);
+      const last = taps[taps.length - 1];
+      assert.deepEqual(Object.keys(cSel), last ? [last.questionoptionid] : []);
+      assertSendsWhatKidsSend(2, options, cSel);
+      // The same final choice made in one tap on the kids renderer.
+      if (last) assert.deepEqual(kidsSubmit(options, kidsSelections([last])), kidsSubmit(options, cSel));
+      count++;
+    }
+    assert.ok(count > 50);
+  });
 }
 
 check('an empty answer is sent as no selection and graded wrong, as today', () => {
@@ -157,19 +196,46 @@ check('an empty answer is sent as no selection and graded wrong, as today', () =
   assert.deepEqual(r.answer, kidsSubmit(SINGLE[4], {}).answer);
 });
 
-check('selection order is the order tapped; un-select then re-select moves it last', () => {
+check('multi: selection order is the order tapped; un-select then re-select moves it last', () => {
   const o = MULTI[4];
-  const s = corporateSelections([o[2], o[0], o[2], o[2]]);
+  const s = corporateSelections([o[2], o[0], o[2], o[2]], 'multi');
   assert.deepEqual(Object.keys(s), [U(1), U(3)]);
-  assert.deepEqual(Object.keys(corporateSelections([o[0]])), [U(1)]);
-  assert.deepEqual(Object.keys(corporateSelections([o[0], o[0]])), []);
+  assert.deepEqual(Object.keys(corporateSelections([o[0]], 'multi')), [U(1)]);
+  assert.deepEqual(Object.keys(corporateSelections([o[0], o[0]], 'multi')), []);
 });
 
-check('toggleSelection does not mutate the selections it was given', () => {
+check('single: a tap replaces the choice, tapping the chosen one keeps it (a radio does not unselect)', () => {
+  const o = SINGLE[3];
+  assert.deepEqual(Object.keys(corporateSelections([o[0], o[1]], 'single')), [U(2)]);
+  assert.deepEqual(Object.keys(corporateSelections([o[1], o[1]], 'single')), [U(2)]);
+  assert.deepEqual(Object.keys(corporateSelections([o[0], o[1], o[0]], 'single')), [U(1)]);
+});
+
+check('mode: template 2 single, 4 multi; a template 2 question with two correct options falls back to multi', () => {
+  assert.equal(selectionModeFor(2, q(SINGLE[4])), 'single');
+  assert.equal(selectionModeFor(4, q(MULTI[4])), 'multi');
+  assert.equal(selectionModeFor(4, q(SINGLE[4])), 'multi');
+  assert.equal(selectionModeFor(2, q(MULTI[4])), 'multi', 'multi-correct falls back so it stays answerable');
+  // ...and there the learner can choose both correct options and grade right.
+  const m = MULTI[4];
+  const sel = corporateSelections([m[0], m[2]], selectionModeFor(2, q(m)));
+  assert.equal(evaluateMcqImage(m, sel).iscorrect, true);
+});
+
+check('roles: single is a radiogroup of radios, multi a group of checkboxes', () => {
+  assert.deepEqual(selectionRoles('single'), { group: 'radiogroup', option: 'radio' });
+  assert.deepEqual(selectionRoles('multi'), { group: 'group', option: 'checkbox' });
+  assert.deepEqual(selectionRoles(selectionModeFor(2, q(SINGLE[3]))), { group: 'radiogroup', option: 'radio' });
+  assert.deepEqual(selectionRoles(selectionModeFor(4, q(MULTI[3]))), { group: 'group', option: 'checkbox' });
+});
+
+check('toggleSelection does not mutate the selections it was given; selectOption neither', () => {
   const before = { [U(1)]: MULTI[2][0] };
   const copy = { ...before };
   toggleSelection(before, U(1), MULTI[2][0]);
   toggleSelection(before, U(2), MULTI[2][1]);
+  selectOption(before, U(2), MULTI[2][1], 'single');
+  selectOption(before, U(2), MULTI[2][1], 'multi');
   assert.deepEqual(before, copy);
 });
 
@@ -187,6 +253,36 @@ check('option state: selection, then marks after submit, then the answer after S
   assert.equal(imageOptionState(a, { selected: true, marks: null, showAnswer: true }), 'default');
 });
 
+check('the control: a radio for single, a checkbox for multi', () => {
+  assert.equal(indicatorKind('single'), 'radio');
+  assert.equal(indicatorKind('multi'), 'checkbox');
+  assert.equal(indicatorKind(selectionModeFor(2, q(SINGLE[3]))), 'radio');
+  assert.equal(indicatorKind(selectionModeFor(4, q(MULTI[3]))), 'checkbox');
+});
+
+check('isChecked reads the selection only', () => {
+  const [a, b] = SINGLE[3];
+  const sel = corporateSelections([a], 'single');
+  assert.equal(isChecked(sel, a.questionoptionid), true);
+  assert.equal(isChecked(sel, b.questionoptionid), false);
+  assert.equal(isChecked({}, a.questionoptionid), false);
+  assert.equal(isChecked({ [a.questionoptionid]: {} }, a.questionoptionid), false);
+});
+
+check('checked is the learner\'s selection only: a revealed correct option is not checked, a wrong chosen one still is', () => {
+  // The card reads `selected` (selections) for checked, never the state.
+  const [a, b] = SINGLE[3];
+  // After Submit with the wrong option chosen: it is checked (and marked wrong); the right one is not (and unmarked).
+  const sel = corporateSelections([a], 'single');
+  const marks = evaluateMcqImage(SINGLE[3], sel).perItem;
+  assert.equal(!_.isEmpty(sel[a.questionoptionid]), true);
+  assert.equal(imageOptionState(a, { selected: true, marks, showAnswer: false }), 'incorrect');
+  assert.equal(!_.isEmpty(sel[b.questionoptionid]), false);
+  assert.equal(imageOptionState(b, { selected: false, marks, showAnswer: false }), 'default');
+  // After Show answer the selection is cleared, so nothing is checked, while the correct one looks correct.
+  assert.equal(imageOptionState(b, { selected: false, marks: null, showAnswer: true }), 'correct');
+});
+
 check('perItem marks only the chosen options, by their own correctness', () => {
   const o = MULTI[4];
   const r = evaluateMcqImage(o, corporateSelections([o[1], o[2]]));
@@ -194,90 +290,84 @@ check('perItem marks only the chosen options, by their own correctness', () => {
   assert.deepEqual(evaluateMcqImage(o, {}).perItem, {});
 });
 
-check('template 4 is multi, template 2 is single', () => {
-  assert.equal(isMultiTemplate(4), true);
-  assert.equal(isMultiTemplate('4'), true);
-  assert.equal(isMultiTemplate(2), false);
-  assert.equal(isMultiTemplate(undefined), false);
+// --- Tile sizing (from the shell's measured layout) ------------------------
+const L = (availableWidth: number, availableHeight: number, compact = false) => ({ availableWidth, availableHeight, compact });
+const plan = (count: number, layout: ReturnType<typeof L> | null, breakpointSize = 175) => planImageGrid({ count, breakpointSize, layout });
+const cellSide = (W: number, cols: number, frame: number, gap: number) => Math.floor((W - gap * (cols - 1)) / cols) - 2 * frame;
+
+check('unmeasured (layout null): the breakpoint size, two columns for several options, one for a lone option', () => {
+  assert.deepEqual(plan(4, null), { columns: 2, side: 175, compact: false, frame: CARD_FRAME, gap: GRID_GAP });
+  assert.equal(plan(1, null).columns, 1);
 });
 
-// --- Tile sizing ------------------------------------------------------------
-const cellSide = (gridWidth: number) => Math.floor((gridWidth - GRID_GAP) / 2) - 2 * CARD_FRAME;
-const rowHeight = (side: number) => side + 2 * CARD_FRAME + CARD_CAPTION;
-
-check('unmeasured: the breakpoint size, two columns for several options, one for a lone option', () => {
-  assert.deepEqual(planImageGrid({ count: 4, breakpointSize: 175, gridWidth: null, availableHeight: null }), { columns: 2, side: 175 });
-  assert.deepEqual(planImageGrid({ count: 1, breakpointSize: 175, gridWidth: null, availableHeight: null }).columns, 1);
-});
-
-check('width: never wider than its cell (a 390 phone gets two 150-ish pictures, not 175)', () => {
-  const p = planImageGrid({ count: 4, breakpointSize: 175, gridWidth: 350, availableHeight: null });
-  assert.equal(p.side, cellSide(350));
-  assert.ok(p.side < 175);
-  // 320 wide: still two across, smaller.
-  const small = planImageGrid({ count: 4, breakpointSize: 150, gridWidth: 280, availableHeight: null });
-  assert.equal(small.side, cellSide(280));
-  // 760 column: the breakpoint size caps it (the cell would allow far more).
-  assert.equal(planImageGrid({ count: 4, breakpointSize: 256, gridWidth: 760, availableHeight: null }).side, 256);
-});
-
-check('height: tall rooms keep the size; short ones shrink it, never below the minimum', () => {
-  const tall = planImageGrid({ count: 4, breakpointSize: 256, gridWidth: 760, availableHeight: 2 * rowHeight(256) + GRID_GAP + 40 });
-  assert.equal(tall.side, 256);
-  const tight = planImageGrid({ count: 4, breakpointSize: 256, gridWidth: 760, availableHeight: 2 * rowHeight(180) + GRID_GAP });
-  assert.equal(tight.side, 180);
-  const none = planImageGrid({ count: 4, breakpointSize: 256, gridWidth: 760, availableHeight: 40 });
-  assert.equal(none.side, MIN_TILE_SIZE);
-  // Two options are one row: the same room gives them a bigger picture than four.
-  const two = planImageGrid({ count: 2, breakpointSize: 256, gridWidth: 760, availableHeight: 2 * rowHeight(180) + GRID_GAP });
-  assert.ok(two.side > tight.side);
-});
-
-check('four options are a 2x2 in the 760 column and on a tall phone, on every breakpoint size', () => {
-  for (const [breakpointSize, gridWidth, availableHeight] of [[256, 760, 900], [175, 760, 900], [150, 350, 560], [150, 350, null], [256, 760, null]] as const) {
-    const p = planImageGrid({ count: 4, breakpointSize, gridWidth, availableHeight });
-    assert.equal(p.columns, 2, `${breakpointSize}/${gridWidth}/${availableHeight}`);
+check('regular: a 2x2 for four options, exactly two columns wide, on every breakpoint size', () => {
+  for (const [bp, W, H] of [[256, 760, 900], [175, 760, 900], [150, 350, 560], [150, 350, 460]] as const) {
+    const p = plan(4, L(W, H), bp);
+    assert.equal(p.columns, 2, `${bp}/${W}/${H}`);
+    assert.equal(p.compact, false);
+    assert.ok(planWidth(p) <= W, 'fits the width');
+    assert.ok(planWidth(p) < 3 * (p.side + 2 * CARD_FRAME) + 2 * GRID_GAP, 'a third card never fits on a row');
   }
-  // Three options: two columns, the last card centred on its own row.
-  assert.equal(planImageGrid({ count: 3, breakpointSize: 256, gridWidth: 760, availableHeight: 900 }).columns, 2);
+  assert.equal(plan(3, L(760, 900), 256).columns, 2);
 });
 
-check('a desktop with room for two rows of a smaller picture keeps the 2x2 rather than one bigger row', () => {
-  // 1280x800: 2 rows fit at 160, a single row would allow 165: the 2x2 stays.
-  const p = planImageGrid({ count: 4, breakpointSize: 175, gridWidth: 760, availableHeight: 473 });
-  assert.equal(p.columns, 2);
-  assert.equal(p.side, 160);
+check('regular width: never wider than its cell (a 390 phone gets two ~150 pictures, not 175)', () => {
+  const p = plan(4, L(350, 900), 175);
+  assert.equal(p.side, cellSide(350, 2, CARD_FRAME, GRID_GAP));
+  assert.ok(p.side < 175);
+  assert.equal(plan(4, L(760, 900), 256).side, 256);
 });
 
-check('a landscape phone, where height limits the picture, takes one row of four (half the height)', () => {
-  const p = planImageGrid({ count: 4, breakpointSize: 175, gridWidth: 640, availableHeight: 60 });
+check('regular height: fits the measured height, and refits when the result strip takes its part', () => {
+  const before = plan(4, L(350, 460), 175);
+  const after = plan(4, L(350, 460 - 110), 175); // availableHeight drops by the strip
+  assert.ok(after.side < before.side, 'smaller once the strip shows');
+  assert.ok(planHeight(after, 4) <= 460 - 110, 'the whole grid, with its captions, is above the strip');
+  assert.ok(planHeight(before, 4) <= 460);
+  // Never below the minimum for height, but never wider than its cell.
+  assert.equal(plan(4, L(760, 40), 256).side, REGULAR_MIN_TILE);
+  assert.equal(plan(4, L(130, 10), 150).side, cellSide(130, 2, CARD_FRAME, GRID_GAP));
+  assert.ok(cellSide(130, 2, CARD_FRAME, GRID_GAP) < REGULAR_MIN_TILE);
+});
+
+check('compact (a phone on its side): one row of four, captions on the picture, so the row is only the picture and its frame tall', () => {
+  const p = plan(4, L(684, 200, true), 175);
+  assert.equal(p.compact, true);
   assert.equal(p.columns, 4);
-  assert.equal(p.side, MIN_TILE_SIZE);
-  // ...but not when one row would be smaller than two (a narrow phone).
-  assert.equal(planImageGrid({ count: 4, breakpointSize: 150, gridWidth: 300, availableHeight: 60 }).columns, 2);
+  assert.equal(p.frame, COMPACT_CARD_FRAME);
+  assert.equal(p.gap, COMPACT_GRID_GAP);
+  assert.ok(planWidth(p) <= 684);
+  // No caption row under the picture in compact.
+  assert.equal(planHeight(p, 4), p.side + 2 * COMPACT_CARD_FRAME);
+  assert.ok(planHeight(p, 4) <= 200);
+  assert.ok(p.side >= 64, 'about 64 or more before Submit');
 });
 
-check('the grid is exactly its columns wide, so a third card never fits on a row', () => {
-  const p = planImageGrid({ count: 4, breakpointSize: 175, gridWidth: 760, availableHeight: 900 });
-  assert.equal(planWidth(p), 2 * (p.side + 2 * CARD_FRAME) + GRID_GAP);
-  assert.ok(planWidth(p) < 3 * (p.side + 2 * CARD_FRAME) + 2 * GRID_GAP);
-  assert.ok(planWidth(p) <= 760);
+check('compact refits after Submit: smaller with the strip, down to the floor, never past the width', () => {
+  const before = plan(4, L(684, 140, true), 175);
+  const after = plan(4, L(684, 60, true), 175);
+  assert.ok(after.side < before.side);
+  assert.equal(after.side, 60 - 2 * COMPACT_CARD_FRAME);
+  assert.ok(planHeight(after, 4) <= 60, 'the whole row is above the strip');
+  // Starved of height: the floor, and no wider than the cell.
+  assert.equal(plan(4, L(684, 10, true), 175).side, COMPACT_MIN_TILE);
+  assert.equal(plan(4, L(120, 200, true), 175).side, cellSide(120, plan(4, L(120, 200, true), 175).columns, COMPACT_CARD_FRAME, COMPACT_GRID_GAP));
 });
 
-check('height never pushes a picture past its cell width, even below the minimum tile', () => {
-  const p = planImageGrid({ count: 4, breakpointSize: 150, gridWidth: 200, availableHeight: 10 });
-  assert.equal(p.side, cellSide(200));
-  assert.ok(p.side < MIN_TILE_SIZE);
+check('compact wraps to more rows only when the row cannot fit at the smallest size', () => {
+  const narrow = plan(4, L(120, 400, true), 175);
+  assert.ok(narrow.columns < 4 && narrow.columns >= 1);
+  assert.ok(planWidth(narrow) <= 120);
+  assert.equal(plan(1, L(684, 200, true), 175).columns, 1);
 });
 
-check('available height: the window less the body top and the reserve, never negative', () => {
-  assert.equal(availableGridHeight({ windowHeight: 812, bodyTop: 200, bottomReserve: 96 }), 516);
-  assert.equal(availableGridHeight({ windowHeight: 375, bodyTop: 400, bottomReserve: 96 }), 0);
+check('the plan is stable: the same layout gives the same plan (no feedback from its own result)', () => {
+  assert.deepEqual(plan(4, L(700, 500)), plan(4, L(700, 500)));
+  assert.deepEqual(plan(4, L(700, 100, true)), plan(4, L(700, 100, true)));
 });
 
-check('the plan is stable: the same inputs give the same plan (no feedback from its own result)', () => {
-  const args = { count: 4, breakpointSize: 175, gridWidth: 700, availableHeight: 500 };
-  assert.deepEqual(planImageGrid(args), planImageGrid(args));
+check('CARD_CAPTION covers the caption row (the gap and the 48 row)', () => {
+  assert.equal(CARD_CAPTION, 54);
 });
 
 // --- Files ------------------------------------------------------------------
@@ -286,6 +376,15 @@ check('option media: a picture is the picture; an audio file is the audio, and t
   assert.deepEqual(optionMediaNames({ questionoptionfile: { filename: 'a.mp3', filetype: 1 } }), { image: '', audio: 'a.mp3' });
   assert.deepEqual(optionMediaNames({ questionoptionfile: null }), { image: '', audio: '' });
   assert.deepEqual(optionMediaNames({}), { image: '', audio: '' });
+});
+
+check('a picture with no text is named "Picture A" by position, never by its answer, plus "unavailable" when missing', () => {
+  assert.equal(optionLetter(0), 'A');
+  assert.equal(optionLetter(3), 'D');
+  assert.equal(optionAccessibleName({ text: '', pictureName: 'Picture C', unavailable: null }), 'Picture C');
+  assert.equal(optionAccessibleName({ text: '   ', pictureName: 'Picture C', unavailable: null }), 'Picture C');
+  assert.equal(optionAccessibleName({ text: null, pictureName: 'Picture B', unavailable: 'Image unavailable' }), 'Picture B, Image unavailable');
+  assert.equal(optionAccessibleName({ text: 'Circle', pictureName: 'Picture A', unavailable: 'Image unavailable' }), 'Circle');
 });
 
 console.log(`mcqImage: ${passed} checks passed`);

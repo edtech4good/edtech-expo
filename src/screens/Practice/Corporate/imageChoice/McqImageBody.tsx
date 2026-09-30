@@ -1,6 +1,5 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutChangeEvent, View, useWindowDimensions } from 'react-native';
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import _ from 'lodash';
 
 import { QuestionOption } from '@/models';
@@ -9,30 +8,34 @@ import type { QuestionBodyProps } from '../types';
 import { useReportAnswer } from '../useReportAnswer';
 import ImageChoiceCard from './ImageChoiceCard';
 import {
-  availableGridHeight,
   evaluateMcqImage,
-  FOOTER_RESERVE,
-  GRID_GAP,
   imageOptionState,
-  isMultiTemplate,
+  indicatorKind,
+  isChecked,
   planImageGrid,
   planWidth,
-  toggleSelection,
+  selectionModeFor,
+  selectionRoles,
+  selectOption,
 } from './imageChoiceLogic';
 
 /**
  * Multiple choice, pictures (templates 2 and 4), for CorporateQuestionShell.
- * Behaviour is today's PracticeMCQImage: options are shuffled per attempt,
- * tapping toggles an option (several may be chosen on BOTH templates: today
- * template 2 does not limit the answer to one), and an attempt starts with
- * nothing chosen. Grading is the shared rule, so `iscorrect` and the answer
- * are what the kids renderer sends for the same taps.
+ * Options are shuffled per attempt (keyed on `tries`) and an attempt starts
+ * with nothing chosen, as today's PracticeMCQImage. Selection follows
+ * selectionModeFor: template 2 is single-select (a tap replaces the choice;
+ * radios), template 4 toggles (several may be chosen; checkboxes), and a
+ * template 2 question with more than one correct option keeps multiple
+ * selection so it stays answerable. Grading is the shared rule, so for the
+ * same final selection `iscorrect` and the answer are what the kids renderer
+ * sends.
  *
- * Layout: a two-column grid of square pictures (a 2x2 for four options),
- * centred in the 760 column. The picture side is the breakpoint size clamped
- * to the measured grid width and to the height left below the question (see
- * planImageGrid); there is no minHeight, and the footer with Submit sits
- * outside the scrolling page, so it is always visible.
+ * Layout: sized from the shell's measured `layout` (never the window). A 2x2
+ * of square pictures with captions under them; on a phone on its side
+ * (`layout.compact`) one row with captions on the pictures, down to 64
+ * points. `layout.availableHeight` drops by the result strip after Submit, so
+ * the grid refits and the learner's own mark is never behind the strip. The
+ * grid renders hidden until the shell has measured, so nothing jumps.
  */
 export default function McqImageBody({
   question,
@@ -42,6 +45,7 @@ export default function McqImageBody({
   marks,
   showAnswer,
   report,
+  layout,
 }: QuestionBodyProps) {
   const questionOptions = useMemo(
     () => _.get(question, 'questionobject.questionoptions', []) as QuestionOption[],
@@ -49,7 +53,12 @@ export default function McqImageBody({
   );
   // Reshuffled per attempt, as today (keyed on tries).
   const options = useMemo(() => _.shuffle(questionOptions), [tries, questionOptions]);
-  const multi = isMultiTemplate(_.get(question, 'templatetypeid'));
+
+  const mode = useMemo(
+    () => selectionModeFor(Number(_.get(question, 'templatetypeid')), question),
+    [question],
+  );
+  const roles = selectionRoles(mode);
 
   const [selections, setSelections] = useState<Record<string, QuestionOption>>({});
   // Retry / Try again clear the answer; so does Show answer (as today).
@@ -60,43 +69,13 @@ export default function McqImageBody({
   // Multiple choice can always be submitted: today an empty answer grades as wrong.
   useReportAnswer(report, true, () => evaluateMcqImage(questionOptions, selections));
 
-  // Measured space: the grid's width (onLayout), and where the body starts in
-  // the window (measureInWindow), so the tiles fit what is left.
   const breakpointSize = useMCQImageBreakpointSize();
-  const { height: windowHeight } = useWindowDimensions();
-  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
-  const [gridWidth, setGridWidth] = useState<number | null>(null);
-  const [bodyTop, setBodyTop] = useState<number | null>(null);
-  const rootRef = useRef<View>(null);
-  const measureTop = useCallback(() => {
-    rootRef.current?.measureInWindow((_x, y) => {
-      if (Number.isFinite(y)) setBodyTop(y);
-    });
-  }, []);
-  const onGridLayout = (e: LayoutChangeEvent) => {
-    setGridWidth(e.nativeEvent.layout.width);
-    measureTop();
-  };
-  const availableHeight =
-    bodyTop === null
-      ? null
-      : availableGridHeight({
-          windowHeight,
-          bodyTop,
-          bottomReserve: FOOTER_RESERVE + tabBarHeight,
-        });
-  const plan = planImageGrid({
-    count: options.length,
-    breakpointSize,
-    gridWidth,
-    availableHeight,
-  });
+  const plan = planImageGrid({ count: options.length, breakpointSize, layout });
 
   return (
-    <View ref={rootRef} collapsable={false}>
-      <View onLayout={onGridLayout} style={{ opacity: gridWidth === null ? 0 : 1 }}>
+    <View style={{ opacity: layout === null ? 0 : 1 }}>
       <View
-        role={multi ? 'group' : 'radiogroup'}
+        role={roles.group}
         style={{
           width: planWidth(plan),
           maxWidth: '100%',
@@ -104,30 +83,32 @@ export default function McqImageBody({
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'center',
-          columnGap: GRID_GAP,
-          rowGap: GRID_GAP,
+          columnGap: plan.gap,
+          rowGap: plan.gap,
         }}>
-        {options.map((item, index) => (
-          <ImageChoiceCard
-            key={item.questionoptionid}
-            option={item}
-            index={index}
-            count={options.length}
-            side={plan.side}
-            multi={multi}
-            showAnswer={showAnswer}
-            state={imageOptionState(item, {
-              selected: !_.isEmpty(selections[item.questionoptionid]),
-              marks,
-              showAnswer,
-            })}
-            disabled={disabled}
-            onPress={() =>
-              setSelections(s => toggleSelection(s, item.questionoptionid, item))
-            }
-          />
-        ))}
-      </View>
+        {options.map((item, index) => {
+          const selected = isChecked(selections, item.questionoptionid);
+          return (
+            <ImageChoiceCard
+              key={item.questionoptionid}
+              option={item}
+              index={index}
+              count={options.length}
+              side={plan.side}
+              frame={plan.frame}
+              compact={plan.compact}
+              indicator={indicatorKind(mode)}
+              role={roles.option}
+              selected={selected}
+              showAnswer={showAnswer}
+              state={imageOptionState(item, { selected, marks, showAnswer })}
+              disabled={disabled}
+              onPress={() =>
+                setSelections(s => selectOption(s, item.questionoptionid, item, mode))
+              }
+            />
+          );
+        })}
       </View>
     </View>
   );

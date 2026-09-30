@@ -9,7 +9,8 @@ import OptionAudioCircle, { OPTION_AUDIO_SIZE } from '@/components/kit/OptionAud
 import ResultMark from '@/components/kit/ResultMark';
 import { useSmallText } from '@/components/kit/kitText';
 import hexAlpha from '@/utils/hexAlpha';
-import { CARD_FRAME, optionMediaNames } from './imageChoiceLogic';
+import SelectionIndicator from './SelectionIndicator';
+import { optionAccessibleName, optionLetter, optionMediaNames } from './imageChoiceLogic';
 import type { ImageOptionState } from './imageChoiceLogic';
 
 export interface ImageChoiceCardProps {
@@ -18,9 +19,16 @@ export interface ImageChoiceCardProps {
   count: number;
   /** Side of the square picture. */
   side: number;
+  /** Border plus padding, each side (constant across states). */
+  frame: number;
+  /** A phone on its side: the caption sits on the picture. */
+  compact: boolean;
   state: ImageOptionState;
-  /** One answer (template 2, radio) or several (template 4, checkbox). */
-  multi: boolean;
+  /** The learner's own selection (drives `checked` and the control), not the result. */
+  selected: boolean;
+  /** The control drawn: a radio (one answer) or a checkbox (several). */
+  indicator: 'radio' | 'checkbox';
+  role: 'radio' | 'checkbox';
   /** The answer is being shown: the correct cards are announced as such. */
   showAnswer: boolean;
   disabled: boolean;
@@ -28,11 +36,12 @@ export interface ImageChoiceCardProps {
 }
 
 /**
- * One picture answer: the quiz-option card (r16, hairline, teal ring when
- * chosen, mint and orange result tints with a disc) around a square picture
- * and a caption row (radio, text, the 44pt audio circle). The picture keeps
- * today's fill fit in a square, and degrades to the labelled placeholder
- * when the file is missing.
+ * One picture answer: the quiz-option card (r16, hairline border, teal ring
+ * when chosen, mint and orange result tints with a check or cross disc)
+ * around a square picture and its caption (regular: a row under the picture
+ * with the radio or checkbox; compact: the caption and the control on the
+ * picture). The picture keeps today's fill fit in a square, and degrades to
+ * the labelled placeholder when the file is missing.
  *
  * The audio circle is a sibling of the selecting Pressable, never inside it,
  * so a tap on it plays the clip and does not choose the option.
@@ -42,8 +51,12 @@ export default function ImageChoiceCard({
   index,
   count,
   side,
+  frame,
+  compact,
   state,
-  multi,
+  selected,
+  indicator,
+  role,
   showAnswer,
   disabled,
   onPress,
@@ -56,8 +69,8 @@ export default function ImageChoiceCard({
   const image = useResource({ name: names.image }, [option.questionoptionid]);
   const audio = useResource({ name: names.audio }, [option.questionoptionid]);
   const slot = useOptionImageSlot(image, option.questionoptiontext);
+  const text = (option.questionoptiontext ?? '').trim();
 
-  const chosen = state === 'selected' || state === 'correct';
   let backgroundColor = theme.colors.surface;
   let borderColor = theme.colors.divider;
   let borderWidth = 1;
@@ -73,26 +86,38 @@ export default function ImageChoiceCard({
     borderColor = theme.colors.error;
     borderWidth = 2;
   }
-  const pad = CARD_FRAME - borderWidth;
+  const pad = frame - borderWidth;
   const showMark = state === 'correct' || state === 'incorrect';
 
-  // What a screen reader hears: the option's text (or the placeholder's), and
-  // after a result the mark, which the disc alone carries for sighted users.
-  const base = slot.accessibilityLabel;
+  // The name a screen reader hears: the option's text, or "Picture B" when it
+  // has none (by position, so it never says which is right). After a result
+  // the mark is added to the name. `checked` below stays the learner's own
+  // selection, so a revealed correct option is not read as checked.
+  const name = optionAccessibleName({
+    text,
+    pictureName: t('corporate.mcqImage.picture', { letter: optionLetter(index) }),
+    unavailable: slot.showPlaceholder ? t('image.unavailable') : null,
+  });
   const label =
     state === 'correct'
-      ? t(showAnswer ? 'corporate.mcqImage.correctAnswer' : 'corporate.mcqImage.correct', {
-          label: base ?? '',
-        })
+      ? t(showAnswer ? 'corporate.mcqImage.correctAnswer' : 'corporate.mcqImage.correct', { label: name })
       : state === 'incorrect'
-        ? t('corporate.mcqImage.incorrect', { label: base ?? '' })
-        : base;
+        ? t('corporate.mcqImage.incorrect', { label: name })
+        : name;
+
+  const captionSize = compact ? 12 : 14;
+  const captionLine = small.km ? (compact ? 20 : 24) : undefined;
+  const chosenText = state === 'selected' ? theme.colors.selectionText : theme.colors.onSurface;
+  // Tiny tiles (the result strip on a short screen) get smaller controls.
+  const tiny = compact && side < 64;
+  const markSize = compact ? (tiny ? 16 : 22) : 28;
+  const controlSize = tiny ? 14 : 20;
 
   return (
     <View
       style={{
-        width: side + 2 * CARD_FRAME,
-        borderRadius: theme.radii.card,
+        width: side + 2 * frame,
+        borderRadius: compact ? 12 : theme.radii.card,
         borderWidth,
         borderColor,
         backgroundColor,
@@ -102,13 +127,12 @@ export default function ImageChoiceCard({
         testID={`answer-option-${index}`}
         onPress={onPress}
         disabled={disabled}
-        accessibilityRole={multi ? 'checkbox' : 'radio'}
+        accessibilityRole={role}
         accessibilityLabel={label}
-        accessibilityState={{
-          selected: chosen,
-          checked: chosen,
-          disabled,
-        }}
+        // `checked` is the learner's own selection only (never the result), on
+        // native (accessibilityState) and web (aria-checked) alike.
+        accessibilityState={{ checked: selected, disabled }}
+        aria-checked={selected}
         aria-posinset={index + 1}
         aria-setsize={count}>
         <View style={{ alignItems: 'center' }}>
@@ -116,53 +140,80 @@ export default function ImageChoiceCard({
             source={image}
             slot={slot}
             contentFit="fill"
-            style={{ width: side, height: side, borderRadius: 10 }}
+            style={{ width: side, height: side, borderRadius: compact ? 8 : 10 }}
           />
           {showMark ? (
-            <View style={{ position: 'absolute', top: 8, right: 8 }}>
-              <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={28} />
+            <View style={{ position: 'absolute', top: compact ? 3 : 8, right: compact ? 3 : 8 }}>
+              <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={markSize} />
             </View>
           ) : null}
+          {compact ? (
+            <>
+              <View style={{ position: 'absolute', top: 3, left: 3 }}>
+                <SelectionIndicator kind={indicator} checked={selected} size={controlSize} />
+              </View>
+              {text ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderBottomLeftRadius: 8,
+                    borderBottomRightRadius: 8,
+                    backgroundColor: hexAlpha(theme.colors.surface, 0.92),
+                  }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontFamily: small.fontFamily,
+                      fontSize: captionSize,
+                      lineHeight: captionLine,
+                      textAlign: 'center',
+                      color: chosenText,
+                    }}>
+                    {text}
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          ) : null}
         </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            minHeight: 48,
-            marginTop: 6,
-            paddingLeft: 6,
-            // Room for the audio circle, which sits over this corner.
-            paddingRight: audio ? OPTION_AUDIO_SIZE + 6 : 6,
-          }}>
+        {compact ? null : (
           <View
             style={{
-              width: 22,
-              height: 22,
-              borderRadius: 11,
-              borderWidth: chosen ? 6 : 1.5,
-              borderColor: chosen ? theme.colors.selection : theme.colors.outline,
-            }}
-          />
-          <Text
-            style={{
-              flex: 1,
-              marginLeft: 10,
-              fontFamily: small.fontFamily,
-              fontSize: 14,
-              lineHeight: small.km ? 24 : undefined,
-              color: state === 'selected' ? theme.colors.selectionText : theme.colors.onSurface,
+              flexDirection: 'row',
+              alignItems: 'center',
+              minHeight: 48,
+              marginTop: 6,
+              paddingLeft: 6,
+              // Room for the audio circle, which sits over this corner.
+              paddingRight: audio ? OPTION_AUDIO_SIZE + 6 : 6,
             }}>
-            {option.questionoptiontext}
-          </Text>
-        </View>
+            <SelectionIndicator kind={indicator} checked={selected} />
+            <Text
+              style={{
+                flex: 1,
+                marginLeft: 10,
+                fontFamily: small.fontFamily,
+                fontSize: captionSize,
+                lineHeight: captionLine,
+                color: chosenText,
+              }}>
+              {text}
+            </Text>
+          </View>
+        )}
       </Pressable>
       {audio ? (
-        <View style={{ position: 'absolute', right: pad, bottom: pad + 2 }}>
+        <View style={{ position: 'absolute', right: pad, bottom: pad + (compact ? 0 : 2) }}>
           <OptionAudioCircle
             testID={`answer-option-audio-${index}`}
             clipId={`option-${option.questionoptionid}`}
             source={audio}
-            label={option.questionoptiontext}
+            label={text || name}
           />
         </View>
       ) : null}

@@ -23,6 +23,22 @@ import {
 import { chooseModule, CORPORATE_MODULE_BY_TEMPLATE } from '../templateRegistry';
 import { TemplateTypeId } from '../../../../constants/QuestionTemplate';
 import type { QuestionEvaluation } from '../types';
+import {
+  COMPACT_BELOW,
+  COMPACT_SPACING,
+  computeBodyLayout,
+  REGULAR_SPACING,
+  regularCardStale,
+  ShellMeasures,
+  SHELL_COLUMN_WIDTH,
+  stripUnderViewport,
+} from '../shellLayout';
+import { COMPACT_OPTION_MIN_WIDTH, compactColumns } from '../mcqTextLogic';
+import {
+  selectionModeFor,
+  selectionRoles,
+  selectOption,
+} from '../selectionMode';
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -304,6 +320,171 @@ check('end to end: press sequences produce exactly the calls today\'s renderer m
     { fn: 'onSubmit', args: [1, false, false, WRONG.answer, { inlineResult: true }] },
     { fn: 'onContinue', args: [] },
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// The body's layout (shellLayout.ts): measured viewport minus the card.
+// ---------------------------------------------------------------------------
+
+const measures = (over: Partial<ShellMeasures> = {}): ShellMeasures => ({
+  viewport: { width: 390, height: 560 },
+  cardHeight: 150,
+  regularCardHeight: 150,
+  stripHeight: 0,
+  gutter: 20,
+  ...over,
+});
+
+check('layout: null until both the viewport and the card are measured (first frame)', () => {
+  assert.equal(computeBodyLayout(measures({ viewport: null })), null);
+  assert.equal(computeBodyLayout(measures({ cardHeight: null })), null);
+  assert.notEqual(computeBodyLayout(measures()), null);
+});
+
+check('layout: available height is the viewport minus the card, the padding and the gap', () => {
+  const l = computeBodyLayout(measures())!;
+  assert.equal(l.availableHeight, 560 - REGULAR_SPACING.scrollPadding * 2 - 150 - REGULAR_SPACING.cardGap);
+  assert.equal(l.availableHeight, 362);
+  assert.equal(l.compact, false);
+  // A taller card (a two-line heading) leaves less.
+  assert.equal(computeBodyLayout(measures({ cardHeight: 190, regularCardHeight: 190 }))!.availableHeight, 322);
+});
+
+check('layout: available width is the column (760 cap) minus the gutters', () => {
+  assert.equal(computeBodyLayout(measures())!.availableWidth, 390 - 40);
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 1280, height: 700 } }))!.availableWidth, SHELL_COLUMN_WIDTH);
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 790, height: 700 } }))!.availableWidth, 750);
+});
+
+check('layout: the result strip shrinking the viewport shrinks the body by the same amount, and compact holds', () => {
+  const before = computeBodyLayout(measures())!;
+  // The footer grew by the strip (80) plus its gap: the ScrollView is 90 shorter.
+  const after = computeBodyLayout(measures({ viewport: { width: 390, height: 470 }, stripHeight: 90 }))!;
+  assert.equal(before.availableHeight - after.availableHeight, 90);
+  assert.equal(after.compact, before.compact);
+  // Near the threshold the strip alone must not switch to compact.
+  const edge = 150 + REGULAR_SPACING.scrollPadding * 2 + REGULAR_SPACING.cardGap + COMPACT_BELOW;
+  const edgeBefore = computeBodyLayout(measures({ viewport: { width: 390, height: edge } }))!;
+  const edgeAfter = computeBodyLayout(measures({ viewport: { width: 390, height: edge - 90 }, stripHeight: 90 }))!;
+  assert.equal(edgeBefore.compact, false);
+  assert.equal(edgeAfter.compact, false);
+  assert.equal(edgeAfter.availableHeight, COMPACT_BELOW - 90);
+});
+
+check(`layout: compact below ${COMPACT_BELOW} for the body with the regular card, never flapping`, () => {
+  const edge = 150 + REGULAR_SPACING.scrollPadding * 2 + REGULAR_SPACING.cardGap + COMPACT_BELOW;
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 390, height: edge } }))!.compact, false);
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 390, height: edge - 1 } }))!.compact, true);
+  // A phone on its side.
+  const side = computeBodyLayout(measures({ viewport: { width: 812, height: 230 } }))!;
+  assert.equal(side.compact, true);
+  // Once compact, the card is drawn smaller (cardHeight 70), which leaves
+  // more room; compact is still decided on the regular card, so it holds.
+  const drawnCompact = computeBodyLayout(measures({ viewport: { width: 812, height: edge - 1 }, cardHeight: 70 }))!;
+  assert.equal(drawnCompact.compact, true);
+  assert.equal(drawnCompact.availableHeight, edge - 1 - COMPACT_SPACING.scrollPadding * 2 - 70 - COMPACT_SPACING.cardGap);
+});
+
+check('layout: after a rotation while compact, the regular card is measured again at the new width, then compact is decided on it', () => {
+  // Landscape, compact: the regular card was measured at 684 wide (one line, 110 high).
+  const landscape = measures({ viewport: { width: 812, height: 230 }, cardHeight: 70, cardWidth: 684, regularCardHeight: 110, regularCardWidth: 684 });
+  assert.equal(computeBodyLayout(landscape)!.compact, true);
+  // Rotated to a short portrait window: the card now reports 350 wide.
+  // The 684-wide regular height is stale, so the layout goes regular for
+  // a frame to measure the regular card at 350.
+  const rotated = { ...landscape, viewport: { width: 390, height: 420 }, cardWidth: 350 };
+  assert.equal(regularCardStale(rotated), true);
+  assert.equal(computeBodyLayout(rotated)!.compact, false);
+  // The regular card at 350 wraps to three lines (190 high): 420 - 32 - 190 - 16 = 182 < 260, so compact.
+  const measured = { ...rotated, cardHeight: 190, regularCardHeight: 190, regularCardWidth: 350 };
+  assert.equal(regularCardStale(measured), false);
+  assert.equal(computeBodyLayout(measured)!.compact, true);
+  // The compact card that follows (70 high, same width) changes nothing: no flapping.
+  assert.equal(computeBodyLayout({ ...measured, cardHeight: 70 })!.compact, true);
+  // Without the re-measure, the stale one-line height would have said regular (420 - 32 - 110 - 16 = 262).
+  assert.equal(computeBodyLayout({ ...measured, regularCardHeight: 110 })!.compact, false);
+  // Sub-pixel differences are not a rotation.
+  assert.equal(regularCardStale({ ...measured, cardWidth: 350.4 }), false);
+});
+
+check('layout: on Retry the strip is added back until the viewport has grown, so compact does not flip for a frame', () => {
+  const edge = 150 + REGULAR_SPACING.scrollPadding * 2 + REGULAR_SPACING.cardGap + COMPACT_BELOW;
+  const strip = 90;
+  // Frames: answering; submitted (viewport shrunk, measured with the strip);
+  // Retry pressed, strip gone but the viewport not yet re-measured; re-measured.
+  const frames: Array<[number, boolean]> = [[edge, false], [edge - strip, true], [edge - strip, true], [edge, false]];
+  for (const [height, hasStrip] of frames) {
+    const l = computeBodyLayout(measures({ viewport: { width: 390, height }, stripHeight: stripUnderViewport(hasStrip, strip) }))!;
+    assert.equal(l.compact, false, `frame ${height}/${hasStrip}`);
+  }
+  // Keying on "strip shown" instead would flip on the Retry frame.
+  assert.equal(computeBodyLayout(measures({ viewport: { width: 390, height: edge - strip }, stripHeight: 0 }))!.compact, true);
+  assert.equal(stripUnderViewport(false, strip), 0);
+  assert.equal(stripUnderViewport(true, strip), strip);
+});
+
+check('compact multiple choice: as many columns as fit the measured width, audio circles included', () => {
+  // 812 x 375 on the web: 684 wide. Three options with audio fit on one row.
+  assert.equal(compactColumns(3, 684, 10, 52), 3);
+  // Four without audio fit on one row; with audio, three.
+  assert.equal(compactColumns(4, 684, 10, 0), 4);
+  assert.equal(compactColumns(4, 684, 10, 52), 3);
+  // Never more columns than options, never fewer than one.
+  assert.equal(compactColumns(2, 684, 10, 0), 2);
+  assert.equal(compactColumns(4, 100, 10, 0), 1);
+  // The edge: exactly n minimum-width cells and their gaps.
+  assert.equal(compactColumns(5, COMPACT_OPTION_MIN_WIDTH * 3 + 20, 10, 0), 3);
+  assert.equal(compactColumns(5, COMPACT_OPTION_MIN_WIDTH * 3 + 19, 10, 0), 2);
+});
+
+// ---------------------------------------------------------------------------
+// Single or multiple selection (selectionMode.ts).
+// ---------------------------------------------------------------------------
+
+const q = (...correct: boolean[]) => ({
+  questionobject: { questionoptions: correct.map(c => ({ questionoptioniscorrect: c })) },
+});
+
+check('selection: templates 1 and 2 are single-select; 3 and 4 (and others) stay multi', () => {
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleText, q(true, false, false)), 'single');
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleImage, q(false, true)), 'single');
+  assert.equal(selectionModeFor(TemplateTypeId.MCQMultiText, q(true, false)), 'multi');
+  assert.equal(selectionModeFor(TemplateTypeId.MCQMultiImage, q(true, true)), 'multi');
+  assert.equal(selectionModeFor(TemplateTypeId.TextOrdering, q(true)), 'multi');
+});
+
+check('selection: a template 1 or 2 question with several correct options keeps multi (bad data stays answerable)', () => {
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleText, q(true, true, false)), 'multi');
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleImage, q(true, false, true)), 'multi');
+  // No options, or none correct, is still single (nothing to lose).
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleText, q()), 'single');
+  assert.equal(selectionModeFor(TemplateTypeId.MCQSingleText, null), 'single');
+});
+
+check('selection: single replaces on tap; tapping the chosen option keeps it', () => {
+  let s: Record<string, string> = {};
+  s = selectOption(s, 'a', 'A', 'single');
+  assert.deepEqual(s, { a: 'A' });
+  s = selectOption(s, 'b', 'B', 'single');
+  assert.deepEqual(s, { b: 'B' });
+  s = selectOption(s, 'b', 'B', 'single');
+  assert.deepEqual(s, { b: 'B' });
+  s = selectOption(s, 'c', 'C', 'single');
+  assert.deepEqual(Object.keys(s), ['c']);
+});
+
+check('selection: multi toggles, keeping selection order (today\'s rule)', () => {
+  let s: Record<string, string> = {};
+  s = selectOption(s, 'a', 'A', 'multi');
+  s = selectOption(s, 'b', 'B', 'multi');
+  assert.deepEqual(Object.keys(s), ['a', 'b']);
+  s = selectOption(s, 'a', 'A', 'multi');
+  assert.deepEqual(s, { b: 'B' });
+});
+
+check('selection: single is radios in a radiogroup; multi is checkboxes in a group', () => {
+  assert.deepEqual(selectionRoles('single'), { group: 'radiogroup', option: 'radio' });
+  assert.deepEqual(selectionRoles('multi'), { group: 'group', option: 'checkbox' });
 });
 
 console.log(`shellLogic: ${passed} checks passed`);
