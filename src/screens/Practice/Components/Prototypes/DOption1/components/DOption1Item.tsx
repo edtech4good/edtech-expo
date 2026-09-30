@@ -1,5 +1,10 @@
 import { Images } from '@/assets';
-import { H4, OptionImage, SizedBox } from '@/components';
+import {
+  H4,
+  OptionImage,
+  SizedBox,
+  useOptionImageSlot,
+} from '@/components';
 import { QuestionOption } from '@/models';
 import { useResource } from '@/services';
 import _ from 'lodash';
@@ -26,6 +31,8 @@ export default function DOption1Item({
     [option],
   );
 
+  const slot = useOptionImageSlot(source, option?.questionoptiontext);
+
   const borderColor = useMemo(
     () => (isSelected ? theme.colors.primary : theme.colors.divider),
     [isSelected],
@@ -49,6 +56,10 @@ export default function DOption1Item({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={slot.accessibilityLabel}
+      aria-selected={isSelected}
+      accessibilityState={{ selected: isSelected, disabled }}
       style={{
         borderRadius: theme.layouts.defaultRadius,
         borderWidth: theme.layouts.divider,
@@ -59,8 +70,7 @@ export default function DOption1Item({
       {!_.isEmpty(source) && (
         <OptionImage
           source={source}
-          label={option.questionoptiontext}
-          tappable
+          slot={slot}
           contentFit="contain"
           style={{ width: 100, height: 100 }}
         />

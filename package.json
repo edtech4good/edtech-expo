@@ -82,6 +82,9 @@
     "styled-components": "^6.5.3",
     "text-encoding": "^0.7.0"
   },
+  "resolutions": {
+    "@types/react-test-renderer/@types/react": "~18.2.45"
+  },
   "overrides": {
     "react": "18.2.0",
     "react-dom": "18.2.0",

@@ -16,7 +16,7 @@
     "elapsedOfTotal": "{{elapsed}} ក្នុងចំណោម {{total}}"
   },
   "image": {
-    "unavailable": "រូបភាពមិនអាចប្រើបាន"
+    "unavailable": "មិនមានរូបភាព"
   },
   "resumeVideo": {
     "question": "តើអ្នកចង់បន្តពីកន្លែងដែលបានឈប់លើកមុនទេ?"

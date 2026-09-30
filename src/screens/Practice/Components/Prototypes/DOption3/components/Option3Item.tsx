@@ -1,5 +1,10 @@
 import { Images } from '@/assets';
-import { H3, OptionImage, ShakingWrapper } from '@/components';
+import {
+  H3,
+  OptionImage,
+  ShakingWrapper,
+  useOptionImageSlot,
+} from '@/components';
 import { Question, ShakingHandler } from '@/models';
 import { useResource } from '@/services';
 import _ from 'lodash';
@@ -24,6 +29,8 @@ export default function Option3Item({
     [question],
   );
 
+  const slot = useOptionImageSlot(source);
+
   const handlePress = () => {
     if (!shakingRef.current) return;
     if (!shakingRef.current.isShaking) return;
@@ -37,6 +44,8 @@ export default function Option3Item({
     <ShakingWrapper ref={shakingRef}>
       <Pressable
         onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={slot.accessibilityLabel}
         style={{
           width: 200,
           height: 200,
@@ -57,7 +66,7 @@ export default function Option3Item({
         }}>
         <OptionImage
           source={source}
-          tappable
+          slot={slot}
           contentFit="contain"
           style={{ width: 100, height: 100 }}
         />

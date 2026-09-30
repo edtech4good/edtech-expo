@@ -1,5 +1,12 @@
 import { Images } from '@/assets';
-import { BouncyWrapper, H3, H4, OptionImage, Row } from '@/components';
+import {
+  BouncyWrapper,
+  H3,
+  H4,
+  OptionImage,
+  Row,
+  useOptionImageSlot,
+} from '@/components';
 import { File, QuestionOption } from '@/models';
 import { useResource } from '@/services';
 import { useEffect } from 'react';
@@ -25,6 +32,8 @@ export default function Option3Area({
 
   const source = useResource({ name: questionItem.filename }, [questionItem]);
 
+  const slot = useOptionImageSlot(source, option.questionoptiontext);
+
   // useEffect(() => {
   //   console.log('My item counts: ', count.field.value);
   // }, [count]);
@@ -36,7 +45,11 @@ export default function Option3Area({
   };
 
   return (
-    <BouncyWrapper onPress={handlePress} animateOnPressIn animateOnPressOut>
+    <BouncyWrapper
+      onPress={handlePress}
+      accessibilityLabel={slot.accessibilityLabel}
+      animateOnPressIn
+      animateOnPressOut>
       <Row
         style={{
           flexDirection: 'row',
@@ -53,8 +66,7 @@ export default function Option3Area({
         {count.field.value > 0 && (
           <OptionImage
             source={source}
-            label={option.questionoptiontext}
-            tappable
+            slot={slot}
             contentFit="contain"
             style={{ width: 100, height: 100 }}
           />

@@ -7,8 +7,9 @@
  *  - expo-image          -> a host <img> that carries its props, so a test can
  *                           read `source` and call `onError`
  *  - styled-components/native -> a theme (the real corporate tokens) plus a
- *                           minimal `styled.Pressable.attrs` that keeps the
+ *                           minimal `styled.<Tag>[.attrs]` that keeps the
  *                           props the wrapper receives (CSS is not evaluated)
+ *  - expo-av, @/assets, texts/H4|H6|SH3 -> inert stand-ins
  *  - @/services          -> useResource / useBreakpoint / useFont stand-ins
  */
 import Module from 'node:module';
@@ -23,6 +24,11 @@ const THEME = {
 // The app compiles JSX with Babel's automatic runtime; tsx here uses the
 // classic one, which needs React in scope.
 (globalThis as any).React = React;
+
+// Animated (used by DragItem) schedules frames.
+(globalThis as any).requestAnimationFrame ??= (cb: (t: number) => void) =>
+  setTimeout(() => cb(Date.now()), 16);
+(globalThis as any).cancelAnimationFrame ??= (id: any) => clearTimeout(id);
 
 const h = React.createElement;
 
@@ -41,14 +47,21 @@ const stubs: Record<string, unknown> = {
   'styled-components/native': {
     __esModule: true,
     useTheme: () => THEME,
-    default: {
-      Pressable: {
-        attrs: (fn: (p: any) => any) => () => {
-          const { Pressable } = require('react-native-web');
-          return (p: any) => h(Pressable, { ...p, ...fn(p) });
+    // Keeps the props each wrapper receives; CSS in the template is not evaluated.
+    default: new Proxy(
+      {},
+      {
+        get: (_t, tag: string) => {
+          const make = (attrs?: (p: any) => any) => () => (p: any) => {
+            const RN = require('react-native-web');
+            return h(RN[tag], { ...p, ...(attrs ? attrs(p) : {}) });
+          };
+          const base: any = make();
+          base.attrs = (fn: (p: any) => any) => make(fn);
+          return base;
         },
       },
-    },
+    ),
   },
   '@/services': {
     __esModule: true,
@@ -57,13 +70,43 @@ const stubs: Record<string, unknown> = {
     useResource: ({ name }: { name: string }) =>
       name ? `https://media.test/${name}` : '',
     useBreakpoint: (o: { mobile: number }) => o.mobile,
+    useTypeRole: (role: string) => ({
+      fontFamily: 'NotoSansKhmer',
+      ...(THEME.typeScale.en.phone as any)[role],
+    }),
+  },
+  '@/assets': { __esModule: true, Images: new Proxy({}, { get: () => ({ uri: 'asset.png' }) }) },
+  'expo-av': {
+    __esModule: true,
+    Audio: {
+      Sound: class {
+        unloadAsync = async () => undefined;
+        loadAsync = async () => undefined;
+        playFromPositionAsync = async () => undefined;
+      },
+    },
   },
 };
 
 const anyModule = Module as any;
 const original = anyModule._load;
 anyModule._load = function (request: string, ...rest: unknown[]) {
-  if (request === 'react-native') return original.call(this, 'react-native-web', ...rest);
+  if (request === 'react-native') {
+    const rnw = original.call(this, 'react-native-web', ...rest);
+    // RNW's Image needs `window`; the decorative backgrounds only need a host node.
+    return new Proxy(rnw, {
+      get: (t, k) => (k === 'Image' ? (p: any) => h('img', { src: p.source?.uri }) : t[k]),
+    });
+  }
   if (request in stubs) return stubs[request];
+  // Text components pull in redux; a Text carrying the children is enough here.
+  if (/(^|\/)texts\/(H4|H6|SH3)$/.test(request))
+    return {
+      __esModule: true,
+      default: (p: any) => {
+        const { Text } = require('react-native-web');
+        return h(Text, { style: p.style }, p.children);
+      },
+    };
   return original.call(this, request, ...rest);
 };

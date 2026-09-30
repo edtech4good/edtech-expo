@@ -9,6 +9,7 @@ import _ from 'lodash';
 import { useResource } from '@/services';
 import H6 from '../texts/H6';
 import SH3 from '../texts/SH3';
+import OptionImage, { useOptionImageSlot } from './OptionImage';
 
 interface DragItemProps extends MatchingItemProps {
   isShowingAnswer?: boolean;
@@ -43,6 +44,13 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
     },
     [option, file],
   );
+
+  const associateText = _.get(
+    option,
+    'questionassociate.questionassociatetext',
+    '',
+  );
+  const slot = useOptionImageSlot(fileSource, associateText);
 
   const playbackObject = useMemo(() => new Audio.Sound(), []);
 
@@ -207,6 +215,10 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
       <Pressable
         onPress={handlePress}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={slot.accessibilityLabel}
+        aria-selected={isSelected}
+        accessibilityState={{ selected: isSelected, disabled }}
         style={{
           width: 300,
           height: 105,
@@ -264,12 +276,10 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
         )}
 
         {!_.isEmpty(file?.filename) && file?.filetype === 6 && (
-          <Image
-            resizeMethod="resize"
-            resizeMode="contain"
-            width={300}
-            height={105}
-            source={{ uri: fileSource }}
+          <OptionImage
+            source={fileSource}
+            slot={slot}
+            contentFit="contain"
             style={{ alignSelf: 'center', width: 300, height: 100 }}
           />
         )}

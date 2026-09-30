@@ -23,6 +23,7 @@ import {
   H2,
   H4,
   OptionImage,
+  useOptionImageSlot,
   PracticeFooter,
   PracticeHeading,
   Row,
@@ -148,10 +149,18 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         { name: _.get(item, 'questionoptionfile.filename', '') },
         [index, item],
       );
+      const slot = useOptionImageSlot(imageSource, item.questionoptiontext);
       return (
         <Pressable
           key={item.questionoptionid}
           disabled={isShowingAnswer}
+          accessibilityRole="button"
+          accessibilityLabel={slot.accessibilityLabel}
+          aria-selected={indexToSwap === index}
+          accessibilityState={{
+            selected: indexToSwap === index,
+            disabled: isShowingAnswer,
+          }}
           onPress={() => handleItemPress(item, index)}
           style={[
             {
@@ -181,8 +190,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           <OptionImage
             focusable={false}
             source={imageSource}
-            label={item.questionoptiontext}
-            tappable
+            slot={slot}
             contentFit="contain"
             style={{
               width: itemWidth,

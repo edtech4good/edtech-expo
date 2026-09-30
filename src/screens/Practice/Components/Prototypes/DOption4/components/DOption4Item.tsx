@@ -1,4 +1,8 @@
-import { OptionImage, ShakingWrapper } from '@/components';
+import {
+  OptionImage,
+  ShakingWrapper,
+  useOptionImageSlot,
+} from '@/components';
 import { ShakingHandler } from '@/models';
 import { useResource } from '@/services';
 import _ from 'lodash';
@@ -28,7 +32,7 @@ export default forwardRef<ShakingHandler, Props>(function DOption4Item(
     [source],
   );
 
-  console.log('File Source: ', fileSource);
+  const slot = useOptionImageSlot(fileSource, label);
 
   useImperativeHandle(ref, () => {
     return {
@@ -43,11 +47,13 @@ export default forwardRef<ShakingHandler, Props>(function DOption4Item(
 
   return (
     <ShakingWrapper ref={shakingRef}>
-      <Pressable onPress={onPress}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={slot.accessibilityLabel}>
         <OptionImage
           source={fileSource}
-          label={label}
-          tappable
+          slot={slot}
           focusable={false}
           contentFit="contain"
           style={{

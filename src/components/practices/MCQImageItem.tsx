@@ -1,5 +1,5 @@
 import { QuestionOption } from '@/models';
-import OptionImage from './OptionImage';
+import OptionImage, { useOptionImageSlot } from './OptionImage';
 import _ from 'lodash';
 import styled, { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource } from '@/services';
@@ -51,6 +51,8 @@ export default function MCQImageItem({
     [option.questionoptionid],
   );
 
+  const slot = useOptionImageSlot(imageSource, option.questionoptiontext);
+
   const highlightItem = useMemo(
     () => isShowingAnswer && option.questionoptioniscorrect,
     [isShowingAnswer, option],
@@ -65,11 +67,17 @@ export default function MCQImageItem({
       testID={index !== undefined ? `answer-option-${index}` : undefined}
       isSelected={isSelected || highlightItem}
       disabled={disabled || isShowingAnswer}
+      accessibilityRole="button"
+      accessibilityLabel={slot.accessibilityLabel}
+      aria-selected={isSelected || !!highlightItem}
+      accessibilityState={{
+        selected: isSelected || !!highlightItem,
+        disabled: disabled || isShowingAnswer,
+      }}
       onPress={handleImagePress}>
       <OptionImage
         source={imageSource}
-        label={option.questionoptiontext}
-        tappable
+        slot={slot}
         contentFit="fill"
         style={{
           width: itemWidth,
