@@ -198,8 +198,10 @@ check('tapping the active empty blank changes nothing; an out-of-range tap is ig
 });
 
 check('Show answer: every blank holds its right word, in sequence order', () => {
-  const s = answerBlanks([B, A]);
-  assert.deepEqual(s.filled, [A.questionoptionid, B.questionoptionid]);
+  const C = real(6, 'tax', 3);
+  const s = answerBlanks([C, A, B]);
+  assert.deepEqual(s.filled, [A.questionoptionid, B.questionoptionid, C.questionoptionid]);
+  assert.equal(isReady(s.filled), true);
 });
 
 check('blank looks: active, empty, filled, and the marks after submit', () => {
@@ -326,6 +328,14 @@ check('marks: each blank by its own word; a wrong answer does not reveal the rig
   const right = evaluateFillBlank(TWO, BANKS[0], [A.questionoptionid, B.questionoptionid]);
   assert.deepEqual(right.perItem, { [A.questionoptionid]: 'correct', [B.questionoptionid]: 'correct' });
   assert.deepEqual(right.summary, { correctCount: 2, total: 2 });
+});
+
+check('marks: a word in the right place that is not a correct option is wrong, as graded', () => {
+  // Data slip: a distractor-like tile that carries the sequence of the second blank.
+  const trap: Opt = { questionoptionid: U(7), questionoptiontext: 'trap', questionoptioniscorrect: false, questionoptionsequence: 2 };
+  const e = evaluateFillBlank(TWO, [A, B, trap], [A.questionoptionid, trap.questionoptionid]);
+  assert.equal(e.iscorrect, false);
+  assert.deepEqual(e.perItem, { [A.questionoptionid]: 'correct', [trap.questionoptionid]: 'incorrect' });
 });
 
 check('every blank marked right exactly when iscorrect, for every filling', () => {
