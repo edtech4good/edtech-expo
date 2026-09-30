@@ -27,6 +27,7 @@
     "test:layout": "tsx src/screens/Practice/Components/__tests__/imageLayout.ts",
     "test:drag": "tsx src/components/drag/__tests__/reorder.ts",
     "test:kit": "tsx src/components/kit/__tests__/audioManager.ts && tsx src/components/kit/__tests__/resultStrip.ts && tsx src/components/kit/__tests__/announcer.ts && tsx src/components/kit/__tests__/tileStyle.ts && tsx src/components/kit/__tests__/i18n.ts && tsx src/components/kit/__tests__/contrast.ts",
+    "test:matching": "tsx src/screens/Practice/Corporate/__tests__/matching.ts && tsx src/screens/Practice/Corporate/__tests__/matchingRender.tsx",
     "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx",
     "test:ordering": "tsx src/screens/Practice/Corporate/__tests__/textOrdering.ts",
     "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts",

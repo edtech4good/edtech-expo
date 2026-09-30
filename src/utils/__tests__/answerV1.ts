@@ -33,6 +33,8 @@ import { gradeArrangeText } from '../../screens/Practice/Components/ArrangeText/
 import { evaluateTextOrdering } from '../../screens/Practice/Corporate/textOrderingLogic';
 import { gradeFillBlank } from '../../screens/Practice/Components/FillBlank/fillBlankGrade';
 import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../screens/Practice/Corporate/FillBlank/fillBlankLogic';
+import { gradeMatching } from '../../screens/Practice/Components/DragDrop/matchingGrade';
+import { evaluateMatching } from '../../screens/Practice/Corporate/matchingLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
 
 // Every answer any test maps goes through these wrappers, which assert the
@@ -768,6 +770,88 @@ check('corporate fill in the blank: what the shell hands the screen equals the k
       );
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Corporate matching (template 7): for the same final pairing, the corporate
+// renderer sends exactly what the kids renderer sends. Every way of putting
+// distinct chips on some or all of the slots is tried, for 3 pairs and for 4
+// (empty slots included: corporate blocks Submit until all are filled, but
+// `evaluate()` still has to agree with the kids path when some are not).
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeDragDrop's submit, as it was written inline before it moved to
+ * matchingGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsMatchSubmitAsBefore(questionOptions: Opt[], answers: Record<string, string>) {
+  const isCorrect = _.reduce(
+    questionOptions,
+    (result, value) => {
+      if (
+        _.isEmpty(answers[value.questionoptionid]) ||
+        answers[value.questionoptionid] !== value.questionoptionid
+      )
+        result = false;
+      return result;
+    },
+    true,
+  );
+  return { isCorrect, answer: B.matchAnswer(answers) };
+}
+
+/** Every partial injective pairing: each slot empty or holding a distinct chip. */
+function pairings(ids: string[]): Record<string, string>[] {
+  const out: Record<string, string>[] = [];
+  const walk = (i: number, used: Set<string>, acc: Record<string, string>) => {
+    if (i === ids.length) return void out.push({ ...acc });
+    walk(i + 1, used, acc); // slot i left empty
+    for (const chip of ids) {
+      if (used.has(chip)) continue;
+      used.add(chip);
+      walk(i + 1, used, { ...acc, [ids[i]]: chip });
+      used.delete(chip);
+    }
+  };
+  walk(0, new Set(), {});
+  return out;
+}
+
+for (const count of [3, 4]) {
+  check(`corporate matching, ${count} pairs: answer and iscorrect equal the kids path for every pairing`, () => {
+    const options: Opt[] = Array.from({ length: count }, (_x, i) =>
+      opt(100 + i, `prompt ${i}`, true, i + 1),
+    );
+    const slotIds = ids(options);
+    let n = 0;
+    let correct = 0;
+    for (const placed of pairings(slotIds)) {
+      // The kids form keeps '' for a target whose chip was taken back.
+      const kidsHeld: Record<string, string> = Object.fromEntries(slotIds.map(id => [id, placed[id] ?? '']));
+      for (const held of [placed, kidsHeld]) {
+        const kids = kidsMatchSubmitAsBefore(options, held);
+        assert.deepEqual(gradeMatching(options, held), kids, 'the shared rule is the old inline one');
+      }
+      const kids = kidsMatchSubmitAsBefore(options, kidsHeld);
+      const corp = evaluateMatching(options, placed);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(7, options, corp.answer), corp.iscorrect);
+      if (corp.iscorrect) correct += 1;
+      n++;
+    }
+    assert.equal(correct, 1, 'exactly one pairing is right');
+    assert.ok(n >= (count === 3 ? 34 : 209), `tried ${n} pairings`);
+  });
+}
+
+check('corporate matching marks: placed slots only, by their own correctness', () => {
+  const options = [opt(100, 'a', true, 1), opt(101, 'b', true, 2), opt(102, 'c', true, 3)];
+  const ev = evaluateMatching(options, { [U(100)]: U(100), [U(101)]: U(102) });
+  assert.deepEqual(ev.perItem, { [U(100)]: 'correct', [U(101)]: 'incorrect' });
+  assert.deepEqual(ev.summary, { correctCount: 1, total: 3 });
 });
 
 console.log(`answerV1: ${passed} checks passed`);

@@ -265,6 +265,24 @@
     "startLesson": "Start Lesson {{n}}"
   },
   "corporate": {
+    "matching": {
+      "instruction": "Tap an answer, then tap the word it matches.",
+      "pickedHint": "“{{label}}” picked. Tap the word it matches.",
+      "slotHint": "Tap the answer for “{{label}}”.",
+      "answers": "Answers",
+      "promptSound": "Sound {{n}}",
+      "answerSound": "Answer sound {{letter}}",
+      "answerPicture": "Picture {{letter}}",
+      "instructionPrompt": "Tap an answer, then tap the prompt it matches.",
+      "pickedHintPrompt": "“{{label}}” picked. Tap the prompt it matches.",
+      "promptPicture": "Picture {{n}}",
+      "slotEmpty": "{{prompt}}: empty",
+      "slotActive": "{{prompt}}: empty, waiting for an answer",
+      "slotTarget": "{{prompt}}: place “{{chip}}” here",
+      "slotFilled": "{{prompt}}: {{answer}}, placed. Tap to take it back.",
+      "slotSwap": "{{prompt}}: {{answer}} placed. Tap to put “{{chip}}” here instead.",
+      "slotPlaced": "{{prompt}}: {{answer}}, placed"
+    },
     "textOrdering": {
       "hintBefore": "Drag a word",
       "hintAfter": "to move it, or tap two words to swap them.",
