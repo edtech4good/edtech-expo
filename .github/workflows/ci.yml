@@ -74,6 +74,9 @@ jobs:
       - name: Corporate fill in the blank
         run: yarn test:fillblank
 
+      - name: Question renderer key (fresh renderer per question)
+        run: yarn test:questionkey
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

@@ -336,7 +336,6 @@ export default function QuizScreen() {
         )}
         <PracticeContent
           ref={practiceRef}
-          key={currentQuestion.question.questionnid}
           question={currentQuestion.question}
           currentQuestionIndex={question + 1}
           maxQuestion={questions.length}
@@ -348,78 +347,6 @@ export default function QuizScreen() {
           mode="quiz"
           onContinue={handleContinue}
         />
-        {/* {currentQuestion.question.templatetypeid === 7 && (
-          <PracticeDragDrop
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )}
-        {(currentQuestion.question.templatetypeid === 1 ||
-          currentQuestion.question.templatetypeid === 3) && (
-          <PracticeMCQText
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )}
-        {(currentQuestion.question.templatetypeid === 4 ||
-          currentQuestion.question.templatetypeid === 2) && (
-          <PracticeMCQImage
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )}
-
-        {currentQuestion.question.templatetypeid === 5 && (
-          <PracticeArrangeText
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )}
-
-        {currentQuestion.question.templatetypeid === 8 && (
-          <PracticeFillBlank
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )}
-
-        {currentQuestion.question.templatetypeid === 6 && (
-          <PracticeArrangeImage
-            ref={practiceRef}
-            key={currentQuestion.question.questionnid}
-            question={currentQuestion.question}
-            currentQuestionIndex={question + 1}
-            maxQuestion={questions.length}
-            onSubmit={handleSubmitPress}
-            onRetry={handleRetryPress}
-          />
-        )} */}
-
         <Modal
           animationType="fade"
           transparent={true}
