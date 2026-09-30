@@ -5,7 +5,7 @@
 // A clip is identified by an id the caller picks (a question or option id).
 // Anything that shows a clip's state subscribes to that id.
 
-export type ClipStatus = 'idle' | 'loading' | 'playing' | 'error';
+export type ClipStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
 export interface ClipState {
   status: ClipStatus;
@@ -19,6 +19,7 @@ export const IDLE_CLIP: ClipState = { status: 'idle', positionMs: 0, durationMs:
 export interface PlaybackStatusLike {
   isLoaded: boolean;
   isPlaying?: boolean;
+  isBuffering?: boolean;
   didJustFinish?: boolean;
   positionMillis?: number;
   durationMillis?: number;
@@ -32,6 +33,8 @@ export interface SoundLike {
     initialStatus?: { shouldPlay?: boolean; progressUpdateIntervalMillis?: number },
   ): Promise<unknown>;
   unloadAsync(): Promise<unknown>;
+  pauseAsync(): Promise<unknown>;
+  playAsync(): Promise<unknown>;
   setOnPlaybackStatusUpdate(cb: ((s: PlaybackStatusLike) => void) | null): void;
 }
 
@@ -129,8 +132,10 @@ export class AudioManager {
         void this.finish(id, generation);
         return;
       }
+      // Loaded and not playing is a pause (the learner's, or the OS's: a
+      // call, another app taking audio focus) unless it is still buffering.
       this.setState(id, {
-        status: status.isPlaying ? 'playing' : 'loading',
+        status: status.isPlaying ? 'playing' : status.isBuffering ? 'loading' : 'paused',
         positionMs: status.positionMillis ?? 0,
         durationMs: status.durationMillis ?? 0,
       });
@@ -165,6 +170,47 @@ export class AudioManager {
     if (sound) await sound.unloadAsync().catch(() => undefined);
   }
 
+  /** Pauses the current clip, keeping it loaded so a resume continues from here. */
+  async pause(id: string): Promise<void> {
+    if (this.currentId !== id || this.getState(id).status !== 'playing') return;
+    const sound = this.sound;
+    const generation = this.generation;
+    const cur = this.getState(id);
+    this.setState(id, { ...cur, status: 'paused' });
+    try {
+      await sound?.pauseAsync();
+    } catch {
+      if (generation === this.generation) await this.fail(id, generation);
+    }
+  }
+
+  /** Continues a paused clip from where it stopped. */
+  async resume(id: string): Promise<void> {
+    if (this.currentId !== id || this.getState(id).status !== 'paused') return;
+    const sound = this.sound;
+    const generation = this.generation;
+    const cur = this.getState(id);
+    this.setState(id, { ...cur, status: 'playing' });
+    try {
+      await sound?.playAsync();
+    } catch {
+      if (generation === this.generation) await this.fail(id, generation);
+    }
+  }
+
+  /**
+   * What a tap on a clip's control does: playing -> pause, paused -> resume,
+   * loading -> cancel, error -> try again, idle -> play from the start.
+   */
+  async toggle(id: string, source: ClipSource): Promise<void> {
+    const { status } = this.getState(id);
+    if (this.currentId === id && status === 'playing') return this.pause(id);
+    if (this.currentId === id && status === 'paused') return this.resume(id);
+    if (this.currentId === id && status === 'loading') return this.stop();
+    if (status === 'error') this.clearError(id);
+    return this.play(id, source);
+  }
+
   /** Stops `id` only if it is the current clip (use when its screen goes away). */
   async release(id: string): Promise<void> {
     if (this.currentId === id) await this.stop();
@@ -178,16 +224,20 @@ export class AudioManager {
 
   private async finish(id: string, generation: number) {
     if (generation !== this.generation) return;
-    await this.stop();
-    this.setState(id, IDLE_CLIP);
+    // detach() already returns the clip to idle, synchronously. Nothing may be
+    // set after the await below: the learner can replay this clip while the
+    // unload is pending, and a late "idle" would overwrite the new play.
+    const sound = this.detach();
+    if (sound) await sound.unloadAsync().catch(() => undefined);
   }
 
   /** A missing or undecodable file: a non-blocking error state, never a throw. */
   private async fail(id: string, generation: number) {
     if (generation !== this.generation) return;
     const sound = this.detach();
-    if (sound) await sound.unloadAsync().catch(() => undefined);
+    // Set before the await for the same reason as finish().
     this.setState(id, { status: 'error', positionMs: 0, durationMs: 0 });
+    if (sound) await sound.unloadAsync().catch(() => undefined);
   }
 }
 

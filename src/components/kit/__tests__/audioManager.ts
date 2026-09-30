@@ -22,6 +22,9 @@ class FakeSound implements SoundLike {
   static all: FakeSound[] = [];
   loaded = false;
   unloads = 0;
+  pauses = 0;
+  plays = 0;
+  failPause = false;
   source: unknown = null;
   cb: ((s: PlaybackStatusLike) => void) | null = null;
   failLoad = false;
@@ -39,6 +42,15 @@ class FakeSound implements SoundLike {
   async unloadAsync() {
     this.loaded = false;
     this.unloads++;
+    return {};
+  }
+  async pauseAsync() {
+    this.pauses++;
+    if (this.failPause) throw new Error('pause failed');
+    return {};
+  }
+  async playAsync() {
+    this.plays++;
     return {};
   }
   setOnPlaybackStatusUpdate(cb: ((s: PlaybackStatusLike) => void) | null) {
@@ -204,6 +216,131 @@ async function main() {
     await m.play('b', 'file:///b.mp3');
     assert.deepEqual(FakeSound.all[1].source, { uri: 'file:///b.mp3' });
     console.log('ok  number and uri sources');
+  }
+
+  // 11. Finish then replay while the unload is still pending: the replay must
+  // not be overwritten by a late "idle" (this left activeId 'q' with status idle).
+  {
+    const m = fresh();
+    await m.play('q', 'x');
+    FakeSound.all[0].emit({ isLoaded: true, isPlaying: false, didJustFinish: true });
+    const replay = m.play('q', 'x'); // before finish()'s unload has settled
+    await replay;
+    await new Promise(r => setImmediate(r));
+    assert.equal(m.activeId, 'q');
+    assert.equal(m.getState('q').status, 'loading', 'replay is not overwritten by idle');
+    console.log('ok  replay right after a finish keeps its state');
+  }
+
+  // 11b. Same for a failure: an error must not land on top of a replay.
+  {
+    const m = fresh();
+    await m.play('q', 'x');
+    FakeSound.all[0].emit({ isLoaded: false, error: 'decode' });
+    const replay = m.play('q', 'x');
+    await replay;
+    await new Promise(r => setImmediate(r));
+    assert.equal(m.activeId, 'q');
+    assert.equal(m.getState('q').status, 'loading', 'replay is not overwritten by error');
+    console.log('ok  replay right after a failure keeps its state');
+  }
+
+  // 12. Real pause: keeps the clip loaded and its position; resume continues.
+  {
+    const m = fresh();
+    await m.play('a', 'x');
+    const snd = FakeSound.all[0];
+    snd.emit({ isLoaded: true, isPlaying: true, positionMillis: 1500, durationMillis: 3000 });
+    await m.toggle('a', 'x'); // playing -> pause
+    assert.equal(snd.pauses, 1);
+    assert.equal(snd.unloads, 0, 'a paused clip stays loaded');
+    assert.equal(snd.loaded, true);
+    assert.equal(m.activeId, 'a');
+    assert.deepEqual(m.getState('a'), { status: 'paused', positionMs: 1500, durationMs: 3000 });
+    await m.toggle('a', 'x'); // paused -> resume, same sound, same position
+    assert.equal(snd.plays, 1);
+    assert.equal(FakeSound.all.length, 1, 'resume does not load a new sound');
+    assert.deepEqual(m.getState('a'), { status: 'playing', positionMs: 1500, durationMs: 3000 });
+    console.log('ok  pause keeps the clip loaded and resume continues from the same position');
+  }
+
+  // 13. A paused clip that another clip takes over is unloaded; blur/unmount release it.
+  {
+    const m = fresh();
+    await m.play('a', 'x');
+    FakeSound.all[0].emit({ isLoaded: true, isPlaying: true, positionMillis: 100, durationMillis: 3000 });
+    await m.pause('a');
+    await m.play('b', 'y');
+    assert.equal(FakeSound.all[0].unloads, 1, 'paused clip unloaded on takeover');
+    assert.equal(m.getState('a').status, 'idle');
+    await m.pause('b'); // b is only loading: nothing to pause
+    assert.equal(FakeSound.all[1].pauses, 0);
+    FakeSound.all[1].emit({ isLoaded: true, isPlaying: true, positionMillis: 0, durationMillis: 3000 });
+    await m.pause('b');
+    await m.release('b');
+    assert.equal(FakeSound.all[1].unloads, 1, 'release unloads a paused clip');
+    console.log('ok  takeover and release unload a paused clip');
+  }
+
+  // 14. Loading: a tap cancels; an OS interruption maps to paused, buffering to loading.
+  {
+    const m = fresh();
+    await m.play('a', 'x');
+    assert.equal(m.getState('a').status, 'loading');
+    await m.toggle('a', 'x');
+    assert.equal(m.activeId, null);
+    assert.equal(FakeSound.all[0].unloads, 1);
+    assert.equal(m.getState('a').status, 'idle');
+
+    await m.play('b', 'x');
+    const s2 = FakeSound.all[1];
+    s2.emit({ isLoaded: true, isPlaying: true, positionMillis: 200, durationMillis: 3000 });
+    assert.equal(m.getState('b').status, 'playing');
+    s2.emit({ isLoaded: true, isPlaying: false, positionMillis: 250, durationMillis: 3000 }); // a call, focus lost
+    assert.equal(m.getState('b').status, 'paused');
+    s2.emit({ isLoaded: true, isPlaying: false, isBuffering: true, positionMillis: 250, durationMillis: 3000 });
+    assert.equal(m.getState('b').status, 'loading');
+    // Resuming after an OS pause works from the paused state.
+    s2.emit({ isLoaded: true, isPlaying: false, positionMillis: 250, durationMillis: 3000 });
+    await m.toggle('b', 'x');
+    assert.equal(s2.plays, 1);
+    console.log('ok  loading cancels; OS interruption is paused, buffering is loading');
+  }
+
+  // 15. release() of a non-current clip in the error state returns it to idle.
+  {
+    const m = new AudioManager(() => {
+      const snd = new FakeSound();
+      snd.failLoad = true;
+      return snd;
+    });
+    await m.play('bad', 'x');
+    assert.equal(m.getState('bad').status, 'error');
+    await m.play('other', 'y'); // fails too, but 'bad' is no longer current
+    assert.equal(m.activeId, null);
+    await m.release('bad');
+    assert.equal(m.getState('bad').status, 'idle', 'release clears an error on a non-current clip');
+    // toggle on an error retries.
+    const m2 = fresh();
+    await m2.play('e', 'x');
+    FakeSound.all[0].emit({ isLoaded: false, error: 'x' });
+    await new Promise(r => setImmediate(r));
+    assert.equal(m2.getState('e').status, 'error');
+    await m2.toggle('e', 'x');
+    assert.equal(m2.getState('e').status, 'loading');
+    console.log('ok  release clears an error; toggle on an error retries');
+  }
+
+  // 16. A pause that throws is an error state, not a crash.
+  {
+    const m = fresh();
+    await m.play('a', 'x');
+    FakeSound.all[0].failPause = true;
+    FakeSound.all[0].emit({ isLoaded: true, isPlaying: true, positionMillis: 0, durationMillis: 1000 });
+    await m.pause('a');
+    assert.equal(m.getState('a').status, 'error');
+    assert.equal(m.activeId, null);
+    console.log('ok  a failing pause is an error state');
   }
 
   // 10. Clock and ring helpers.

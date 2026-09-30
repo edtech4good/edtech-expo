@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 
@@ -30,7 +30,10 @@ export default function ListenPill({ clipId, source, testID }: ListenPillProps) 
   const { state, available, toggle } = useAudioClip(clipId, source);
   if (!available) return null;
 
-  const playing = state.status === 'playing' || state.status === 'loading';
+  const loading = state.status === 'loading';
+  const paused = state.status === 'paused';
+  // Filled blue whenever the clip is loaded or loading; the glyph says which.
+  const playing = state.status === 'playing' || paused || loading;
   const failed = state.status === 'error';
   const fg = playing ? theme.colors.onPrimary : failed ? theme.colors.error : theme.colors.primary;
   const label = failed ? t('kit.audio.unavailable') : t('kit.audio.listen');
@@ -47,11 +50,15 @@ export default function ListenPill({ clipId, source, testID }: ListenPillProps) 
       accessibilityLabel={
         failed
           ? t('kit.audio.unavailableRetry')
-          : playing
-            ? t('kit.audio.pauseA11y')
-            : t('kit.audio.listenA11y')
+          : loading
+            ? t('kit.audio.loadingA11y')
+            : paused
+              ? t('kit.audio.resumeA11y')
+              : playing
+                ? t('kit.audio.pauseA11y')
+                : t('kit.audio.listenA11y')
       }
-      accessibilityState={{ busy: state.status === 'loading' }}
+      accessibilityState={{ busy: loading }}
       style={[
         styles.pill,
         {
@@ -72,6 +79,12 @@ export default function ListenPill({ clipId, source, testID }: ListenPillProps) 
         ]}>
         {failed ? (
           <WarnGlyph color={theme.colors.error} size={18} />
+        ) : loading ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        ) : paused ? (
+          <View style={{ marginLeft: 1.5 }}>
+            <PlayGlyph color={theme.colors.primary} size={14} />
+          </View>
         ) : playing ? (
           <PauseGlyph color={theme.colors.primary} size={14} />
         ) : (

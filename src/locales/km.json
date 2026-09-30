@@ -54,7 +54,11 @@
       "playOptionNoLabel": "ចាក់សំឡេង",
       "pauseOptionNoLabel": "ផ្អាកសំឡេង",
       "unavailable": "មិនមានសំឡេង",
-      "unavailableRetry": "មិនមានសំឡេង។ ចុចដើម្បីព្យាយាមម្តងទៀត។"
+      "unavailableRetry": "មិនមានសំឡេង។ ចុចដើម្បីព្យាយាមម្តងទៀត។",
+      "resumeA11y": "បន្តសំឡេងសំណួរ",
+      "loadingA11y": "កំពុងផ្ទុកសំឡេង។ ចុចដើម្បីបោះបង់។",
+      "resumeOption": "បន្តសំឡេង {{label}}",
+      "resumeOptionNoLabel": "បន្តសំឡេង"
     },
     "result": {
       "correctTitle": "ត្រឹមត្រូវ",
@@ -68,7 +72,9 @@
     },
     "mark": {
       "correct": "ត្រឹមត្រូវ",
-      "incorrect": "មិនត្រឹមត្រូវ"
+      "incorrect": "មិនត្រឹមត្រូវ",
+      "labelCorrect": "{{label}}។ ត្រឹមត្រូវ",
+      "labelIncorrect": "{{label}}។ មិនត្រឹមត្រូវ"
     },
     "slot": {
       "placeholder": "ដាក់ចម្លើយ",

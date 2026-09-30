@@ -102,6 +102,8 @@ assert.deepEqual(Object.keys(tileFrameStyle(C, 'correct')).sort(), [
   'paddingRight',
 ]);
 assert.equal(tileFrameStyle(C, 'incorrect').borderColor, C.error);
-console.log('ok  tileFrameStyle');
+assert.equal(tileFrameStyle(C, 'correct'), tileFrameStyle(C, 'correct'), 'same reference every call');
+assert.notEqual(tileFrameStyle(C, 'correct'), tileFrameStyle(C, 'incorrect'));
+console.log('ok  tileFrameStyle (stable references)');
 
 console.log('\nall tile style checks passed');

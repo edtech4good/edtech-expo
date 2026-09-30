@@ -127,6 +127,8 @@ export default function MovableTile({
           ) : null}
           {mark ? <View style={styles.markCorner}>{mark}</View> : null}
         </View>
+        {/* A missing picture already shows its label in the fallback tile, so the
+            caption is not repeated; the row keeps its height for the audio circle. */}
         <Text
           style={{
             fontFamily: small.fontFamily,
@@ -137,7 +139,7 @@ export default function MovableTile({
             paddingRight: reserveAudio ? AUDIO_RESERVE : 4,
             color: theme.colors.onBackground,
           }}>
-          {label}
+          {imageSlot.showPlaceholder ? '' : label}
         </Text>
       </View>
     );
@@ -168,29 +170,37 @@ export default function MovableTile({
   };
 
   // Announce the result in words: the disc and tint are never the only signal.
+  // The sentence (label, full stop, result) is one key so Khmer can punctuate
+  // its own way.
   const a11yLabel =
     frame.mark === 'correct'
-      ? `${label}. ${t('kit.mark.correct')}`
+      ? t('kit.mark.labelCorrect', { label })
       : frame.mark === 'incorrect'
-        ? `${label}. ${t('kit.mark.incorrect')}`
+        ? t('kit.mark.labelIncorrect', { label })
         : label;
+  const inert = state === 'disabled' || frame.mark !== null;
 
   if (onPress) {
     return (
       <Pressable
         testID={testID}
         onPress={onPress}
-        disabled={state === 'disabled' || frame.mark !== null}
+        disabled={inert}
         accessibilityRole="button"
         accessibilityLabel={a11yLabel}
-        accessibilityState={{ selected: state === 'picked', disabled: state === 'disabled' }}
+        accessibilityState={{ selected: state === 'picked', disabled: inert }}
         style={shell}>
         {content}
       </Pressable>
     );
   }
   return (
-    <View testID={testID} accessible accessibilityLabel={a11yLabel} style={shell}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityLabel={a11yLabel}
+      accessibilityState={inert ? { disabled: true } : undefined}
+      style={shell}>
       {content}
     </View>
   );

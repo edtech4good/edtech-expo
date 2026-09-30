@@ -42,13 +42,7 @@ export function useAudioClip(id: string, source: ClipSource | undefined) {
 
   const toggle = useCallback(() => {
     if (!available) return;
-    const current = audioManager.getState(id);
-    if (current.status === 'playing' || current.status === 'loading') {
-      void audioManager.stop();
-      return;
-    }
-    audioManager.clearError(id);
-    void audioManager.play(id, source as ClipSource);
+    void audioManager.toggle(id, source as ClipSource);
   }, [id, source, available]);
 
   return { state, available, toggle } as const;

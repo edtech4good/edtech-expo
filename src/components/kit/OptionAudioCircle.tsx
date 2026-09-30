@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
@@ -47,7 +47,9 @@ export default function OptionAudioCircle({
   const { state, available, toggle } = useAudioClip(clipId, source);
   if (!available) return null;
 
-  const playing = state.status === 'playing' || state.status === 'loading';
+  const loading = state.status === 'loading';
+  const paused = state.status === 'paused';
+  const playing = state.status === 'playing' || paused || loading;
   const failed = state.status === 'error';
   const progress = progressFraction(state);
 
@@ -61,11 +63,15 @@ export default function OptionAudioCircle({
         ? { position: 'absolute', right: 5, top: '50%', marginTop: -OPTION_AUDIO_SIZE / 2 }
         : null;
 
+  // playing -> Pause, paused -> Resume, loading -> cancel, idle -> Play.
+  const verb = loading ? 'loading' : paused ? 'resume' : playing ? 'pause' : 'play';
   const a11yLabel = failed
     ? t('kit.audio.unavailableRetry')
-    : label
-      ? t(playing ? 'kit.audio.pauseOption' : 'kit.audio.playOption', { label })
-      : t(playing ? 'kit.audio.pauseOptionNoLabel' : 'kit.audio.playOptionNoLabel');
+    : verb === 'loading'
+      ? t('kit.audio.loadingA11y')
+      : label
+        ? t(`kit.audio.${verb}Option`, { label })
+        : t(`kit.audio.${verb}OptionNoLabel`);
 
   return (
     <Pressable
@@ -73,7 +79,7 @@ export default function OptionAudioCircle({
       onPress={toggle}
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
-      accessibilityState={{ busy: state.status === 'loading' }}
+      accessibilityState={{ busy: loading }}
       style={[
         styles.base,
         place,
@@ -108,7 +114,15 @@ export default function OptionAudioCircle({
             />
           </Svg>
           <View style={[styles.inner, { backgroundColor: theme.colors.primary }]}>
-            <PauseGlyph color={theme.colors.onPrimary} size={14} />
+            {loading ? (
+              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+            ) : paused ? (
+              <View style={{ marginLeft: 1.5 }}>
+                <PlayGlyph color={theme.colors.onPrimary} size={14} />
+              </View>
+            ) : (
+              <PauseGlyph color={theme.colors.onPrimary} size={14} />
+            )}
           </View>
         </>
       ) : failed ? (

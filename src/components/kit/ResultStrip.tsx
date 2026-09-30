@@ -1,10 +1,11 @@
 import AppButton from '@/components/ui/AppButton';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 import hexAlpha from '@/utils/hexAlpha';
+import { AnnouncerProvider, useAnnouncer } from './Announcer';
 import { useSmallText, useTileText } from './kitText';
 import ResultMark from './ResultMark';
 import {
@@ -49,11 +50,25 @@ export interface ResultStripProps {
  * optional read-back. It never shows the correct answer: that stays behind
  * "Show answer".
  *
- * Screen readers: the strip is a polite live region, and the same words are
- * announced once when it appears (announceForAccessibility), so the result
- * is heard without moving focus.
+ * Screen readers: the words are announced once when the strip appears, so the
+ * result is heard without moving focus. Native uses announceForAccessibility
+ * only; the web fills an always-mounted polite region hosted by
+ * AnnouncerProvider (mount one per screen). The strip itself is not a live
+ * region: that would double-announce on Android.
  */
-export default function ResultStrip({
+export default function ResultStrip(props: ResultStripProps) {
+  // Announcements need a host. A screen mounts one AnnouncerProvider; when
+  // there is none, the strip brings its own so it still works alone.
+  const host = useAnnouncer();
+  if (host) return <ResultStripBody {...props} />;
+  return (
+    <AnnouncerProvider>
+      <ResultStripBody {...props} />
+    </AnnouncerProvider>
+  );
+}
+
+function ResultStripBody({
   kind,
   correctCount,
   total,
@@ -71,16 +86,18 @@ export default function ResultStrip({
   const tile = useTileText();
   const small = useSmallText();
   const correct = kind === 'correct';
+  const announcer = useAnnouncer();
 
   const input = { kind, correctCount, total };
   const title = resultTitle(kind, t);
   const summary = resultSummary(input, t);
   const spoken = resultAnnouncement({ ...input, readBack: correct ? readBack : undefined }, t);
 
+  // Announce on appearance and whenever the words change. Native: one
+  // announce call. Web: the host's always-mounted region (see announcerLogic.ts).
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(spoken);
-    // Announce on appearance and whenever the words change.
-  }, [spoken]);
+    announcer?.announce(spoken);
+  }, [spoken, announcer]);
 
   const handlers: Record<FooterActionId, (() => void) | undefined> = {
     next: onNext,
@@ -98,9 +115,6 @@ export default function ResultStrip({
         testID={testID}
         accessible
         accessibilityLabel={spoken}
-        accessibilityLiveRegion="polite"
-        // rn-web maps this to role="status" (a polite live region).
-        {...(Platform.OS === 'web' ? ({ role: 'status' } as object) : { accessibilityRole: 'summary' as const })}
         style={[
           styles.strip,
           { backgroundColor: tint, borderColor: edge, borderRadius: theme.radii.card },

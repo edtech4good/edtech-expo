@@ -40,13 +40,18 @@ export default function Slot({
   const frame = slotFrame(theme.colors, state);
   const hasContent = state === 'filled' || state === 'correct' || state === 'incorrect';
   const isBlank = variant === 'blank';
+  // A graded slot is locked.
+  const result = state === 'correct' || state === 'incorrect';
 
   let a11yLabel: string;
   if (hasContent) {
+    // "Tap to take it back" only when the slot can be pressed.
     a11yLabel =
       state === 'filled'
-        ? t('kit.slot.a11yFilled', { label })
-        : `${label}. ${t(state === 'correct' ? 'kit.mark.correct' : 'kit.mark.incorrect')}`;
+        ? onPress
+          ? t('kit.slot.a11yFilled', { label })
+          : (label ?? '')
+        : t(state === 'correct' ? 'kit.mark.labelCorrect' : 'kit.mark.labelIncorrect', { label });
   } else {
     a11yLabel = state === 'active' ? t('kit.slot.a11yActive') : t('kit.slot.a11yEmpty');
   }
@@ -83,9 +88,11 @@ export default function Slot({
             {label}
           </Text>
           {state === 'filled' ? (
+            onPress ? (
             <View style={[styles.cue, { backgroundColor: theme.colors.surfaceVariant }]}>
               <CrossGlyph color={theme.colors.onSurfaceVariant} />
             </View>
+            ) : null
           ) : (
             <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={18} />
           )}
@@ -112,16 +119,22 @@ export default function Slot({
       <Pressable
         testID={testID}
         onPress={onPress}
+        disabled={result}
         accessibilityRole="button"
         accessibilityLabel={a11yLabel}
-        accessibilityState={{ selected: state === 'active' }}
+        accessibilityState={{ selected: state === 'active', disabled: result }}
         style={isBlank ? undefined : styles.fill}>
         {body}
       </Pressable>
     );
   }
   return (
-    <View testID={testID} accessible accessibilityLabel={a11yLabel} style={isBlank ? undefined : styles.fill}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityLabel={a11yLabel}
+      accessibilityState={result ? { disabled: true } : undefined}
+      style={isBlank ? undefined : styles.fill}>
       {body}
     </View>
   );

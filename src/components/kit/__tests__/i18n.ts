@@ -77,6 +77,11 @@ for (const file of files) {
 }
 // The move actions are looked up as `reorder.${action}`.
 ['moveEarlier', 'moveLater', 'moveToStart', 'moveToEnd'].forEach(a => used.add(`reorder.${a}`));
+// The audio labels are looked up as `kit.audio.${verb}Option[NoLabel]`.
+['play', 'pause', 'resume'].forEach(v => {
+  used.add(`kit.audio.${v}Option`);
+  used.add(`kit.audio.${v}OptionNoLabel`);
+});
 assert.ok(used.size >= 30, `found only ${used.size} keys in source`);
 for (const key of used) {
   assert.ok(key in enKeys, `source uses ${key}, missing from en.json`);

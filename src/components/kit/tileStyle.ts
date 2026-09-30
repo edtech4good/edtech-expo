@@ -251,12 +251,33 @@ export function slotFrame(colors: KitColors, state: SlotState): SlotFrame {
  * borders and padding only: the shadow is dropped by the caller's choice.
  */
 export function tileFrameStyle(colors: KitColors, state: TileState) {
-  const f = tileFrame(colors, state);
-  return {
-    backgroundColor: f.backgroundColor,
-    borderColor: f.borderColor,
-    borderWidth: f.borderWidth,
-    paddingLeft: f.paddingLeft,
-    paddingRight: f.paddingRight,
-  };
+  // Cached per colours object and state, so the same reference comes back
+  // every render and ReorderableList's memo(Tile) is not defeated.
+  let byState = frameStyleCache.get(colors);
+  if (!byState) {
+    byState = new Map();
+    frameStyleCache.set(colors, byState);
+  }
+  let style = byState.get(state);
+  if (!style) {
+    const f = tileFrame(colors, state);
+    style = {
+      backgroundColor: f.backgroundColor,
+      borderColor: f.borderColor,
+      borderWidth: f.borderWidth,
+      paddingLeft: f.paddingLeft,
+      paddingRight: f.paddingRight,
+    };
+    byState.set(state, style);
+  }
+  return style;
 }
+
+type FrameStyle = {
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: number;
+  paddingLeft: number;
+  paddingRight: number;
+};
+const frameStyleCache = new WeakMap<object, Map<TileState, FrameStyle>>();

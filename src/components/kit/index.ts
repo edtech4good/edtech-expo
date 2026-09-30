@@ -15,3 +15,4 @@ export { useAudioClip } from './audio/useAudioClip';
 export { tileFrame, tileFrameStyle, slotFrame, TILE_STATES, SLOT_STATES } from './tileStyle';
 export type { TileState, SlotState, TileFrame, SlotFrame } from './tileStyle';
 export { footerActions, resultSummary, resultTitle, resultAnnouncement } from './resultLogic';
+export { AnnouncerProvider, useAnnouncer } from './Announcer';

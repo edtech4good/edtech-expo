@@ -1,5 +1,6 @@
 import { ReorderableList, ReorderItem } from '@/components/drag';
 import {
+  AnnouncerProvider,
   audioManager,
   footerActions,
   ListenPill,
@@ -61,9 +62,14 @@ const PHOTO =
 // The generated tone. Required lazily and only in dev so the harness adds
 // nothing to a production bundle.
 function toneSource(): number | undefined {
-  if (!__DEV__) return undefined;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../../../assets/dev-kit-tone.wav');
+  // The require sits inside the __DEV__ block itself: Metro folds
+  // `if (__DEV__)` away in a production build and drops the asset with it (an
+  // early return above a bare require is not folded, and ships the file).
+  if (__DEV__) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('../../../assets/dev-kit-tone.wav');
+  }
+  return undefined;
 }
 
 function Label({ children }: { children: ReactNode }) {
@@ -264,6 +270,8 @@ export default function KitGalleryScreen() {
 
   return (
     <ThemeProvider theme={corporateTheme}>
+      {/* One announcer host for the whole screen (web: an always-mounted region). */}
+      <AnnouncerProvider>
       <ScrollView
         style={{ flex: 1, backgroundColor: C.background }}
         contentContainerStyle={{
@@ -398,6 +406,7 @@ export default function KitGalleryScreen() {
           </Section>
         </QuestionColumn>
       </ScrollView>
+      </AnnouncerProvider>
     </ThemeProvider>
   );
 }

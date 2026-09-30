@@ -54,7 +54,11 @@
       "playOptionNoLabel": "Play audio",
       "pauseOptionNoLabel": "Pause audio",
       "unavailable": "Audio unavailable",
-      "unavailableRetry": "Audio unavailable. Tap to try again."
+      "unavailableRetry": "Audio unavailable. Tap to try again.",
+      "resumeA11y": "Resume the question audio",
+      "loadingA11y": "Loading audio. Tap to cancel.",
+      "resumeOption": "Resume audio for {{label}}",
+      "resumeOptionNoLabel": "Resume audio"
     },
     "result": {
       "correctTitle": "Correct",
@@ -68,7 +72,9 @@
     },
     "mark": {
       "correct": "Correct",
-      "incorrect": "Incorrect"
+      "incorrect": "Incorrect",
+      "labelCorrect": "{{label}}. Correct",
+      "labelIncorrect": "{{label}}. Incorrect"
     },
     "slot": {
       "placeholder": "Place an answer",
