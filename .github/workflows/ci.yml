@@ -60,6 +60,9 @@ jobs:
       - name: Picture-choice layout rules
         run: yarn test:layout
 
+      - name: Drag primitive logic
+        run: yarn test:drag
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 
