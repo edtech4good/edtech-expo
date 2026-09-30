@@ -18,6 +18,7 @@ import {
   readBackSentence,
   wordMarks,
   wordState,
+  wordStatusKey,
   type OrderingOption,
 } from '../textOrderingLogic';
 
@@ -165,6 +166,15 @@ check('banner: idle shows the hint; picked and dragging say what is happening', 
   const d = bannerFor({ kind: 'dragging', id: 'a', label: 'Write', target: 'before “sale”' });
   assert.deepEqual(d.rest, { key: 'corporate.textOrdering.movingTo', values: { place: 'before “sale”' } });
   assert.equal(bannerFor({ kind: 'dragging', id: 'a', label: 'Write', target: null }).rest?.key, 'corporate.textOrdering.movingBack');
+});
+
+check('screen reader status: the mark after Submit, Correct on the shown answer, nothing while answering', () => {
+  const marks = { a: 'correct', b: 'incorrect' } as const;
+  assert.equal(wordStatusKey('a', { marks, showAnswer: false }), 'kit.mark.correct');
+  assert.equal(wordStatusKey('b', { marks, showAnswer: false }), 'kit.mark.incorrect');
+  assert.equal(wordStatusKey('z', { marks, showAnswer: false }), undefined);
+  assert.equal(wordStatusKey('a', { marks: null, showAnswer: false }), undefined);
+  assert.equal(wordStatusKey('b', { marks: null, showAnswer: true }), 'kit.mark.correct');
 });
 
 console.log(`textOrdering: ${passed} checks passed`);

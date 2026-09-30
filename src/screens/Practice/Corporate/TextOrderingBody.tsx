@@ -18,6 +18,7 @@ import {
   ListStatus,
   shuffledNotSolved,
   wordState,
+  wordStatusKey,
 } from './textOrderingLogic';
 import type { QuestionBodyProps } from './types';
 import { useReportAnswer } from './useReportAnswer';
@@ -93,31 +94,35 @@ export default function TextOrderingBody({
   return (
     <View style={{ rowGap: 12 }}>
       {/* The instruction line, or what the learner is doing now. Its height is
-          reserved (two lines) so the tiles never move when it changes. */}
-      <View
-        style={[
-          {
-            minHeight: 60,
-            justifyContent: 'center',
-            borderRadius: 12,
-            paddingHorizontal: 12,
-          },
-          banner.live ? { backgroundColor: theme.colors.primaryLight } : null,
-        ]}>
-        {banner.live && banner.rest ? (
-          <Text style={[line, { color: theme.colors.onBackground }]}>
-            <Text style={{ color: theme.colors.primaryDark }}>
-              {t(banner.lead!.key, banner.lead!.values)}
-            </Text>{' '}
-            {t(banner.rest.key, banner.rest.values)}
-          </Text>
-        ) : (
-          <Text style={line}>
-            {t('corporate.textOrdering.hintBefore')}{' '}⠿{' '}
-            {t('corporate.textOrdering.hintAfter')}
-          </Text>
-        )}
-      </View>
+          reserved (two lines) so the tiles never move when it changes while
+          answering. After Submit (or Show answer) there is nothing left to
+          do, so it goes and gives its room back. */}
+      {disabled ? null : (
+        <View
+          style={[
+            {
+              minHeight: 60,
+              justifyContent: 'center',
+              borderRadius: 12,
+              paddingHorizontal: 12,
+            },
+            banner.live ? { backgroundColor: theme.colors.primaryLight } : null,
+          ]}>
+          {banner.live && banner.rest ? (
+            <Text style={[line, { color: theme.colors.onBackground }]}>
+              <Text style={{ color: theme.colors.primaryDark }}>
+                {t(banner.lead!.key, banner.lead!.values)}
+              </Text>{' '}
+              {t(banner.rest.key, banner.rest.values)}
+            </Text>
+          ) : (
+            <Text style={line}>
+              {t('corporate.textOrdering.hintBefore')} ⠿{' '}
+              {t('corporate.textOrdering.hintAfter')}
+            </Text>
+          )}
+        </View>
+      )}
       <View
         style={{
           backgroundColor: theme.colors.surfaceVariant,
@@ -134,6 +139,12 @@ export default function TextOrderingBody({
           disabled={disabled}
           onOrderChange={setOrder}
           onStatusChange={setStatus}
+          // The mark reaches a screen reader through the tile's label: the
+          // tile's own content is inside the labelled button and is not read.
+          itemStatusFor={item => {
+            const key = wordStatusKey(item.id, { marks, showAnswer });
+            return key ? t(key) : undefined;
+          }}
           frameFor={item => {
             const s = wordState(item.id, { picked: false, marks, showAnswer });
             return s === 'correct' || s === 'incorrect'

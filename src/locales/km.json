@@ -29,6 +29,7 @@
       "swapWith": "ចុចពីរដងដើម្បីប្តូរជាមួយធាតុដែលបានជ្រើស។"
     },
     "itemLabel": "{{label}}។ {{noun}}ទី {{position}} ក្នុងចំណោម {{count}}",
+    "itemLabelStatus": "{{label}}។ {{noun}}ទី {{position}} ក្នុងចំណោម {{count}}។ {{status}}",
     "announce": {
       "picked": "បានជ្រើស {{label}}។ ជ្រើសមួយទៀតដើម្បីប្តូរ។",
       "putBack": "{{label}} ត្រឡប់ទៅវិញ។",

@@ -40,6 +40,26 @@ export function evaluateMcqText(
   return { iscorrect: isCorrect, answer, perItem };
 }
 
+/** The narrowest a compact option's card gets (its label wraps below this). */
+export const COMPACT_OPTION_MIN_WIDTH = 150;
+
+/**
+ * Columns for the options on a short screen (layout.compact): as many as
+ * fit across `availableWidth`, so the options take as few rows as possible
+ * and stay above the footer. `trailing` is the width beside each card (the
+ * audio circle and its gap), 0 when no option has audio.
+ */
+export function compactColumns(
+  count: number,
+  availableWidth: number,
+  gap: number,
+  trailing: number,
+): number {
+  const per = COMPACT_OPTION_MIN_WIDTH + trailing;
+  const fit = Math.floor((availableWidth + gap) / (per + gap));
+  return Math.max(1, Math.min(count, fit));
+}
+
 export type McqOptionState = 'default' | 'selected' | 'correct' | 'incorrect';
 
 /** How one option looks: the answer when shown, else its mark, else selection. */
@@ -51,7 +71,8 @@ export function mcqOptionState(
     showAnswer: boolean;
   },
 ): McqOptionState {
-  if (opts.showAnswer) return option.questionoptioniscorrect ? 'correct' : 'default';
+  if (opts.showAnswer)
+    return option.questionoptioniscorrect ? 'correct' : 'default';
   if (opts.marks) return opts.marks[option.questionoptionid] ?? 'default';
   return opts.selected ? 'selected' : 'default';
 }

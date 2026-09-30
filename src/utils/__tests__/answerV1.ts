@@ -36,6 +36,10 @@ import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../scre
 import { gradeMatching } from '../../screens/Practice/Components/DragDrop/matchingGrade';
 import { evaluateMatching } from '../../screens/Practice/Corporate/matchingLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
+import {
+  selectionModeFor,
+  selectOption,
+} from '../../screens/Practice/Corporate/selectionMode';
 
 // Every answer any test maps goes through these wrappers, which assert the
 // answer never contains an empty string anywhere (the deployed validator
@@ -852,6 +856,65 @@ check('corporate matching marks: placed slots only, by their own correctness', (
   const ev = evaluateMatching(options, { [U(100)]: U(100), [U(101)]: U(102) });
   assert.deepEqual(ev.perItem, { [U(100)]: 'correct', [U(101)]: 'incorrect' });
   assert.deepEqual(ev.summary, { correctCount: 1, total: 3 });
+});
+
+// ---------------------------------------------------------------------------
+// Corporate single-select (templates 1 and 2): a tap replaces the choice.
+// For the same FINAL selection, the answer and iscorrect are exactly what
+// the kids renderer sends when that option is the one left selected.
+// ---------------------------------------------------------------------------
+
+function corporateSingleSelections(taps: Opt[], mode: 'single' | 'multi') {
+  let selections: Record<string, Opt> = {};
+  for (const qp of taps) selections = selectOption(selections, qp.questionoptionid, qp, mode);
+  return selections;
+}
+
+for (const templateId of [1, 2] as const) {
+  check(`corporate single-select, template ${templateId}: every tap sequence ends in at most one option, sent exactly as kids sends it`, () => {
+    const q = { questionobject: { questionoptions: singleChoice } };
+    assert.equal(selectionModeFor(templateId, q), 'single');
+    // Every ordered tap sequence, repeats included (a radio tapped twice), up to 4 taps.
+    const seqs: Opt[][] = [[]];
+    for (let len = 1; len <= 4; len++)
+      for (const prev of seqs.filter(x => x.length === len - 1))
+        for (const o of singleChoice) seqs.push([...prev, o as Opt]);
+    let n = 0;
+    for (const taps of seqs) {
+      const cSel = corporateSingleSelections(taps, 'single');
+      const keys = Object.keys(cSel);
+      assert.ok(keys.length <= 1, 'single-select holds one option at most');
+      if (taps.length) assert.deepEqual(keys, [taps[taps.length - 1].questionoptionid], 'the last tap wins');
+      // Kids, arriving at the same final selection (that option tapped once).
+      const kSel = kidsSelections(taps.length ? [taps[taps.length - 1]] : []);
+      const kids = kidsSubmitAsBefore(singleChoice as Opt[], kSel);
+      const corp = evaluateMcqText(singleChoice as Opt[], cSel);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.equal(serverGrade(templateId, singleChoice as Opt[], corp.answer), corp.iscorrect);
+      const practice = pressSubmit(cSel, singleChoice as Opt[], 'practice', 1);
+      assert.equal(practice.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, 1, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, 1, practiceRes, kids.answer),
+      );
+      n++;
+    }
+    assert.ok(n > 100, `tried ${n} sequences`);
+  });
+}
+
+check('corporate single-select fallback: a template 1 question with two correct options stays multi and can be answered right', () => {
+  const bad = [opt(1, 'ក', true), opt(2, 'ខ', true), opt(3, 'គ', false)] as Opt[];
+  const mode = selectionModeFor(1, { questionobject: { questionoptions: bad } });
+  assert.equal(mode, 'multi');
+  const sel = corporateSingleSelections([bad[1], bad[0]], mode);
+  const corp = evaluateMcqText(bad, sel);
+  assert.equal(corp.iscorrect, true);
+  assert.deepEqual(corp.answer, kidsSubmitAsBefore(bad, kidsSelections([bad[1], bad[0]])).answer);
+  // Had it been single-select, no selection could be correct.
+  assert.equal(evaluateMcqText(bad, corporateSingleSelections([bad[1], bad[0]], 'single')).iscorrect, false);
 });
 
 console.log(`answerV1: ${passed} checks passed`);

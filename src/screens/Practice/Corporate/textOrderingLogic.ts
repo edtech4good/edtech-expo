@@ -99,6 +99,24 @@ export function wordState(
   return opts.picked ? 'picked' : 'default';
 }
 
+/**
+ * What a screen reader hears after the word's label and position: its mark
+ * after Submit, or "Correct" on every word of the shown answer; nothing
+ * while answering. A translation key (kit.mark.*), or undefined.
+ */
+export function wordStatusKey(
+  id: string,
+  opts: {
+    marks: Readonly<Record<string, ItemMark>> | null;
+    showAnswer: boolean;
+  },
+): 'kit.mark.correct' | 'kit.mark.incorrect' | undefined {
+  const s = wordState(id, { picked: false, ...opts });
+  if (s === 'correct') return 'kit.mark.correct';
+  if (s === 'incorrect') return 'kit.mark.incorrect';
+  return undefined;
+}
+
 /** A source of numbers in [0, 1), like Math.random (tests pass a seeded one). */
 export type Rng = () => number;
 

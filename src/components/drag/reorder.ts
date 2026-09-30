@@ -212,6 +212,7 @@ export const REORDER_EN: Record<string, string> = {
   'reorder.hint.picked': 'Picked. Double-tap again to cancel, or use the move actions.',
   'reorder.hint.swapWith': 'Double-tap to swap with the picked item.',
   'reorder.itemLabel': '{{label}}. {{noun}} {{position}} of {{count}}',
+  'reorder.itemLabelStatus': '{{label}}. {{noun}} {{position}} of {{count}}. {{status}}',
   'reorder.announce.picked': '{{label}} picked. Choose another to swap with.',
   'reorder.announce.putBack': '{{label}} put back.',
   'reorder.announce.moved': '{{label}} moved to {{noun}} {{position}}. {{order}}.',
@@ -358,8 +359,13 @@ export function itemAccessibilityLabel(
   index: number,
   length: number,
   t: Translate = englishTranslate,
+  status?: string,
 ): string {
-  return t('reorder.itemLabel', { label, noun, position: index + 1, count: length });
+  const values = { label, noun, position: index + 1, count: length };
+  // "Write. Word 3 of 6. Correct": the item's result, when there is one.
+  return status
+    ? t('reorder.itemLabelStatus', { ...values, status })
+    : t('reorder.itemLabel', values);
 }
 
 /** "Write moved to word 1. Write sale in book every your." */

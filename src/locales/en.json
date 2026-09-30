@@ -29,6 +29,7 @@
       "swapWith": "Double-tap to swap with the picked item."
     },
     "itemLabel": "{{label}}. {{noun}} {{position}} of {{count}}",
+    "itemLabelStatus": "{{label}}. {{noun}} {{position}} of {{count}}. {{status}}",
     "announce": {
       "picked": "{{label}} picked. Choose another to swap with.",
       "putBack": "{{label}} put back.",

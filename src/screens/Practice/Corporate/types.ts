@@ -72,6 +72,37 @@ export interface QuestionBodyProps {
    * (it keeps `evaluate` current without re-reporting every render).
    */
   report: (report: QuestionBodyReport) => void;
+  /**
+   * The space the body has, measured by the shell (see BodyLayout), or null
+   * on the first frame, before anything is measured. A body that sizes
+   * itself from it renders hidden (opacity 0) while it is null.
+   */
+  layout: BodyLayout | null;
+}
+
+/**
+ * The body's box, measured, never guessed: the shell's ScrollView viewport
+ * minus the question card and the shell's own padding and gap. It changes
+ * when the result strip appears (the footer grows, so the viewport
+ * shrinks), when the window is resized or rotated, and when the card's
+ * height changes. A body that fits itself to it (a picture grid) refits on
+ * every change. See shellLayout.ts and README.md.
+ */
+export interface BodyLayout {
+  /** The column's content width (the 760 cap, minus gutters). */
+  availableWidth: number;
+  /**
+   * The height the body can use without the question scrolling: from just
+   * below the question card to the top of the footer, as it is now.
+   */
+  availableHeight: number;
+  /**
+   * A short screen (a phone on its side). The card is already compact; the
+   * body should use its compact layout (captions on the picture, tiles down
+   * to about 64). Decided with the result strip hidden, so it does not
+   * change on Submit.
+   */
+  compact: boolean;
 }
 
 export type QuestionBody = ComponentType<QuestionBodyProps>;

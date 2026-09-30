@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Locale files (no duplicate keys, en and km match)
+        run: yarn test:locales
+
       - name: Typecheck (held at baseline)
         run: |
           echo "::remove-matcher owner=tsc::"
