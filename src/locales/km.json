@@ -257,5 +257,17 @@
     "review": "មើលឡើងវិញ",
     "continueLesson": "បន្តមេរៀនទី {{n}}",
     "startLesson": "ចាប់ផ្ដើមមេរៀនទី {{n}}"
+  },
+  "corporate": {
+    "matching": {
+      "instruction": "ចុចចម្លើយ រួចចុចពាក្យដែលត្រូវនឹងវា។",
+      "pickedHint": "បានជ្រើស «{{label}}»។ ចុចពាក្យដែលត្រូវនឹងវា។",
+      "slotHint": "ចុចចម្លើយសម្រាប់ «{{label}}»។",
+      "slotHintNoLabel": "ចុចចម្លើយដែលត្រូវនឹងកន្លែងនេះ។",
+      "answers": "ចម្លើយ",
+      "promptSound": "សំឡេង {{n}}",
+      "answerSound": "សំឡេងចម្លើយ {{n}}",
+      "answerPicture": "រូបភាព {{n}}"
+    }
   }
 }

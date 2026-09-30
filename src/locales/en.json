@@ -263,5 +263,17 @@
     "review": "Review",
     "continueLesson": "Continue Lesson {{n}}",
     "startLesson": "Start Lesson {{n}}"
+  },
+  "corporate": {
+    "matching": {
+      "instruction": "Tap an answer, then tap the word it matches.",
+      "pickedHint": "“{{label}}” picked. Tap the word it matches.",
+      "slotHint": "Tap the answer for “{{label}}”.",
+      "slotHintNoLabel": "Tap the answer that belongs here.",
+      "answers": "Answers",
+      "promptSound": "Sound {{n}}",
+      "answerSound": "Answer sound {{n}}",
+      "answerPicture": "Picture {{n}}"
+    }
   }
 }
