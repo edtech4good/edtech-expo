@@ -178,11 +178,29 @@ function main() {
     assert.deepEqual(height({ availableWidth: 335, availableHeight: 800, compact: false }), { image: 104, gap: 12, gapY: 12 });
     assert.deepEqual(height({ availableWidth: 760, availableHeight: 800, compact: false }), { image: 128, gap: 16, gapY: 16 });
     // A short screen: the compact floor and gap, a smaller picture than the regular floor allows.
-    assert.deepEqual(height({ availableWidth: 760, availableHeight: 60, compact: true }), { image: 64, gap: 10, gapY: 10 });
+    assert.deepEqual(height({ availableWidth: 760, availableHeight: 60, compact: true }), { image: 52, gap: 10, gapY: 10 });
     // Less room after Submit (the strip): smaller pictures, same layout.
     const roomy = height({ availableWidth: 335, availableHeight: 400, compact: false }).image;
     const after = height({ availableWidth: 335, availableHeight: 400 - 96, compact: false }).image;
     assert.ok(after < roomy, `${after} < ${roomy}`);
+  });
+
+  check('compact: the compact tile and the small audio circle, and the list is told its columns; regular is untouched', () => {
+    const six = Q(['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => ({ ...o(id, id, i + 1), questionoptionfile: { filename: `${id}.wav`, filetype: 1 } })));
+    const probe = (layout: any) => {
+      const r = mount(base(six, { layout }));
+      const tile = list.renderItem(list.items[0], { index: 0, count: 6, picked: false, lifted: false });
+      // Render the tile itself and read what reached the MovableTile inside it.
+      let tr!: ReactTestRenderer;
+      act(() => { tr = TestRenderer.create(tile); });
+      const movable = tr.root.findAll(n => n.props?.variant === 'image' && 'imageHeight' in n.props)[0];
+      const out = { columns: list.columns, compact: movable.props.compact, accessory: list.renderAccessory(list.items[0]).props.compact };
+      act(() => { tr.unmount(); r.unmount(); });
+      return out;
+    };
+    assert.deepEqual(probe({ availableWidth: 684, availableHeight: 150, compact: true }), { columns: 6, compact: true, accessory: true });
+    assert.deepEqual(probe({ availableWidth: 335, availableHeight: 800, compact: false }), { columns: undefined, compact: false, accessory: false });
+    assert.deepEqual(probe({ availableWidth: 760, availableHeight: 800, compact: false }), { columns: undefined, compact: false, accessory: false });
   });
 
   check('a picture with no text gets a letter label that follows the starting order, not the answer', () => {

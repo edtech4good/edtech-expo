@@ -5,6 +5,12 @@ import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 
+import hexAlpha from '@/utils/hexAlpha';
+import {
+  COMPACT_AUDIO_RESERVE,
+  compactCaptionShown,
+  ORDERING_COMPACT_MARK,
+} from './compactTile';
 import { FLAT, LIFTED, RAISED } from './elevation';
 import { useSmallText, useTileText } from './kitText';
 import ResultMark from './ResultMark';
@@ -31,6 +37,13 @@ export interface MovableTileProps {
   inList?: boolean;
   /** Leave room for the option audio circle (drawn as a `renderAccessory`). */
   reserveAudio?: boolean;
+  /**
+   * Image variant on a short screen (a phone on its side): no caption row.
+   * The caption sits on the picture (dropped on a tiny picture, see
+   * compactTile.ts), the badges and the mark are smaller, and the audio
+   * circle is the compact one. The tile is the picture plus its frame.
+   */
+  compact?: boolean;
   /** Standalone only (a chip in a bank): makes the tile a button. */
   onPress?: () => void;
   testID?: string;
@@ -54,6 +67,7 @@ export default function MovableTile({
   badge,
   inList = false,
   reserveAudio = false,
+  compact = false,
   onPress,
   testID,
 }: MovableTileProps) {
@@ -65,9 +79,19 @@ export default function MovableTile({
   const isImage = variant === 'image';
   const imageSlot = useOptionImageSlot(imageSource, label);
 
+  const compactImage = isImage && compact;
   const mark = frame.mark ? (
-    <ResultMark kind={frame.mark} size={isImage ? 22 : 18} />
+    <ResultMark
+      testID={testID ? `${testID}-mark` : undefined}
+      kind={frame.mark}
+      size={compactImage ? ORDERING_COMPACT_MARK.size : isImage ? 22 : 18}
+    />
   ) : null;
+  const picked = state === 'picked' || state === 'dragging';
+  const badgeSize = compactImage ? 24 : 28;
+  const gripSize = compactImage ? 26 : 32;
+  const showCompactCaption =
+    compactImage && !imageSlot.showPlaceholder && label !== '' && compactCaptionShown(imageHeight);
 
   const textNode = (
     <Text
@@ -85,7 +109,7 @@ export default function MovableTile({
   let content: ReactNode;
   if (isImage) {
     content = (
-      <View style={{ rowGap: 6 }}>
+      <View style={compactImage ? null : { rowGap: 6 }}>
         <View>
           <OptionImage
             source={imageSource}
@@ -94,21 +118,48 @@ export default function MovableTile({
             style={{ width: '100%', height: imageHeight, borderRadius: theme.radii.imageWell }}
             contentFit="cover"
           />
+          {showCompactCaption ? (
+            // The caption on the picture: one line on a light band, clear of
+            // the audio circle in the bottom-right corner.
+            <View
+              style={[
+                styles.captionBand,
+                {
+                  backgroundColor: hexAlpha(theme.colors.surface, 0.92),
+                  borderBottomLeftRadius: theme.radii.imageWell,
+                  borderBottomRightRadius: theme.radii.imageWell,
+                  paddingRight: reserveAudio ? COMPACT_AUDIO_RESERVE : 6,
+                },
+              ]}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontFamily: small.fontFamily,
+                  fontSize: 12,
+                  lineHeight: small.km ? 20 : 16,
+                  color: theme.colors.onBackground,
+                }}>
+                {label}
+              </Text>
+            </View>
+          ) : null}
           {badge !== undefined ? (
             <View
               style={[
                 styles.badge,
+                compactImage
+                  ? { top: 4, left: 4, width: badgeSize, height: badgeSize, borderRadius: badgeSize / 2 }
+                  : null,
                 {
-                  backgroundColor:
-                    state === 'picked' || state === 'dragging' ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: picked ? theme.colors.primary : theme.colors.surface,
                 },
               ]}>
               <Text
                 style={{
                   fontFamily: text.fontFamily,
-                  fontSize: 13,
+                  fontSize: compactImage ? 12 : 13,
                   color:
-                    state === 'picked' || state === 'dragging'
+                    picked
                       ? theme.colors.onPrimary
                       : state === 'correct'
                         ? theme.colors.successText
@@ -121,26 +172,47 @@ export default function MovableTile({
             </View>
           ) : null}
           {frame.showGrip ? (
-            <View style={[styles.gripBadge, { backgroundColor: theme.colors.surface }]}>
+            <View
+              style={[
+                styles.gripBadge,
+                compactImage ? { width: gripSize, height: gripSize, borderRadius: 8 } : null,
+                { backgroundColor: theme.colors.surface },
+              ]}>
               <GripGlyph color={theme.colors.placeholder} />
             </View>
           ) : null}
-          {mark ? <View style={styles.markCorner}>{mark}</View> : null}
+          {mark ? (
+            <View
+              style={
+                compactImage
+                  ? {
+                      position: 'absolute',
+                      top: ORDERING_COMPACT_MARK.vertical,
+                      right: ORDERING_COMPACT_MARK.right,
+                    }
+                  : styles.markCorner
+              }>
+              {mark}
+            </View>
+          ) : null}
         </View>
         {/* A missing picture already shows its label in the fallback tile, so the
-            caption is not repeated; the row keeps its height for the audio circle. */}
-        <Text
-          style={{
-            fontFamily: small.fontFamily,
-            fontSize: small.fontSize,
-            lineHeight: small.lineHeight,
-            minHeight: 44,
-            paddingLeft: 4,
-            paddingRight: reserveAudio ? AUDIO_RESERVE : 4,
-            color: theme.colors.onBackground,
-          }}>
-          {imageSlot.showPlaceholder ? '' : label}
-        </Text>
+            caption is not repeated; the row keeps its height for the audio circle.
+            Compact: no caption row (the caption is on the picture). */}
+        {compactImage ? null : (
+          <Text
+            style={{
+              fontFamily: small.fontFamily,
+              fontSize: small.fontSize,
+              lineHeight: small.lineHeight,
+              minHeight: 44,
+              paddingLeft: 4,
+              paddingRight: reserveAudio ? AUDIO_RESERVE : 4,
+              color: theme.colors.onBackground,
+            }}>
+            {imageSlot.showPlaceholder ? '' : label}
+          </Text>
+        )}
       </View>
     );
   } else {
@@ -229,4 +301,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markCorner: { position: 'absolute', top: 6, right: 6 },
+  captionBand: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingLeft: 6,
+    paddingVertical: 2,
+  },
 });

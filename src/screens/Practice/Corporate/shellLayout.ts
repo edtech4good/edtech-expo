@@ -28,6 +28,48 @@ export const SHELL_COLUMN_WIDTH = 760;
  */
 export const COMPACT_BELOW = 260;
 
+/**
+ * Whether the question card is clamped: compact, with the result strip
+ * showing. The heading is cut to one line (the whole question stays in its
+ * accessibility label), the Listen pill becomes its disc, and the card's
+ * padding tightens, so the room the strip takes is partly given back to
+ * the pictures.
+ *
+ * It cannot flap: compact is decided on the regular card's height
+ * (ShellMeasures.regularCardHeight), which only a regular card updates, and
+ * a clamped card is always compact. So the shorter clamped card never feeds
+ * back into the decision (see the tests).
+ */
+export function questionClamped(compact: boolean, stripShowing: boolean): boolean {
+  return compact && stripShowing;
+}
+
+/** The regular card's measures (see ShellMeasures.regularCardHeight). */
+export interface RegularCard {
+  regularCardHeight: number | null;
+  regularCardWidth: number | null;
+}
+
+/**
+ * The card's onLayout: only a card drawn in the regular layout updates the
+ * regular measures. A compact card, clamped or not, never does, so its
+ * smaller height cannot feed back into the compact decision.
+ */
+export function recordCardLayout(
+  prev: RegularCard,
+  measured: { height: number; width: number },
+  compact: boolean,
+): RegularCard {
+  if (compact) return prev;
+  return { regularCardHeight: measured.height, regularCardWidth: measured.width };
+}
+
+/** The question card's vertical padding: regular, compact, and compact clamped. */
+export function cardPaddingVertical(compact: boolean, clamped: boolean): number {
+  if (!compact) return 20;
+  return clamped ? 6 : 12;
+}
+
 /** The shell's own spacing, regular and compact (points). */
 export interface ShellSpacing {
   /** The ScrollView's vertical padding, top and bottom. */

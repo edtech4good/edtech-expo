@@ -10,7 +10,15 @@ import ResultMark from '@/components/kit/ResultMark';
 import { useSmallText } from '@/components/kit/kitText';
 import hexAlpha from '@/utils/hexAlpha';
 import SelectionIndicator from './SelectionIndicator';
-import { optionAccessibleName, optionLetter, optionMediaNames } from './imageChoiceLogic';
+import { COMPACT_AUDIO_RESERVE } from '@/components/kit/compactTile';
+import {
+  COMPACT_CARD_AUDIO,
+  compactCaptionShown,
+  compactCardMark,
+  optionAccessibleName,
+  optionLetter,
+  optionMediaNames,
+} from './imageChoiceLogic';
 import type { ImageOptionState } from './imageChoiceLogic';
 
 export interface ImageChoiceCardProps {
@@ -108,9 +116,11 @@ export default function ImageChoiceCard({
   const captionSize = compact ? 12 : 14;
   const captionLine = small.km ? (compact ? 20 : 24) : undefined;
   const chosenText = state === 'selected' ? theme.colors.selectionText : theme.colors.onSurface;
-  // Tiny tiles (the result strip on a short screen) get smaller controls.
-  const tiny = compact && side < 64;
-  const markSize = compact ? (tiny ? 16 : 22) : 28;
+  // Tiny tiles (the result strip on a short screen) get smaller controls and
+  // no caption (see compactCardMark).
+  const tiny = compact && !compactCaptionShown(side);
+  const mark = compactCardMark(side);
+  const markSize = compact ? mark.size : 28;
   const controlSize = tiny ? 14 : 20;
 
   return (
@@ -143,8 +153,17 @@ export default function ImageChoiceCard({
             style={{ width: side, height: side, borderRadius: compact ? 8 : 10 }}
           />
           {showMark ? (
-            <View style={{ position: 'absolute', top: compact ? 3 : 8, right: compact ? 3 : 8 }}>
-              <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={markSize} />
+            <View
+              style={{
+                position: 'absolute',
+                top: compact ? mark.vertical : 8,
+                right: compact ? mark.right : 8,
+              }}>
+              <ResultMark
+                testID={`answer-option-mark-${index}`}
+                kind={state === 'correct' ? 'correct' : 'incorrect'}
+                size={markSize}
+              />
             </View>
           ) : null}
           {compact ? (
@@ -152,14 +171,18 @@ export default function ImageChoiceCard({
               <View style={{ position: 'absolute', top: 3, left: 3 }}>
                 <SelectionIndicator kind={indicator} checked={selected} size={controlSize} />
               </View>
-              {text ? (
+              {/* Not on a tiny picture, nor on a missing one (its placeholder
+                  already shows the text). */}
+              {text && !tiny && !slot.showPlaceholder ? (
                 <View
                   style={{
                     position: 'absolute',
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    paddingHorizontal: 6,
+                    paddingLeft: 6,
+                    // Clear of the audio circle in the bottom-right corner.
+                    paddingRight: audio ? COMPACT_AUDIO_RESERVE : 6,
                     paddingVertical: 2,
                     borderBottomLeftRadius: 8,
                     borderBottomRightRadius: 8,
@@ -208,12 +231,19 @@ export default function ImageChoiceCard({
         )}
       </Pressable>
       {audio ? (
-        <View style={{ position: 'absolute', right: pad, bottom: pad + (compact ? 0 : 2) }}>
+        <View
+          style={{
+            position: 'absolute',
+            right: pad + (compact ? COMPACT_CARD_AUDIO.right : 0),
+            bottom: pad + (compact ? COMPACT_CARD_AUDIO.vertical : 2),
+          }}>
           <OptionAudioCircle
             testID={`answer-option-audio-${index}`}
             clipId={`option-${option.questionoptionid}`}
             source={audio}
             label={text || name}
+            // Compact: the small circle, so it never covers the mark.
+            size={compact ? 'compact' : 'regular'}
           />
         </View>
       ) : null}

@@ -11,6 +11,12 @@
 // corporate, with the multi-correct fallback; 3 and 4 multi).
 
 import type { BodyLayout } from '../types';
+import {
+  COMPACT_AUDIO_SIZE,
+  compactCaptionShown,
+  TINY_TILE_BELOW,
+  type CornerSpot,
+} from '../../../../components/kit/compactTile';
 
 export {
   evaluateMcqText as evaluateMcqImage,
@@ -39,12 +45,28 @@ export const CARD_CAPTION = 6 + 48;
  */
 export const REGULAR_MIN_TILE = 72;
 /**
- * The smallest picture in the compact layout (a phone on its side). About 64
- * is what fits before Submit; after it the result strip takes most of the
- * short screen (more with an audio heading), and the floor is what keeps the
- * learner's own mark in view without scrolling.
+ * The smallest picture in the compact layout (a phone on its side). After
+ * Submit the result strip takes much of a short screen; the shell gives
+ * back room by clamping the question to one line (see shellLayout's
+ * questionClamped), so at 812 x 375 a row of four stays at or above this
+ * even for a two-line Khmer question with heading audio. Below it a photo
+ * is too small to recognise, and the page scrolls instead.
  */
-export const COMPACT_MIN_TILE = 36;
+export const COMPACT_MIN_TILE = 56;
+
+/**
+ * Compact cards: the result mark in the picture's top-right corner, the
+ * small audio circle flush in its bottom-right corner (so a tiny tile's
+ * mark is never covered), the control top-left. A tiny picture (under
+ * TINY_TILE_BELOW) drops its caption: the mark, the accessible label and
+ * the result strip already say which answer it is.
+ */
+export function compactCardMark(side: number): CornerSpot {
+  const tiny = side < TINY_TILE_BELOW;
+  return { size: tiny ? 16 : 22, vertical: 3, right: 3 };
+}
+export const COMPACT_CARD_AUDIO: CornerSpot = { size: COMPACT_AUDIO_SIZE, vertical: 0, right: 0 };
+export { compactCaptionShown };
 
 export interface ImageGridPlan {
   columns: number;

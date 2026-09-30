@@ -42,7 +42,10 @@ import {
   stripKind,
 } from './shellLogic';
 import {
+  cardPaddingVertical,
   computeBodyLayout,
+  questionClamped,
+  recordCardLayout,
   shellSpacing,
   stripUnderViewport,
 } from './shellLayout';
@@ -206,6 +209,9 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
     });
     const compact = layout?.compact ?? false;
     const spacing = shellSpacing(compact);
+    // A short screen with the result showing: the question gives the
+    // pictures back some room (one line, the Listen disc, tighter padding).
+    const clamped = questionClamped(compact, kind !== null);
     const onViewportLayout = (e: LayoutChangeEvent) => {
       const { width, height } = e.nativeEvent.layout;
       setViewport(v =>
@@ -220,11 +226,15 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
       setCardHeight(height);
       setCardWidth(width);
       // Compact is decided on the regular card's height, at the width it
-      // was measured (see ShellMeasures).
-      if (!compact) {
-        setRegularCardHeight(height);
-        setRegularCardWidth(width);
-      }
+      // was measured (see ShellMeasures). A compact or clamped card never
+      // updates it (recordCardLayout), so the decision cannot flap.
+      const next = recordCardLayout(
+        { regularCardHeight, regularCardWidth },
+        { height, width },
+        compact,
+      );
+      setRegularCardHeight(next.regularCardHeight);
+      setRegularCardWidth(next.regularCardWidth);
     };
     const onStripLayout = (e: LayoutChangeEvent) =>
       setStripBlock(e.nativeEvent.layout.height + FOOTER_ROW_GAP);
@@ -294,60 +304,75 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
           onLayout={onViewportLayout}
           contentContainerStyle={{ paddingVertical: spacing.scrollPadding }}>
           <QuestionColumn>
-            <View
-              testID="question-card"
-              onLayout={onCardLayout}
-              style={[
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderRadius: theme.radii.card,
-                  borderWidth: 1,
-                  borderColor: theme.colors.divider,
-                  alignItems: 'center',
-                },
-                // Compact (a short screen): tighter padding and the Listen
-                // pill inline, before the heading.
-                compact
-                  ? {
-                      flexDirection: 'row',
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
-                      columnGap: 12,
-                    }
-                  : { paddingHorizontal: 20, paddingVertical: 20, rowGap: 14 },
-              ]}>
-              <ListenPill
-                testID="question-listen"
-                clipId={`question-${_.get(question, 'questionid', '')}`}
-                source={_.isEmpty(heading.headingfile) ? '' : headingAudio}
-              />
-              <Text
-                accessibilityRole="header"
-                style={
+            {/* onLayout is on a plain wrapper: on the web it fires from a
+                ResizeObserver, which watches the content box, so on the card
+                itself a change of padding alone (the clamp) went unseen. */}
+            <View onLayout={onCardLayout}>
+              <View
+                testID="question-card"
+                style={[
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderRadius: theme.radii.card,
+                    borderWidth: 1,
+                    borderColor: theme.colors.divider,
+                    alignItems: 'center',
+                  },
+                  // Compact (a short screen): tighter padding and the Listen
+                  // pill inline, before the heading.
                   compact
                     ? {
-                        // The kit's tile size (17/22, Khmer 17/30), one
-                        // step down from the regular heading.
-                        flex: 1,
-                        fontFamily: headingFont,
-                        fontSize: tile.fontSize,
-                        lineHeight: tile.lineHeight,
-                        color: theme.colors.onBackground,
-                        textAlign: 'left',
+                        flexDirection: 'row',
+                        paddingHorizontal: 16,
+                        paddingVertical: cardPaddingVertical(true, clamped),
+                        columnGap: clamped ? 10 : 12,
                       }
                     : {
-                        fontFamily: headingFont,
-                        fontSize: theme.fontSizes.subtitle,
-                        // Khmer marks need the taller leading (design v2.1).
-                        lineHeight: small.km
-                          ? theme.fontSizes.subtitle * 1.65
-                          : undefined,
-                        color: theme.colors.onBackground,
-                        textAlign: 'center',
-                      }
-                }>
-                {heading.headingtext}
-              </Text>
+                        paddingHorizontal: 20,
+                        paddingVertical: cardPaddingVertical(false, false),
+                        rowGap: 14,
+                      },
+                ]}>
+                <ListenPill
+                  testID="question-listen"
+                  clipId={`question-${_.get(question, 'questionid', '')}`}
+                  source={_.isEmpty(heading.headingfile) ? '' : headingAudio}
+                  // Clamped: the disc alone, still the same control (a clip
+                  // that is playing keeps playing).
+                  compact={clamped}
+                />
+                <Text
+                  accessibilityRole="header"
+                  // Clamped to one line; the whole question is still read.
+                  numberOfLines={clamped ? 1 : undefined}
+                  accessibilityLabel={clamped ? heading.headingtext : undefined}
+                  testID="question-heading"
+                  style={
+                    compact
+                      ? {
+                          // The kit's tile size (17/22, Khmer 17/30), one
+                          // step down from the regular heading.
+                          flex: 1,
+                          fontFamily: headingFont,
+                          fontSize: tile.fontSize,
+                          lineHeight: tile.lineHeight,
+                          color: theme.colors.onBackground,
+                          textAlign: 'left',
+                        }
+                      : {
+                          fontFamily: headingFont,
+                          fontSize: theme.fontSizes.subtitle,
+                          // Khmer marks need the taller leading (design v2.1).
+                          lineHeight: small.km
+                            ? theme.fontSizes.subtitle * 1.65
+                            : undefined,
+                          color: theme.colors.onBackground,
+                          textAlign: 'center',
+                        }
+                  }>
+                  {heading.headingtext}
+                </Text>
+              </View>
             </View>
             <View style={{ height: spacing.cardGap }} />
             <Body
