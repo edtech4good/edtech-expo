@@ -4,8 +4,6 @@ import _ from 'lodash';
 import styled, { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource } from '@/services';
 import { useMemo } from 'react';
-import { useWindowDimensions } from 'react-native';
-import { imageTileSize } from '@/screens/Practice/Components/MCQImage/layout';
 
 interface MCQImageItemProps {
   option: QuestionOption;
@@ -14,6 +12,9 @@ interface MCQImageItemProps {
   onPress?: (opt: QuestionOption) => void;
   isShowingAnswer?: boolean;
   index?: number;
+  // Tile side; the renderer clamps it to the room it has. Defaults to the
+  // breakpoint size.
+  size?: number;
 }
 
 interface MCQWrapperProps {
@@ -31,26 +32,13 @@ const MCQImageItemWrapper = styled.Pressable.attrs<MCQWrapperProps>(props => ({
     props.isSelected ? props.theme.colors.primary : 'transparent'};
 `;
 
-/**
- * Side of a picture-choice tile (px), by breakpoint. Shared with the
- * renderer so its answer area can be sized from the tile instead of a
- * second copy of these numbers.
- */
-export function useMCQImageTileSize(): number {
-  const { height } = useWindowDimensions();
-  const theme = useTheme();
-  const breakpointSize = useBreakpoint({
+/** Side of a picture-choice tile (px) for the current width breakpoint. */
+export function useMCQImageBreakpointSize(): number {
+  return useBreakpoint({
     desktop: 256,
     tablet: 175,
     mobile: 150,
     phablet: 150,
-  });
-  return imageTileSize({
-    breakpointSize,
-    height,
-    // Selection border either side, and room above and below (see
-    // answerAreaMinHeight).
-    reserve: 2 * theme.layouts.divider + 2 * theme.layouts.large,
   });
 }
 
@@ -61,10 +49,12 @@ export default function MCQImageItem({
   onPress = () => undefined,
   isShowingAnswer = false,
   index,
+  size,
 }: MCQImageItemProps) {
   const theme = useTheme();
 
-  const itemWidth = useMCQImageTileSize();
+  const breakpointSize = useMCQImageBreakpointSize();
+  const itemWidth = size ?? breakpointSize;
 
   const imageSource = useResource(
     { name: _.get(option, 'questionoptionfile.filename', '') },

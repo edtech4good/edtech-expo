@@ -3,8 +3,9 @@
  *  - the tile row grows past its box (flexGrow, never flex: 1) so it scrolls
  *    from the first tile instead of clipping it off the left edge;
  *  - the answer box has a floor at least one tile tall;
- *  - the tile size is clamped to the window height, so the question, the
- *    answer box and Submit fit a landscape phone without scrolling;
+ *  - the tile size is clamped to the answer box's MEASURED height (not the
+ *    window height minus a guess), and the box has no hard minHeight, so on
+ *    a screen that does not scroll Submit can never be pushed off it;
  *  - the renderers actually call those helpers (wiring), since a correct
  *    helper that nothing calls protects nobody.
  *
@@ -17,8 +18,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   MIN_TILE_SIZE,
-  QUESTION_CHROME_HEIGHT,
-  answerAreaMinHeight,
+  arrangeTileReserve,
+  choiceTileReserve,
   imageTileSize,
   tileRowContentStyle,
 } from '../MCQImage/layout';
@@ -46,63 +47,74 @@ check('tile row keeps a gutter so the first tile is not flush to the edge', () =
   assert.equal(tileRowContentStyle(layouts).paddingHorizontal, layouts.large);
 });
 
-check('answer box floor fits one tile plus its border, at every tile size', () => {
-  // MCQImageItem tile sizes by breakpoint: mobile/phablet 150, tablet 175, desktop 256.
-  for (const tile of [150, 175, 256]) {
-    const min = answerAreaMinHeight(tile, layouts);
-    assert.ok(
-      min >= tile + 2 * layouts.divider,
-      `${min} does not fit a ${tile}px tile and its border`,
-    );
-    assert.ok(min > tile + 2 * layouts.divider, 'no room above/below the tile');
+const reserve = choiceTileReserve(layouts);
+
+check('a tall box keeps the breakpoint tile size', () => {
+  for (const bp of [150, 175, 256]) {
+    assert.equal(imageTileSize({ breakpointSize: bp, available: 600 - reserve }), bp);
   }
 });
 
-check('PracticeMCQImage applies both rules', () => {
+check('an exactly-fitting box keeps the breakpoint size; one dp less shrinks it', () => {
+  assert.equal(imageTileSize({ breakpointSize: 150, available: 150 }), 150);
+  assert.equal(imageTileSize({ breakpointSize: 150, available: 149 }), 149);
+});
+
+check('a short measured box shrinks the tile to fit it (landscape phone, ~139dp box)', () => {
+  const tile = imageTileSize({ breakpointSize: 150, available: 139 - reserve });
+  assert.ok(tile < 150 && tile >= MIN_TILE_SIZE, `tile ${tile}`);
+  assert.ok(tile + reserve <= 139, 'tile + border + padding overflows the box');
+});
+
+check('extra header (a 2-line question, audio button, safe area) shrinks it further, down to the floor', () => {
+  const box = 139 - 60;
+  assert.equal(imageTileSize({ breakpointSize: 150, available: box - reserve }), MIN_TILE_SIZE);
+  assert.equal(imageTileSize({ breakpointSize: 150, available: -20 }), MIN_TILE_SIZE);
+});
+
+check('the ordering area reserves its 5px frame and padding above and below', () => {
+  assert.equal(arrangeTileReserve(layouts), 5 + 2 * layouts.large);
+});
+
+check('no hard minHeight comes back on the answer box or tile area', () => {
+  for (const f of [
+    'screens/Practice/Components/MCQImage/PracticeMCQImage.tsx',
+    'screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx',
+  ]) {
+    assert.equal(/minHeight/.test(src(f)), false, `${f} has a minHeight`);
+  }
+});
+
+check('the box height is measured, not guessed from the window', () => {
+  for (const f of [
+    'screens/Practice/Components/MCQImage/PracticeMCQImage.tsx',
+    'screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx',
+  ]) {
+    const s = src(f);
+    assert.ok(s.includes('onLayout='), `${f} does not measure`);
+    assert.equal(s.includes('useWindowDimensions'), false, `${f} uses the window height`);
+  }
+});
+
+check('the tile size is derived from the measured height', () => {
+  assert.ok(src('screens/Practice/Components/MCQImage/PracticeMCQImage.tsx').includes('available: boxHeight - choiceTileReserve('));
+  assert.ok(src('screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx').includes('available: areaHeight - arrangeTileReserve('));
+});
+
+check('PracticeMCQImage applies the row style and passes the size down', () => {
   const s = src('screens/Practice/Components/MCQImage/PracticeMCQImage.tsx');
   assert.ok(s.includes('contentContainerStyle={tileRowContentStyle('));
-  assert.ok(s.includes('minHeight: answerAreaHeight'));
-  assert.ok(s.includes('answerAreaMinHeight(tileSize'));
+  assert.ok(s.includes('size={tileSize}'));
 });
 
-// [width, height, breakpoint size the app picks for that width]
-const SIZES: Array<[number, number, number]> = [
-  [375, 812, 150],
-  [812, 375, 150],
-  [768, 1024, 150],
-  [1280, 800, 175],
-];
-const reserve = 2 * layouts.divider + 2 * layouts.large;
-
-check('tall screens keep the breakpoint tile size (375x812, 768x1024, 1280x800)', () => {
-  for (const [w, h, bp] of SIZES.filter(([, h]) => h > 500)) {
-    assert.equal(imageTileSize({ breakpointSize: bp, height: h, reserve }), bp, `${w}x${h}`);
-  }
-});
-
-check('landscape phone (812x375) shrinks the tile so the box fits above Submit', () => {
-  const [, h, bp] = SIZES[1];
-  const tile = imageTileSize({ breakpointSize: bp, height: h, reserve });
-  assert.ok(tile < bp && tile >= MIN_TILE_SIZE, `tile ${tile}`);
-  assert.ok(
-    QUESTION_CHROME_HEIGHT + answerAreaMinHeight(tile, layouts) <= h,
-    'question chrome + answer box overflow the window',
-  );
-});
-
-check('tile never drops below the floor, even on a very short window', () => {
-  assert.equal(imageTileSize({ breakpointSize: 150, height: 200, reserve }), MIN_TILE_SIZE);
+check('ordering tiles use the clamped size', () => {
+  assert.ok(src('screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx').includes('imageTileSize({'));
 });
 
 check('Practice and Quiz screens stay non-scrolling (list templates keep their bounded lists)', () => {
   for (const f of ['screens/Practice/PracticeScreen.tsx', 'screens/Quiz/QuizScreen.tsx']) {
     assert.equal(src(f).includes('useScroll'), false, `${f} must not wrap every template in a scroll view`);
   }
-});
-
-check('MCQ and ArrangeImage tiles use the clamped size', () => {
-  assert.ok(src('components/practices/MCQImageItem.tsx').includes('imageTileSize({'));
-  assert.ok(src('screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx').includes('imageTileSize({'));
 });
 
 console.log(`\n${passed} passed`);
