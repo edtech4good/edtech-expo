@@ -12,6 +12,9 @@ interface MCQImageItemProps {
   onPress?: (opt: QuestionOption) => void;
   isShowingAnswer?: boolean;
   index?: number;
+  // Tile side; the renderer clamps it to the room it has. Defaults to the
+  // breakpoint size.
+  size?: number;
 }
 
 interface MCQWrapperProps {
@@ -29,6 +32,16 @@ const MCQImageItemWrapper = styled.Pressable.attrs<MCQWrapperProps>(props => ({
     props.isSelected ? props.theme.colors.primary : 'transparent'};
 `;
 
+/** Side of a picture-choice tile (px) for the current width breakpoint. */
+export function useMCQImageBreakpointSize(): number {
+  return useBreakpoint({
+    desktop: 256,
+    tablet: 175,
+    mobile: 150,
+    phablet: 150,
+  });
+}
+
 export default function MCQImageItem({
   option,
   isSelected = false,
@@ -36,15 +49,12 @@ export default function MCQImageItem({
   onPress = () => undefined,
   isShowingAnswer = false,
   index,
+  size,
 }: MCQImageItemProps) {
   const theme = useTheme();
 
-  const itemWidth = useBreakpoint({
-    desktop: 256,
-    tablet: 175,
-    mobile: 150,
-    phablet: 150,
-  });
+  const breakpointSize = useMCQImageBreakpointSize();
+  const itemWidth = size ?? breakpointSize;
 
   const imageSource = useResource(
     { name: _.get(option, 'questionoptionfile.filename', '') },

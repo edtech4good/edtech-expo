@@ -19,6 +19,12 @@ import {
   PracticeFooter,
 } from '@/components';
 import { FlatList } from 'react-native';
+import { useMCQImageBreakpointSize } from '@/components/practices/MCQImageItem';
+import {
+  choiceTileReserve,
+  imageTileSize,
+  tileRowContentStyle,
+} from './layout';
 import _ from 'lodash';
 import { choiceAnswer } from '@/utils/answerV1';
 import { KeyExtractorHelper } from '@/utils';
@@ -43,6 +49,20 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
+    // Height the answer box really has, measured by onLayout. The tile is
+    // sized from it (see imageTileSize), so the question, box and Submit fit
+    // whatever the screen spends on header, safe areas or a wrapped question.
+    // Until the first measurement the tiles are hidden (opacity 0, still laid
+    // out) rather than drawn at the wrong size and then jumping.
+    const breakpointSize = useMCQImageBreakpointSize();
+    const [boxHeight, setBoxHeight] = useState<number | null>(null);
+    const tileSize =
+      boxHeight === null
+        ? breakpointSize
+        : imageTileSize({
+            breakpointSize,
+            available: boxHeight - choiceTileReserve(theme.layouts),
+          });
 
     useImperativeHandle(
       ref,
@@ -158,6 +178,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           option={item}
           isSelected={!_.isEmpty(attempt.selections[item.questionoptionid])}
           isShowingAnswer={isShowingAnswer}
+          size={tileSize}
           index={index}
           onPress={() => handleItemPress(item)}
         />
@@ -186,6 +207,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           justifyContent="center"
           borderRadius={theme.layouts.defaultRadius}
           backgroundColor={theme.colors.surface}
+          onLayout={e => setBoxHeight(e.nativeEvent.layout.height)}
           style={{
             marginHorizontal: theme.layouts.large,
             ...(isCorporate
@@ -193,13 +215,10 @@ export default forwardRef<PracticeHandler, PracticeProps>(
               : null),
           }}>
           <FlatList
-            style={{ flex: 1 }}
+            style={{ flex: 1, opacity: boxHeight === null ? 0 : 1 }}
+            extraData={tileSize}
             data={options}
-            contentContainerStyle={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
+            contentContainerStyle={tileRowContentStyle(theme.layouts)}
             centerContent
             renderItem={renderQuestionOption}
             ItemSeparatorComponent={renderItemSeparation}

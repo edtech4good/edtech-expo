@@ -31,6 +31,7 @@ import {
   SizedBox,
 } from '@/components';
 import { Pressable } from 'react-native';
+import { arrangeTileReserve, imageTileSize } from '../MCQImage/layout';
 import { changeColorOpacity } from '@/utils';
 
 export default forwardRef<PracticeHandler, PracticeProps>(
@@ -53,12 +54,23 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       selections: {},
     });
 
-    const itemWidth = useBreakpoint({
+    // Sized from the height the tile area really has (onLayout), so one row
+    // of tiles fits above the footer whatever the screen spends on header or
+    // safe areas. Hidden (opacity 0) until the first measurement.
+    const breakpointSize = useBreakpoint({
       desktop: 200,
       tablet: 150,
       mobile: 125,
       phablet: 125,
     });
+    const [areaHeight, setAreaHeight] = useState<number | null>(null);
+    const itemWidth =
+      areaHeight === null
+        ? breakpointSize
+        : imageTileSize({
+            breakpointSize,
+            available: areaHeight - arrangeTileReserve(theme.layouts),
+          });
 
     // const itemWidth = useMemo(() => 200, []);
 
@@ -247,7 +259,8 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             backgroundColor={theme.colors.surface}
             justifyContent="center"
             alignItems="center"
-            style={{ flexWrap: 'wrap' }}>
+            onLayout={e => setAreaHeight(e.nativeEvent.layout.height)}
+            style={{ flexWrap: 'wrap', opacity: areaHeight === null ? 0 : 1 }}>
             {_.map(options, (op, index) => renderItem(op, index))}
           </Expanded>
         </Expanded>
