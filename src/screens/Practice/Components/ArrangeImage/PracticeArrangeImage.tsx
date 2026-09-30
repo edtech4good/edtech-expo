@@ -30,10 +30,9 @@ import {
   SH3,
   SizedBox,
 } from '@/components';
-import { Pressable } from 'react-native';
+import { Pressable, useWindowDimensions } from 'react-native';
+import { imageTileSize } from '../MCQImage/layout';
 import { changeColorOpacity } from '@/utils';
-
-const NO_SHRINK = { flexShrink: 0, flexBasis: 'auto' } as const;
 
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeArrangeImage(
@@ -55,11 +54,19 @@ export default forwardRef<PracticeHandler, PracticeProps>(
       selections: {},
     });
 
-    const itemWidth = useBreakpoint({
-      desktop: 200,
-      tablet: 150,
-      mobile: 125,
-      phablet: 125,
+    const { height: windowHeight } = useWindowDimensions();
+    // Clamped to the window height so one row of tiles fits the tile area on
+    // a short screen (tile + 5px frame + the area's top padding and an equal
+    // bottom margin), instead of spilling behind the footer.
+    const itemWidth = imageTileSize({
+      breakpointSize: useBreakpoint({
+        desktop: 200,
+        tablet: 150,
+        mobile: 125,
+        phablet: 125,
+      }),
+      height: windowHeight,
+      reserve: 5 + 2 * theme.layouts.large,
     });
 
     // const itemWidth = useMemo(() => 200, []);
@@ -240,12 +247,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         />
         <SizedBox.Large height />
 
-        {/* Fill the free space but never shrink below the wrapped tiles
-            (flexShrink 0, content-sized basis): on a short screen the
-            screen scrolls instead of the second row of tiles being
-            squeezed out from behind the footer. */}
         <Expanded
-          style={NO_SHRINK}
           paddingLeft={theme.layouts.large}
           paddingRight={theme.layouts.large}>
           <Expanded
@@ -254,7 +256,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             backgroundColor={theme.colors.surface}
             justifyContent="center"
             alignItems="center"
-            style={[{ flexWrap: 'wrap' }, NO_SHRINK]}>
+            style={{ flexWrap: 'wrap' }}>
             {_.map(options, (op, index) => renderItem(op, index))}
           </Expanded>
         </Expanded>

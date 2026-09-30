@@ -3,8 +3,10 @@
  *  - the tile row grows past its box (flexGrow, never flex: 1) so it scrolls
  *    from the first tile instead of clipping it off the left edge;
  *  - the answer box has a floor at least one tile tall;
- *  - the screens actually apply those rules (wiring), since a correct helper
- *    that nothing calls protects nobody.
+ *  - the tile size is clamped to the window height, so the question, the
+ *    answer box and Submit fit a landscape phone without scrolling;
+ *  - the renderers actually call those helpers (wiring), since a correct
+ *    helper that nothing calls protects nobody.
  *
  * Plain script run by `tsx` (package.json `test:layout`). The pixel-level
  * behaviour (first tile visible at 375 wide, Submit reachable at 812x375)
@@ -14,7 +16,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  MIN_TILE_SIZE,
+  QUESTION_CHROME_HEIGHT,
   answerAreaMinHeight,
+  imageTileSize,
   tileRowContentStyle,
 } from '../MCQImage/layout';
 
@@ -60,16 +65,44 @@ check('PracticeMCQImage applies both rules', () => {
   assert.ok(s.includes('answerAreaMinHeight(tileSize'));
 });
 
-check('Practice and Quiz screens scroll when content is taller than the screen', () => {
-  for (const f of ['screens/Practice/PracticeScreen.tsx', 'screens/Quiz/QuizScreen.tsx']) {
-    assert.ok(src(f).includes('<LayoutScrollView useScroll'), `${f} does not scroll`);
+// [width, height, breakpoint size the app picks for that width]
+const SIZES: Array<[number, number, number]> = [
+  [375, 812, 150],
+  [812, 375, 150],
+  [768, 1024, 150],
+  [1280, 800, 175],
+];
+const reserve = 2 * layouts.divider + 2 * layouts.large;
+
+check('tall screens keep the breakpoint tile size (375x812, 768x1024, 1280x800)', () => {
+  for (const [w, h, bp] of SIZES.filter(([, h]) => h > 500)) {
+    assert.equal(imageTileSize({ breakpointSize: bp, height: h, reserve }), bp, `${w}x${h}`);
   }
 });
 
-check('ArrangeImage tile area never shrinks below its wrapped tiles', () => {
-  const s = src('screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx');
-  assert.ok(s.includes("flexShrink: 0, flexBasis: 'auto'"));
-  assert.equal((s.match(/NO_SHRINK/g) ?? []).length >= 3, true);
+check('landscape phone (812x375) shrinks the tile so the box fits above Submit', () => {
+  const [, h, bp] = SIZES[1];
+  const tile = imageTileSize({ breakpointSize: bp, height: h, reserve });
+  assert.ok(tile < bp && tile >= MIN_TILE_SIZE, `tile ${tile}`);
+  assert.ok(
+    QUESTION_CHROME_HEIGHT + answerAreaMinHeight(tile, layouts) <= h,
+    'question chrome + answer box overflow the window',
+  );
+});
+
+check('tile never drops below the floor, even on a very short window', () => {
+  assert.equal(imageTileSize({ breakpointSize: 150, height: 200, reserve }), MIN_TILE_SIZE);
+});
+
+check('Practice and Quiz screens stay non-scrolling (list templates keep their bounded lists)', () => {
+  for (const f of ['screens/Practice/PracticeScreen.tsx', 'screens/Quiz/QuizScreen.tsx']) {
+    assert.equal(src(f).includes('useScroll'), false, `${f} must not wrap every template in a scroll view`);
+  }
+});
+
+check('MCQ and ArrangeImage tiles use the clamped size', () => {
+  assert.ok(src('components/practices/MCQImageItem.tsx').includes('imageTileSize({'));
+  assert.ok(src('screens/Practice/Components/ArrangeImage/PracticeArrangeImage.tsx').includes('imageTileSize({'));
 });
 
 console.log(`\n${passed} passed`);

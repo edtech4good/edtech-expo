@@ -4,6 +4,8 @@ import _ from 'lodash';
 import styled, { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource } from '@/services';
 import { useMemo } from 'react';
+import { useWindowDimensions } from 'react-native';
+import { imageTileSize } from '@/screens/Practice/Components/MCQImage/layout';
 
 interface MCQImageItemProps {
   option: QuestionOption;
@@ -35,11 +37,20 @@ const MCQImageItemWrapper = styled.Pressable.attrs<MCQWrapperProps>(props => ({
  * second copy of these numbers.
  */
 export function useMCQImageTileSize(): number {
-  return useBreakpoint({
+  const { height } = useWindowDimensions();
+  const theme = useTheme();
+  const breakpointSize = useBreakpoint({
     desktop: 256,
     tablet: 175,
     mobile: 150,
     phablet: 150,
+  });
+  return imageTileSize({
+    breakpointSize,
+    height,
+    // Selection border either side, and room above and below (see
+    // answerAreaMinHeight).
+    reserve: 2 * theme.layouts.divider + 2 * theme.layouts.large,
   });
 }
 
