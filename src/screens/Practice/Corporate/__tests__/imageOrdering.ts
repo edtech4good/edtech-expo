@@ -24,12 +24,17 @@ import {
   SHUFFLE_TRIES,
 } from '../ImageOrdering/imageOrderingLogic';
 import {
+  COMPACT_MIN_IMAGE_HEIGHT,
+  COMPACT_MIN_TILE_WIDTH,
+  COMPACT_TILE_CHROME,
   DESKTOP_IMAGE_HEIGHT,
   MIN_IMAGE_HEIGHT,
   PHONE_IMAGE_HEIGHT,
   TILE_CHROME,
+  compactColumns,
   imageOrderingLayout,
 } from '../ImageOrdering/imageOrderingLayout';
+import { ORDERING_TILE_INSET } from '../../../../components/kit/compactTile';
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -228,19 +233,68 @@ check('after Submit the strip takes room: availableHeight drops and the pictures
   assert.ok(usedBy(after, 6, 0) <= 600 - 96);
 });
 
-check('812x375, compact: six pictures get the floor of 64, 4 across, and the tighter 10 gap', () => {
-  const l = at(760, 120, 0, 6, true);
-  assert.equal(l.columns, 4);
-  assert.equal(l.gap, 10);
-  assert.equal(l.imageHeight, 64);
+// Compact (a phone on its side): the tile is the picture plus its frame.
+const usedCompact = (l: ReturnType<typeof at>, count: number) => {
+  const rows = Math.ceil(count / l.columns);
+  return rows * (l.imageHeight + COMPACT_TILE_CHROME) + (rows - 1) * l.gap;
+};
+
+check('compact chrome: the frame only (a 2 result border + 7 padding each side = 18), not the 64 of a caption row', () => {
+  assert.equal(COMPACT_TILE_CHROME, 18);
+  assert.equal(COMPACT_TILE_CHROME, 2 * ORDERING_TILE_INSET);
+  assert.ok(COMPACT_TILE_CHROME < TILE_CHROME);
   assert.equal(MIN_IMAGE_HEIGHT, 64);
+  assert.equal(COMPACT_MIN_IMAGE_HEIGHT, 52);
 });
 
-check('a picture can shrink to 68 where the room is tight, and never below 64', () => {
-  const room = 2 * (68 + TILE_CHROME) + 10; // two rows at 68
-  assert.equal(at(760, room, 0, 6, true).imageHeight, 68);
-  assert.equal(at(760, 10, 0, 6, true).imageHeight, 64);
-  assert.equal(at(335, 10, 0, 6, false).imageHeight, 64);
+check('compact columns: every picture in one row when tiles stay at least 88 wide', () => {
+  // 812 x 375 on the web: the column is 684 wide.
+  assert.equal(compactColumns(684, 6), 6);
+  assert.equal(compactColumns(684, 3), 4, 'three stay 4 across (the regular grid), one row');
+  assert.equal(compactColumns(684, 4), 4);
+  // Narrower: as many as fit at 88, never fewer than the regular grid.
+  assert.equal(compactColumns(560, 6), 5);
+  assert.equal(compactColumns(400, 6), 4);
+  assert.equal(compactColumns(300, 6), 3);
+  assert.equal(compactColumns(150, 6), 2);
+  // The edge: exactly n tiles of 88 and their gaps.
+  assert.equal(compactColumns(6 * COMPACT_MIN_TILE_WIDTH + 5 * 10, 6), 6);
+  assert.equal(compactColumns(6 * COMPACT_MIN_TILE_WIDTH + 5 * 10 - 1, 6), 5);
+  for (const w of [150, 300, 560, 684, 760]) {
+    for (const n of [2, 3, 4, 5, 6, 8]) {
+      const c = compactColumns(w, n);
+      assert.ok(c >= (w >= 600 ? 4 : 2));
+      if (c > (w >= 600 ? 4 : 2)) assert.ok(Math.floor((w - 10 * (c - 1)) / c) >= COMPACT_MIN_TILE_WIDTH, `${w}/${n}`);
+    }
+  }
+});
+
+check('812x375, compact: six pictures in one row fit before and after Submit, as large as the room allows', () => {
+  // Measured on the web at 812 x 375: the body gets about 148 before Submit
+  // and about 80 after it (the question card clamped).
+  for (const room of [148, 112, 80, 71]) {
+    const l = at(684, room, 0, 6, true);
+    assert.equal(l.columns, 6);
+    assert.equal(l.gap, 10);
+    assert.ok(usedCompact(l, 6) <= room, `room ${room}: used ${usedCompact(l, 6)}`);
+    assert.ok(usedCompact(l, 6) > room - 2 || l.imageHeight === DESKTOP_IMAGE_HEIGHT, `room ${room}: as large as it fits`);
+  }
+  assert.equal(at(684, 80, 0, 6, true).imageHeight, 62);
+  assert.equal(at(684, 80, 0, 3, true).imageHeight, 62);
+});
+
+check('compact: a picture shrinks to the room, never below the compact floor of 52; regular keeps 64', () => {
+  const room = 58 + COMPACT_TILE_CHROME;
+  assert.equal(at(684, room, 0, 6, true).imageHeight, 58);
+  assert.equal(at(684, 10, 0, 6, true).imageHeight, COMPACT_MIN_IMAGE_HEIGHT);
+  assert.equal(at(335, 10, 0, 6, false).imageHeight, MIN_IMAGE_HEIGHT);
+});
+
+check('regular layout unchanged: the same numbers as before this change', () => {
+  // Columns and gaps from the width alone, 64 of chrome, the 64 floor.
+  assert.deepEqual(at(335, 520, 52, 4), { columns: 2, gap: 12, tileWidth: 161, imageHeight: 104 });
+  assert.deepEqual(at(760, 560, 52, 6), { columns: 4, gap: 16, tileWidth: 178, imageHeight: 128 });
+  assert.deepEqual(at(760, 300, 52, 6), { columns: 4, gap: 16, tileWidth: 178, imageHeight: Math.max(64, Math.floor((300 - 52 - 16) / 2 - 64)) });
 });
 
 check('768x1024: tablet, 4 across at the design height', () => {
@@ -262,8 +316,8 @@ check('never below the floor and never above the design height, whatever the roo
       for (const count of [1, 3, 4, 6, 8]) {
         for (const compact of [false, true]) {
           const l = at(w, h, 20, count, compact);
-          assert.ok(l.imageHeight >= MIN_IMAGE_HEIGHT, `${w}x${h} n=${count}`);
-          assert.ok(l.imageHeight <= (l.columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT));
+          assert.ok(l.imageHeight >= (compact ? COMPACT_MIN_IMAGE_HEIGHT : MIN_IMAGE_HEIGHT), `${w}x${h} n=${count}`);
+          assert.ok(l.imageHeight <= (l.columns >= 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT));
         }
       }
     }

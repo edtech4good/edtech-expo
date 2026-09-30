@@ -10,6 +10,7 @@ import { ReorderableList } from '@/components/drag';
 import type { ReorderItem, ReorderStatus } from '@/components/drag';
 import MovableTile from '@/components/kit/MovableTile';
 import OptionAudioCircle from '@/components/kit/OptionAudioCircle';
+import { ORDERING_COMPACT_AUDIO_DISC_OFFSET } from '@/components/kit/compactTile';
 import { useSmallText } from '@/components/kit/kitText';
 import { tileFrameStyle } from '@/components/kit/tileStyle';
 import { useReportAnswer } from '../useReportAnswer';
@@ -175,6 +176,8 @@ export default function ImageOrderingBody({
           items={items}
           layout="grid"
           noun={t('reorder.noun.photo')}
+          // Compact may put more pictures in a row than the default grid.
+          columns={compact ? size.columns : undefined}
           gapX={size.gap}
           gapY={size.gap}
           disabled={disabled}
@@ -208,9 +211,10 @@ export default function ImageOrderingBody({
               })}
               imageHeight={size.imageHeight}
               reserveAudio={anyAudio}
+              compact={compact}
             />
           )}
-          renderAccessory={item => <PictureAudio item={item} />}
+          renderAccessory={item => <PictureAudio item={item} compact={compact} />}
         />
       </View>
     </View>
@@ -223,12 +227,14 @@ function PictureTile({
   tileState,
   imageHeight,
   reserveAudio,
+  compact,
 }: {
   item: PictureItem;
   position: number;
   tileState: ReturnType<typeof pictureTileState>;
   imageHeight: number;
   reserveAudio: boolean;
+  compact: boolean;
 }) {
   const imageSource = useResource(
     { name: optionMedia(item.option).imageName },
@@ -249,13 +255,14 @@ function PictureTile({
         imageHeight={imageHeight}
         badge={position}
         reserveAudio={reserveAudio}
+        compact={compact}
         testID={`image-order-tile-${item.id}`}
       />
     </View>
   );
 }
 
-function PictureAudio({ item }: { item: PictureItem }) {
+function PictureAudio({ item, compact }: { item: PictureItem; compact: boolean }) {
   const audio = useResource(
     { name: optionMedia(item.option).audioName },
     [item.id],
@@ -268,6 +275,10 @@ function PictureAudio({ item }: { item: PictureItem }) {
       source={audio}
       label={item.label}
       placement="bottom-right"
+      // Compact: the small disc in a 44 x 44 target, clear of the mark and
+      // the grip (compactTile.ts).
+      size={compact ? 'compact' : 'regular'}
+      discInset={ORDERING_COMPACT_AUDIO_DISC_OFFSET}
     />
   );
 }

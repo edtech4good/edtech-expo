@@ -10,7 +10,19 @@ import ResultMark from '@/components/kit/ResultMark';
 import { useSmallText } from '@/components/kit/kitText';
 import hexAlpha from '@/utils/hexAlpha';
 import SelectionIndicator from './SelectionIndicator';
-import { optionAccessibleName, optionLetter, optionMediaNames } from './imageChoiceLogic';
+import {
+  COMPACT_AUDIO_RESERVE,
+  MCQ_COMPACT_CORNER_INSET,
+  MCQ_COMPACT_FRAME,
+} from '@/components/kit/compactTile';
+import {
+  compactCaptionShown,
+  mcqCompactControlSize,
+  mcqCompactMarkSize,
+  optionAccessibleName,
+  optionLetter,
+  optionMediaNames,
+} from './imageChoiceLogic';
 import type { ImageOptionState } from './imageChoiceLogic';
 
 export interface ImageChoiceCardProps {
@@ -108,10 +120,11 @@ export default function ImageChoiceCard({
   const captionSize = compact ? 12 : 14;
   const captionLine = small.km ? (compact ? 20 : 24) : undefined;
   const chosenText = state === 'selected' ? theme.colors.selectionText : theme.colors.onSurface;
-  // Tiny tiles (the result strip on a short screen) get smaller controls.
-  const tiny = compact && side < 64;
-  const markSize = compact ? (tiny ? 16 : 22) : 28;
-  const controlSize = tiny ? 14 : 20;
+  // Tiny tiles (the result strip on a short screen) get smaller controls and
+  // no caption (see mcqCompactRects in components/kit/compactTile.ts).
+  const tiny = compact && !compactCaptionShown(side);
+  const markSize = compact ? mcqCompactMarkSize(side) : 28;
+  const controlSize = compact ? mcqCompactControlSize(side) : 20;
 
   return (
     <View
@@ -143,23 +156,36 @@ export default function ImageChoiceCard({
             style={{ width: side, height: side, borderRadius: compact ? 8 : 10 }}
           />
           {showMark ? (
-            <View style={{ position: 'absolute', top: compact ? 3 : 8, right: compact ? 3 : 8 }}>
-              <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={markSize} />
+            <View
+              style={{
+                position: 'absolute',
+                top: compact ? MCQ_COMPACT_CORNER_INSET : 8,
+                right: compact ? MCQ_COMPACT_CORNER_INSET : 8,
+              }}>
+              <ResultMark
+                testID={`answer-option-mark-${index}`}
+                kind={state === 'correct' ? 'correct' : 'incorrect'}
+                size={markSize}
+              />
             </View>
           ) : null}
           {compact ? (
             <>
-              <View style={{ position: 'absolute', top: 3, left: 3 }}>
+              <View style={{ position: 'absolute', top: MCQ_COMPACT_CORNER_INSET, left: MCQ_COMPACT_CORNER_INSET }}>
                 <SelectionIndicator kind={indicator} checked={selected} size={controlSize} />
               </View>
-              {text ? (
+              {/* Not on a tiny picture, nor on a missing one (its placeholder
+                  already shows the text). */}
+              {text && !tiny && !slot.showPlaceholder ? (
                 <View
                   style={{
                     position: 'absolute',
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    paddingHorizontal: 6,
+                    paddingLeft: 6,
+                    // Clear of the audio circle in the bottom-right corner.
+                    paddingRight: audio ? COMPACT_AUDIO_RESERVE : 6,
                     paddingVertical: 2,
                     borderBottomLeftRadius: 8,
                     borderBottomRightRadius: 8,
@@ -208,12 +234,23 @@ export default function ImageChoiceCard({
         )}
       </Pressable>
       {audio ? (
-        <View style={{ position: 'absolute', right: pad, bottom: pad + (compact ? 0 : 2) }}>
+        <View
+          style={{
+            position: 'absolute',
+            // Compact: a 44 x 44 target in the card's bottom-right corner
+            // (over the border, still inside the card), the disc flush in
+            // the picture's corner.
+            right: compact ? -borderWidth : pad,
+            bottom: compact ? -borderWidth : pad + 2,
+          }}>
           <OptionAudioCircle
             testID={`answer-option-audio-${index}`}
             clipId={`option-${option.questionoptionid}`}
             source={audio}
             label={text || name}
+            // Compact: the small circle, so it never covers the mark.
+            size={compact ? 'compact' : 'regular'}
+            discInset={MCQ_COMPACT_FRAME}
           />
         </View>
       ) : null}

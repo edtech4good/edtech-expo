@@ -24,9 +24,12 @@ import { chooseModule, CORPORATE_MODULE_BY_TEMPLATE } from '../templateRegistry'
 import { TemplateTypeId } from '../../../../constants/QuestionTemplate';
 import type { QuestionEvaluation } from '../types';
 import {
+  cardPaddingVertical,
   COMPACT_BELOW,
   COMPACT_SPACING,
   computeBodyLayout,
+  questionClamped,
+  recordCardLayout,
   REGULAR_SPACING,
   regularCardStale,
   ShellMeasures,
@@ -421,6 +424,80 @@ check('layout: on Retry the strip is added back until the viewport has grown, so
   assert.equal(computeBodyLayout(measures({ viewport: { width: 390, height: edge - strip }, stripHeight: 0 }))!.compact, true);
   assert.equal(stripUnderViewport(false, strip), 0);
   assert.equal(stripUnderViewport(true, strip), strip);
+});
+
+check('clamp: only compact with the result strip showing; regular and answering never clamp', () => {
+  assert.equal(questionClamped(true, true), true);
+  assert.equal(questionClamped(true, false), false, 'answering, or after Show answer (no strip)');
+  assert.equal(questionClamped(false, true), false, 'regular: the card is unchanged after Submit');
+  assert.equal(questionClamped(false, false), false);
+  // Regular padding is unchanged (20); compact 12, clamped 6.
+  assert.equal(cardPaddingVertical(false, false), 20);
+  assert.equal(cardPaddingVertical(true, false), 12);
+  assert.equal(cardPaddingVertical(true, true), 6);
+});
+
+check('clamp: the room the clamped card gives back reaches the body in availableHeight, and compact holds', () => {
+  // 812 x 375 on the web: 222 of viewport, 151 with the strip (71) showing.
+  // A two-line Khmer heading with audio: regular card 130, compact 86, clamped 54.
+  const base = measures({ viewport: { width: 812, height: 151 }, stripHeight: 71, regularCardHeight: 130, cardWidth: 684, regularCardWidth: 684 });
+  const compactCard = computeBodyLayout({ ...base, cardHeight: 86 })!;
+  const clampedCard = computeBodyLayout({ ...base, cardHeight: 54 })!;
+  assert.equal(compactCard.compact, true);
+  assert.equal(clampedCard.compact, true);
+  assert.equal(clampedCard.availableHeight - compactCard.availableHeight, 86 - 54);
+  assert.equal(clampedCard.availableHeight, 151 - COMPACT_SPACING.scrollPadding * 2 - 54 - COMPACT_SPACING.cardGap);
+});
+
+check('no flap: a compact or clamped card never updates the regular measures', () => {
+  const prev = { regularCardHeight: 130, regularCardWidth: 684 };
+  assert.deepEqual(recordCardLayout(prev, { height: 54, width: 684 }, true), prev);
+  assert.deepEqual(recordCardLayout(prev, { height: 86, width: 684 }, true), prev);
+  assert.deepEqual(recordCardLayout(prev, { height: 120, width: 700 }, false), { regularCardHeight: 120, regularCardWidth: 700 });
+});
+
+check('no flap: the shell settles, and Submit, Retry and Show answer never change compact (frame by frame)', () => {
+  // The shell's loop, frame by frame: lay out from the measures, draw the
+  // card (its height depends on compact and clamped), record it, repeat.
+  // The viewport sits one point inside compact for the regular card, where
+  // a feedback from the smaller cards would turn compact off again.
+  const REGULAR = 150;
+  const cardFor = (compact: boolean, clamped: boolean) => (clamped ? 40 : compact ? 70 : REGULAR);
+  const edge = REGULAR + REGULAR_SPACING.scrollPadding * 2 + REGULAR_SPACING.cardGap + COMPACT_BELOW - 1;
+  const STRIP = 90;
+  let regular = { regularCardHeight: null as number | null, regularCardWidth: null as number | null };
+  let cardHeight: number | null = null;
+  const history: string[] = [];
+  const frames = (stripShowing: boolean, n = 6) => {
+    for (let i = 0; i < n; i++) {
+      const height = stripShowing ? edge - STRIP : edge;
+      const l = computeBodyLayout({
+        viewport: { width: 812, height },
+        cardHeight,
+        cardWidth: 684,
+        ...regular,
+        stripHeight: stripUnderViewport(stripShowing, STRIP),
+        gutter: 20,
+      });
+      // Null on the first frame (the card is not measured yet): regular.
+      const compact = l?.compact ?? false;
+      const clamped = questionClamped(compact, stripShowing);
+      cardHeight = cardFor(compact, clamped);
+      regular = recordCardLayout(regular, { height: cardHeight, width: 684 }, compact);
+      history.push(`${compact ? 'C' : 'R'}${clamped ? '*' : ''}`);
+    }
+  };
+  frames(false); // answering
+  const settled = history.length;
+  frames(true); // Submit: the strip shows
+  frames(false); // Retry / Show answer: the strip goes
+  frames(true); // Submit again
+  // The first frame is regular (nothing measured yet), then compact for good.
+  assert.equal(history[0], 'R');
+  assert.ok(history.slice(1, settled).every(h => h === 'C'), history.join(' '));
+  assert.ok(history.slice(settled).every(h => h.startsWith('C')), history.join(' '));
+  assert.ok(history.slice(settled, settled + 6).every(h => h === 'C*'), 'clamped while the strip shows');
+  assert.equal(regular.regularCardHeight, REGULAR, 'still the regular card');
 });
 
 check('compact multiple choice: as many columns as fit the measured width, audio circles included', () => {

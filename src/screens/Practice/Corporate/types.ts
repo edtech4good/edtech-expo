@@ -98,9 +98,10 @@ export interface BodyLayout {
   availableHeight: number;
   /**
    * A short screen (a phone on its side). The card is already compact; the
-   * body should use its compact layout (captions on the picture, tiles down
-   * to about 64). Decided with the result strip hidden, so it does not
-   * change on Submit.
+   * body should use its compact layout (captions on the picture, dropped on
+   * a tiny tile; see components/kit/compactTile.ts). Decided with the result
+   * strip hidden, so it does not change on Submit; while the strip shows the
+   * card is also clamped to one line (shellLayout's questionClamped).
    */
   compact: boolean;
 }

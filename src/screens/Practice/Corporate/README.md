@@ -121,11 +121,25 @@ How a body uses it:
   question, the options and Submit should then fit without scrolling. The
   shell has already made the card compact (tighter padding, the Listen pill
   inline with the heading, the kit's 17 pt tile type). The body does its
-  part: captions on the picture rather than under it, tiles down to about 64
-  points, smaller gaps. `compact` is decided with the result strip left out,
-  so it does not change on Submit or on Retry; only `availableHeight` does.
-  After a rotation or resize the shell measures the regular card again at the
-  new width (one regular frame) before deciding.
+  part: captions on the picture rather than under it, smaller gaps, and as
+  few rows as the width allows (picture ordering puts six pictures in one
+  row at 812 x 375). The picture floors are 60 (multiple choice) and 52
+  (ordering); below 64 a picture is "tiny" and drops its caption (and, in
+  ordering, its grip, with the ✓ / ✕ moving to the bottom-left). The option
+  audio disc is 28 pt inside a 44 x 44 touch target on every platform
+  (not hitSlop, which the web ignores), placed so the target never covers
+  the mark, the grip, the badge or the radio / checkbox (see
+  `components/kit/compactTile.ts` and its tests). `compact` is decided with the result
+  strip left out, so it does not change on Submit or on Retry; only
+  `availableHeight` does. After a rotation or resize the shell measures the
+  regular card again at the new width (one regular frame) before deciding.
+- **The clamped card.** While compact and the result strip shows, the shell
+  clamps the question card (`questionClamped`): the heading is cut to one
+  line (its accessibility label keeps the whole question), the Listen pill
+  shrinks to its disc and the padding tightens. That gives back 12 to 40
+  points, which the body receives in `availableHeight`. The clamped card is
+  shorter than the compact one, but compact is decided on the regular card's
+  height, which only a regular card updates, so this cannot flap.
 - If the options still don't fit, the `ScrollView` scrolls: nothing is ever
   cut off.
 

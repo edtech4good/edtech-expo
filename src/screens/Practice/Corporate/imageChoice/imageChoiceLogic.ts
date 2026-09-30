@@ -11,6 +11,12 @@
 // corporate, with the multi-correct fallback; 3 and 4 multi).
 
 import type { BodyLayout } from '../types';
+import {
+  compactCaptionShown,
+  MCQ_COMPACT_FRAME,
+  mcqCompactControlSize,
+  mcqCompactMarkSize,
+} from '../../../../components/kit/compactTile';
 
 export {
   evaluateMcqText as evaluateMcqImage,
@@ -28,7 +34,7 @@ export const COMPACT_GRID_GAP = 8;
  * default, 2 + 6 chosen), so a card never changes size when it is chosen.
  */
 export const CARD_FRAME = 8;
-export const COMPACT_CARD_FRAME = 4;
+export const COMPACT_CARD_FRAME = MCQ_COMPACT_FRAME;
 /** Space under the picture in the regular layout: the gap, then the caption row. */
 export const CARD_CAPTION = 6 + 48;
 /**
@@ -39,12 +45,27 @@ export const CARD_CAPTION = 6 + 48;
  */
 export const REGULAR_MIN_TILE = 72;
 /**
- * The smallest picture in the compact layout (a phone on its side). About 64
- * is what fits before Submit; after it the result strip takes most of the
- * short screen (more with an audio heading), and the floor is what keeps the
- * learner's own mark in view without scrolling.
+ * The smallest picture in the compact layout (a phone on its side). After
+ * Submit the result strip takes much of a short screen; the shell gives
+ * back room by clamping the question to one line (see shellLayout's
+ * questionClamped), so at 812 x 375 a row of four stays at or above this
+ * even for a two-line Khmer question with heading audio (63 measured).
+ * Below it a photo is too small to recognise, and the page scrolls instead.
+ * 60 is also the smallest card whose 44 x 44 audio target clears the mark
+ * and the control (compactTile's mcqCompactRects; see the tests).
  */
-export const COMPACT_MIN_TILE = 36;
+export const COMPACT_MIN_TILE = 60;
+
+/**
+ * Compact cards: the result mark in the picture's top-right corner, the
+ * control top-left, and the small audio disc flush in the bottom-right
+ * corner inside a 44 x 44 target (compactTile's mcqCompactRects). A tiny
+ * picture (under 64) gets the smaller mark and control and drops its
+ * caption: the mark, the accessible label and the result strip already say
+ * which answer it is.
+ */
+export { mcqCompactControlSize, mcqCompactMarkSize };
+export { compactCaptionShown };
 
 export interface ImageGridPlan {
   columns: number;

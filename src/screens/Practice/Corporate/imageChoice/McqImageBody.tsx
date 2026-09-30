@@ -32,10 +32,12 @@ import {
  *
  * Layout: sized from the shell's measured `layout` (never the window). A 2x2
  * of square pictures with captions under them; on a phone on its side
- * (`layout.compact`) one row with captions on the pictures, down to 64
- * points. `layout.availableHeight` drops by the result strip after Submit, so
- * the grid refits and the learner's own mark is never behind the strip. The
- * grid renders hidden until the shell has measured, so nothing jumps.
+ * (`layout.compact`) one row with captions on the pictures, down to
+ * COMPACT_MIN_TILE (56) points; a tiny picture (under 64) drops its caption.
+ * `layout.availableHeight` drops by the result strip after Submit (less the
+ * room the clamped question card gives back), so the grid refits and the
+ * learner's own mark is never behind the strip. The grid renders hidden
+ * until the shell has measured, so nothing jumps.
  */
 export default function McqImageBody({
   question,

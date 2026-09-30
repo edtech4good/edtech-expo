@@ -168,6 +168,12 @@ export interface ReorderableListProps<T extends ReorderItem> {
    * Return undefined for no status (the label is unchanged).
    */
   itemStatusFor?: (item: T) => string | undefined;
+  /**
+   * Grid only: the number of columns. Leave it out for the default (2
+   * under 600pt of container width, 4 from there; see gridColumns). A
+   * short screen passes more, so a row of pictures fits without scrolling.
+   */
+  columns?: number;
   /** Horizontal / vertical space between tiles. */
   gapX?: number;
   gapY?: number;
@@ -513,6 +519,7 @@ function ReorderableListInner<T extends ReorderItem>({
   disabled = false,
   frameFor,
   itemStatusFor,
+  columns: columnsProp,
   gapX = layout === 'grid' ? 12 : 10,
   gapY = 12,
   style,
@@ -539,7 +546,12 @@ function ReorderableListInner<T extends ReorderItem>({
   const [announcement, setAnnouncement] = useState('');
   const [containerWidth, setContainerWidth] = useState(0);
 
-  const columns = layout === 'grid' ? gridColumns(containerWidth) : 0;
+  const columns =
+    layout === 'grid'
+      ? columnsProp !== undefined && columnsProp > 0
+        ? Math.floor(columnsProp)
+        : gridColumns(containerWidth)
+      : 0;
   const itemWidth =
     layout === 'grid' && containerWidth > 0
       ? gridItemWidth(containerWidth, columns, gapX)
