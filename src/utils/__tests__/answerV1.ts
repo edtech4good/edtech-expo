@@ -29,9 +29,19 @@ import {
   evaluateMcqText,
   toggleSelection,
 } from '../../screens/Practice/Corporate/mcqTextLogic';
+import { gradeArrangeText } from '../../screens/Practice/Components/ArrangeText/arrangeTextGrade';
+import { evaluateTextOrdering } from '../../screens/Practice/Corporate/textOrderingLogic';
+import { gradeFillBlank } from '../../screens/Practice/Components/FillBlank/fillBlankGrade';
+import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../screens/Practice/Corporate/FillBlank/fillBlankLogic';
+import { gradeMatching } from '../../screens/Practice/Components/DragDrop/matchingGrade';
+import { evaluateMatching } from '../../screens/Practice/Corporate/matchingLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
 import { gradeArrangeImage } from '../../screens/Practice/Components/ArrangeImage/arrangeImageGrade';
 import { evaluateImageOrdering } from '../../screens/Practice/Corporate/ImageOrdering/imageOrderingLogic';
+import {
+  selectionModeFor,
+  selectOption,
+} from '../../screens/Practice/Corporate/selectionMode';
 
 // Every answer any test maps goes through these wrappers, which assert the
 // answer never contains an empty string anywhere (the deployed validator
@@ -557,6 +567,359 @@ check('corporate MCQ text marks: chosen options only, by their own correctness',
 });
 
 // ---------------------------------------------------------------------------
+// Corporate word ordering (template 5): for the same final order, the
+// corporate shell sends exactly what the kids renderer sends. Every
+// permutation of 3 and 4 words is tried, plus a fixture with equal sequences.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeArrangeText's submit, as it was written inline before it moved to
+ * arrangeTextGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsOrderSubmitAsBefore(options: Opt[], selections: Opt[]) {
+  let isCorrect = true;
+  if (Object.values(selections).length !== options.length) isCorrect = false;
+  else {
+    const answers = Object.values(selections);
+    const { correct } = _.reduce(
+      answers,
+      (result, value) => {
+        if ((value.questionoptionsequence as number) < result.currentSequence) result.correct = false;
+        result.currentSequence = value.questionoptionsequence as number;
+        return result;
+      },
+      { correct: true, currentSequence: 0 },
+    );
+    isCorrect = correct;
+  }
+  return { isCorrect, answer: B.orderAnswer(_.map(selections, o => o.questionoptionid)) };
+}
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(p => [x, ...p]));
+}
+
+const ordering3 = ordering.slice(0, 3);
+const orderingTied = [opt(30, 'ក', true, 1), opt(31, 'ខ', true, 2), opt(32, 'គ', true, 2), opt(33, 'ឃ', true, 3)];
+
+for (const [label, options] of [['3 words', ordering3], ['4 words', ordering], ['4 words, two with equal sequence', orderingTied]] as const) {
+  check(`corporate word ordering, ${label}: answer and iscorrect equal the kids path for every order`, () => {
+    let n = 0;
+    let right = 0;
+    for (const perm of permutations([...options] as Opt[])) {
+      const ids = perm.map(o => o.questionoptionid);
+      const kids = kidsOrderSubmitAsBefore(options as Opt[], perm);
+      const shared = gradeArrangeText(options, perm as never);
+      const corp = evaluateTextOrdering(options as never, ids);
+      assert.deepEqual(shared, kids, 'the shared rule is the old inline one');
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.deepEqual(corp.answer, { v: 1, type: 'order', order: ids });
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(5, options as Opt[], corp.answer), corp.iscorrect);
+      // What the shell hands the screen is what the kids renderer handed it.
+      const practice = shellPress({ ...INITIAL_SHELL_STATE, tries: 2 }, 'submit', {
+        mode: 'practice',
+        ready: true,
+        evaluate: () => evaluateTextOrdering(options as never, ids),
+      });
+      const quiz = shellPress(INITIAL_SHELL_STATE, 'submit', {
+        mode: 'quiz',
+        ready: true,
+        evaluate: () => evaluateTextOrdering(options as never, ids),
+      });
+      assert.equal(practice.effect.kind, 'submit');
+      assert.equal(quiz.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, 2, practiceRes, kids.answer),
+      );
+      assert.deepEqual(
+        toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+        toQuizQuestionResult(kids.isCorrect, quizRes, kids.answer),
+      );
+      if (corp.iscorrect) right++;
+      n++;
+    }
+    assert.ok(n >= 6, `tried ${n} orders`);
+    assert.ok(right >= 1 && right < n, `${right} of ${n} orders grade correct`);
+  });
+}
+
+check('the shared word-ordering rule equals the old inline one for partial and empty placements too', () => {
+  for (const options of [ordering, orderingTied] as Opt[][]) {
+    const seqs = options.flatMap(o => permutations(options).flatMap(p => [p.slice(0, 0), p.slice(0, 2), p.slice(0, 3)]));
+    for (const sel of seqs) {
+      assert.deepEqual(gradeArrangeText(options, sel as never), kidsOrderSubmitAsBefore(options, sel));
+    }
+  }
+});
+
+
+// ---------------------------------------------------------------------------
+// Corporate fill in the blank (template 8): for the same final filling, the
+// corporate shell sends exactly what the kids renderer sends, and the
+// server's grader agrees with both. Every filling of the blanks from the
+// bank (real options and distractors) is tried, by tapping words in and by
+// emptying and refilling.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeFillBlank's submit, as it was written inline before it moved to
+ * fillBlankGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsFillBlankAsBefore(questionOptions: Opt[], selections: Opt[]) {
+  const requiredNumberOfAnswer = questionOptions.length;
+  let isCorrect = false;
+  if (selections.length < requiredNumberOfAnswer) isCorrect = false;
+  else {
+    const { correct } = _.reduce(
+      selections,
+      (result, value) => {
+        if (
+          (!_.isBoolean(value.questionoptioniscorrect) && questionOptions.length > 1) ||
+          !_.isNumber(value.questionoptionsequence)
+        ) {
+          result.correct = false;
+        } else if (value.questionoptionsequence < result.currentSequence) {
+          result.correct = false;
+        } else if (!value.questionoptioniscorrect && questionOptions.length > 1) {
+          result.correct = false;
+        }
+        result.currentSequence = value.questionoptionsequence as number;
+        return result;
+      },
+      { correct: true, currentSequence: 0 },
+    );
+    isCorrect = correct;
+  }
+  return { isCorrect, answer: B.blanksAnswer(_.map(selections, o => o.questionoptionid)) };
+}
+
+// A distractor as fromQuestionDistractorToQuestionOption builds it.
+const distract = (n: number, text: string): Opt => ({
+  questionoptionid: U(n),
+  questionoptiontext: text,
+  questionoptioniscorrect: false,
+});
+const distractorA = distract(17, 'ស្អប់');
+const distractorB = distract(18, 'ភ្លេច');
+
+for (const [label, bank] of [
+  ['3 tiles, one distractor', [...fillBlank, distractorA]],
+  ['4 tiles, two distractors', [...fillBlank, distractorA, distractorB]],
+] as const) {
+  check(`corporate fill in the blank, ${label}: answer and iscorrect equal the kids path and the server for every filling`, () => {
+    let n = 0;
+    let right = 0;
+    for (const first of bank) {
+      for (const second of bank) {
+        if (first === second) continue;
+        // The kids renderer appends taps; corporate fills the active blank.
+        const kids = kidsFillBlankAsBefore(fillBlank, [first, second]);
+        assert.deepEqual(gradeFillBlank(fillBlank, [first, second]), kids, 'the shared rule is the old inline one');
+
+        // Path 1: tap the two words in order. Path 2: tap blank 2, place the
+        // second word, then the first (active moves back to blank 1). Path 3:
+        // fill both wrong, empty both, refill.
+        const tap = (s = emptyBlanks(2), ...w: Opt[]) => w.reduce((st, o) => fillActive(st, o.questionoptionid), s);
+        const p1 = tap(undefined, first, second);
+        const p2 = tap(tapBlank(emptyBlanks(2), 1), second, first);
+        const junk = bank.filter(o => o !== first && o !== second);
+        const p3 = tap(tapBlank(tapBlank(tap(undefined, junk[0] ?? second, junk[1] ?? first), 1), 0), first, second);
+        for (const path of [p1, p2, p3]) {
+          assert.deepEqual(path.filled, [first.questionoptionid, second.questionoptionid]);
+          const corp = evaluateFillBlank(fillBlank, bank, path.filled);
+          assert.equal(corp.iscorrect, kids.isCorrect);
+          assert.deepEqual(corp.answer, kids.answer);
+          noEmpty(corp.answer);
+          // The server grades the corporate answer the same way the device did.
+          assert.equal(serverGrade(8, fillBlank, corp.answer), corp.iscorrect);
+          if (corp.iscorrect) right++;
+          // The marks agree with the grade.
+          const all = Object.values(corp.perItem).every(m => m === 'correct') && Object.keys(corp.perItem).length === 2;
+          assert.equal(all, corp.iscorrect);
+        }
+        n++;
+      }
+    }
+    assert.equal(n, bank.length * (bank.length - 1));
+    assert.equal(right, 3, 'only the right filling is right (on each of the three paths)');
+  });
+}
+
+check('corporate fill in the blank: what the shell hands the screen equals the kids result items', () => {
+  const bank = [...fillBlank, distractorA];
+  for (const [first, second] of [[fillBlank[0], fillBlank[1]], [fillBlank[1], distractorA]]) {
+    const kids = kidsFillBlankAsBefore(fillBlank, [first, second]);
+    const filled = [first.questionoptionid, second.questionoptionid];
+    for (const tries of [1, 2, 3]) {
+      const practice = shellPress({ ...INITIAL_SHELL_STATE, tries }, 'submit', {
+        mode: 'practice', ready: true, evaluate: () => evaluateFillBlank(fillBlank, bank, filled),
+      });
+      const quiz = shellPress(INITIAL_SHELL_STATE, 'submit', {
+        mode: 'quiz', ready: true, evaluate: () => evaluateFillBlank(fillBlank, bank, filled),
+      });
+      assert.equal(practice.effect.kind, 'submit');
+      assert.equal(quiz.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, tries, practiceRes, kids.answer),
+      );
+      assert.deepEqual(
+        toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+        toQuizQuestionResult(kids.isCorrect, quizRes, kids.answer),
+      );
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Corporate matching (template 7): for the same final pairing, the corporate
+// renderer sends exactly what the kids renderer sends. Every way of putting
+// distinct chips on some or all of the slots is tried, for 3 pairs and for 4
+// (empty slots included: corporate blocks Submit until all are filled, but
+// `evaluate()` still has to agree with the kids path when some are not).
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeDragDrop's submit, as it was written inline before it moved to
+ * matchingGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsMatchSubmitAsBefore(questionOptions: Opt[], answers: Record<string, string>) {
+  const isCorrect = _.reduce(
+    questionOptions,
+    (result, value) => {
+      if (
+        _.isEmpty(answers[value.questionoptionid]) ||
+        answers[value.questionoptionid] !== value.questionoptionid
+      )
+        result = false;
+      return result;
+    },
+    true,
+  );
+  return { isCorrect, answer: B.matchAnswer(answers) };
+}
+
+/** Every partial injective pairing: each slot empty or holding a distinct chip. */
+function pairings(ids: string[]): Record<string, string>[] {
+  const out: Record<string, string>[] = [];
+  const walk = (i: number, used: Set<string>, acc: Record<string, string>) => {
+    if (i === ids.length) return void out.push({ ...acc });
+    walk(i + 1, used, acc); // slot i left empty
+    for (const chip of ids) {
+      if (used.has(chip)) continue;
+      used.add(chip);
+      walk(i + 1, used, { ...acc, [ids[i]]: chip });
+      used.delete(chip);
+    }
+  };
+  walk(0, new Set(), {});
+  return out;
+}
+
+for (const count of [3, 4]) {
+  check(`corporate matching, ${count} pairs: answer and iscorrect equal the kids path for every pairing`, () => {
+    const options: Opt[] = Array.from({ length: count }, (_x, i) =>
+      opt(100 + i, `prompt ${i}`, true, i + 1),
+    );
+    const slotIds = ids(options);
+    let n = 0;
+    let correct = 0;
+    for (const placed of pairings(slotIds)) {
+      // The kids form keeps '' for a target whose chip was taken back.
+      const kidsHeld: Record<string, string> = Object.fromEntries(slotIds.map(id => [id, placed[id] ?? '']));
+      for (const held of [placed, kidsHeld]) {
+        const kids = kidsMatchSubmitAsBefore(options, held);
+        assert.deepEqual(gradeMatching(options, held), kids, 'the shared rule is the old inline one');
+      }
+      const kids = kidsMatchSubmitAsBefore(options, kidsHeld);
+      const corp = evaluateMatching(options, placed);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      noEmpty(corp.answer);
+      // The server grades the corporate answer the same way the device did.
+      assert.equal(serverGrade(7, options, corp.answer), corp.iscorrect);
+      if (corp.iscorrect) correct += 1;
+      n++;
+    }
+    assert.equal(correct, 1, 'exactly one pairing is right');
+    assert.ok(n >= (count === 3 ? 34 : 209), `tried ${n} pairings`);
+  });
+}
+
+check('corporate matching marks: placed slots only, by their own correctness', () => {
+  const options = [opt(100, 'a', true, 1), opt(101, 'b', true, 2), opt(102, 'c', true, 3)];
+  const ev = evaluateMatching(options, { [U(100)]: U(100), [U(101)]: U(102) });
+  assert.deepEqual(ev.perItem, { [U(100)]: 'correct', [U(101)]: 'incorrect' });
+  assert.deepEqual(ev.summary, { correctCount: 1, total: 3 });
+});
+
+// ---------------------------------------------------------------------------
+// Corporate single-select (templates 1 and 2): a tap replaces the choice.
+// For the same FINAL selection, the answer and iscorrect are exactly what
+// the kids renderer sends when that option is the one left selected.
+// ---------------------------------------------------------------------------
+
+function corporateSingleSelections(taps: Opt[], mode: 'single' | 'multi') {
+  let selections: Record<string, Opt> = {};
+  for (const qp of taps) selections = selectOption(selections, qp.questionoptionid, qp, mode);
+  return selections;
+}
+
+for (const templateId of [1, 2] as const) {
+  check(`corporate single-select, template ${templateId}: every tap sequence ends in at most one option, sent exactly as kids sends it`, () => {
+    const q = { questionobject: { questionoptions: singleChoice } };
+    assert.equal(selectionModeFor(templateId, q), 'single');
+    // Every ordered tap sequence, repeats included (a radio tapped twice), up to 4 taps.
+    const seqs: Opt[][] = [[]];
+    for (let len = 1; len <= 4; len++)
+      for (const prev of seqs.filter(x => x.length === len - 1))
+        for (const o of singleChoice) seqs.push([...prev, o as Opt]);
+    let n = 0;
+    for (const taps of seqs) {
+      const cSel = corporateSingleSelections(taps, 'single');
+      const keys = Object.keys(cSel);
+      assert.ok(keys.length <= 1, 'single-select holds one option at most');
+      if (taps.length) assert.deepEqual(keys, [taps[taps.length - 1].questionoptionid], 'the last tap wins');
+      // Kids, arriving at the same final selection (that option tapped once).
+      const kSel = kidsSelections(taps.length ? [taps[taps.length - 1]] : []);
+      const kids = kidsSubmitAsBefore(singleChoice as Opt[], kSel);
+      const corp = evaluateMcqText(singleChoice as Opt[], cSel);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.equal(serverGrade(templateId, singleChoice as Opt[], corp.answer), corp.iscorrect);
+      const practice = pressSubmit(cSel, singleChoice as Opt[], 'practice', 1);
+      assert.equal(practice.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, 1, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, 1, practiceRes, kids.answer),
+      );
+      n++;
+    }
+    assert.ok(n > 100, `tried ${n} sequences`);
+  });
+}
+
+check('corporate single-select fallback: a template 1 question with two correct options stays multi and can be answered right', () => {
+  const bad = [opt(1, 'ក', true), opt(2, 'ខ', true), opt(3, 'គ', false)] as Opt[];
+  const mode = selectionModeFor(1, { questionobject: { questionoptions: bad } });
+  assert.equal(mode, 'multi');
+  const sel = corporateSingleSelections([bad[1], bad[0]], mode);
+  const corp = evaluateMcqText(bad, sel);
+  assert.equal(corp.iscorrect, true);
+  assert.deepEqual(corp.answer, kidsSubmitAsBefore(bad, kidsSelections([bad[1], bad[0]])).answer);
+  // Had it been single-select, no selection could be correct.
+  assert.equal(evaluateMcqText(bad, corporateSingleSelections([bad[1], bad[0]], 'single')).iscorrect, false);
+});
+
+// ---------------------------------------------------------------------------
 // Corporate picture ordering (template 6): for the same final order, the
 // corporate shell sends exactly what the kids renderer sends. Every
 // permutation of the fixtures is tried, including one with equal sequences.
@@ -580,9 +943,9 @@ function kidsArrangeAsBefore(options: Opt[]) {
   return { correct, answer: B.orderAnswer(_.map(options, o => o.questionoptionid)) };
 }
 
-function permutations<T>(xs: T[]): T[][] {
+function permutationsOf<T>(xs: T[]): T[][] {
   if (xs.length <= 1) return [xs];
-  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(rest => [x, ...rest]));
+  return xs.flatMap((x, i) => permutationsOf([...xs.slice(0, i), ...xs.slice(i + 1)]).map(rest => [x, ...rest]));
 }
 
 const sixPictures = [1, 2, 3, 4, 5, 6].map(n => opt(60 + n, `រូបភាព ${n}`, true, n));
@@ -594,7 +957,7 @@ const oddPictures = [opt(80, 'ក', true, -1), opt(81, 'ខ', true, 0), opt(82, 
 for (const [name, options] of [['4 pictures', ordering], ['6 pictures', sixPictures], ['equal sequences', tiedPictures], ['zero and negative sequences', oddPictures]] as const) {
   check(`corporate picture ordering, ${name}: answer and iscorrect equal the kids path for every order`, () => {
     let n = 0;
-    for (const perm of permutations([...options] as Opt[])) {
+    for (const perm of permutationsOf([...options] as Opt[])) {
       const ids = perm.map(o => o.questionoptionid);
       const kids = kidsArrangeAsBefore(perm);
       const shared = gradeArrangeImage(perm as any);

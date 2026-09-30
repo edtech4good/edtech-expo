@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Locale files (no duplicate keys, en and km match)
+        run: yarn test:locales
+
       - name: Typecheck (held at baseline)
         run: |
           echo "::remove-matcher owner=tsc::"
@@ -71,6 +74,15 @@ jobs:
 
       - name: Corporate picture ordering (marks, sizing, wiring)
         run: yarn test:image-ordering
+      - name: Corporate word ordering (marks, read-back)
+        run: yarn test:ordering
+      - name: Corporate fill in the blank
+        run: yarn test:fillblank
+      - name: Corporate matching logic
+        run: yarn test:matching
+
+      - name: Question renderer key (fresh renderer per question)
+        run: yarn test:questionkey
 
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export

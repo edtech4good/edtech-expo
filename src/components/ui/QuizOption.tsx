@@ -17,6 +17,19 @@ export interface QuizOptionProps {
   onPress?: () => void;
   disabled?: boolean;
   testID?: string;
+  /**
+   * What the option is to assistive tech. Leave it out for today's
+   * behaviour (a radio, with `selected` state). 'radio' or 'checkbox'
+   * sets that role and `aria-checked`, as those roles expect: the
+   * corporate multiple choice passes 'radio' for single-select and
+   * 'checkbox' for multi.
+   */
+  selectionRole?: 'radio' | 'checkbox';
+  /**
+   * A short screen: 48 high (still above the 44 touch minimum) with 12
+   * vertical padding, instead of 56 and 16.
+   */
+  dense?: boolean;
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -53,6 +66,8 @@ export default function QuizOption({
   onPress,
   disabled,
   testID,
+  selectionRole,
+  dense = false,
 }: QuizOptionProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
@@ -105,8 +120,9 @@ export default function QuizOption({
           alignItems: 'center',
           // v2.1: min-height, not a fixed height — Khmer labels wrap to
           // more lines than English and must be able to grow the card.
-          minHeight: 56,
-          padding: 16,
+          minHeight: dense ? 48 : 56,
+          paddingHorizontal: 16,
+          paddingVertical: dense ? 12 : 16,
           borderRadius: theme.radii.card,
           backgroundColor,
           borderWidth,
@@ -174,11 +190,24 @@ export default function QuizOption({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      accessibilityRole="radio"
-      accessibilityState={{
-        selected: state === 'selected' || state === 'correct',
-        disabled: !!disabled,
-      }}>
+      {...(selectionRole
+        ? {
+            role: selectionRole,
+            // aria-* rather than accessibilityState: react-native-web
+            // drops accessibilityState on a Pressable, so the web never
+            // said whether an option was chosen. Every non-default state
+            // is a chosen option (marks go only on chosen options), or
+            // the right answer when it is shown.
+            'aria-checked': state !== 'default',
+            'aria-disabled': !!disabled,
+          }
+        : {
+            accessibilityRole: 'radio' as const,
+            accessibilityState: {
+              selected: state === 'selected' || state === 'correct',
+              disabled: !!disabled,
+            },
+          })}>
       {content}
     </Pressable>
   );

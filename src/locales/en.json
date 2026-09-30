@@ -29,6 +29,7 @@
       "swapWith": "Double-tap to swap with the picked item."
     },
     "itemLabel": "{{label}}. {{noun}} {{position}} of {{count}}",
+    "itemLabelStatus": "{{label}}. {{noun}} {{position}} of {{count}}. {{status}}",
     "announce": {
       "picked": "{{label}} picked. Choose another to swap with.",
       "putBack": "{{label}} put back.",
@@ -265,6 +266,37 @@
     "startLesson": "Start Lesson {{n}}"
   },
   "corporate": {
+    "matching": {
+      "instruction": "Tap an answer, then tap the word it matches.",
+      "pickedHint": "“{{label}}” picked. Tap the word it matches.",
+      "slotHint": "Tap the answer for “{{label}}”.",
+      "answers": "Answers",
+      "promptSound": "Sound {{n}}",
+      "answerSound": "Answer sound {{letter}}",
+      "answerPicture": "Picture {{letter}}",
+      "instructionPrompt": "Tap an answer, then tap the prompt it matches.",
+      "pickedHintPrompt": "“{{label}}” picked. Tap the prompt it matches.",
+      "promptPicture": "Picture {{n}}",
+      "slotEmpty": "{{prompt}}: empty",
+      "slotActive": "{{prompt}}: empty, waiting for an answer",
+      "slotTarget": "{{prompt}}: place “{{chip}}” here",
+      "slotFilled": "{{prompt}}: {{answer}}, placed. Tap to take it back.",
+      "slotSwap": "{{prompt}}: {{answer}} placed. Tap to put “{{chip}}” here instead.",
+      "slotPlaced": "{{prompt}}: {{answer}}, placed"
+    },
+    "textOrdering": {
+      "hintBefore": "Drag a word",
+      "hintAfter": "to move it, or tap two words to swap them.",
+      "picked": "“{{label}}” picked.",
+      "pickedHelp": "Tap the word to swap it with, or tap it again to cancel.",
+      "moving": "Moving “{{label}}”.",
+      "movingTo": "Release to place it {{place}}.",
+      "movingBack": "Release to put it back."
+    },
+    "fillBlank": {
+      "hintActive": "Blank {{n}} of {{total}}. Tap a word to fill it.",
+      "hintDone": "All blanks are filled. Tap a blank to change its word."
+    },
     "imageOrdering": {
       "instruction": "Drag the photos to reorder them, or tap two to swap. Numbers read left to right.",
       "picked": "{{label}} picked. Tap the photo to swap it with."
