@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 
 import { ClipSource, progressFraction } from './audio/audioManager';
-import { COMPACT_AUDIO_SIZE, ORDERING_COMPACT_AUDIO_OFFSET, REGULAR_AUDIO_SIZE } from './compactTile';
+import { COMPACT_AUDIO_SIZE, MIN_TOUCH, REGULAR_AUDIO_SIZE } from './compactTile';
 import { useAudioClip } from './audio/useAudioClip';
 import { PauseGlyph, PlayGlyph, WarnGlyph } from './glyphs';
 
@@ -20,10 +20,18 @@ export interface OptionAudioCircleProps {
   placement?: 'inline' | 'bottom-right' | 'trailing-center';
   /**
    * 'compact': the 28pt circle for compact picture tiles (a phone on its
-   * side), so it never covers the tile's result mark; its touch area is
-   * padded out towards 44 with hitSlop. Default 'regular' (44pt).
+   * side), so it never covers the tile's result mark. The touch target is
+   * still 44 x 44 on every platform: a transparent pressable with the disc
+   * drawn inside it (hitSlop is not honoured on the web). With
+   * placement 'bottom-right' the target fills the layer's bottom-right
+   * corner. Default 'regular' (44pt).
    */
   size?: 'regular' | 'compact';
+  /**
+   * Compact only: how far the disc sits from the target's right and bottom
+   * edges. Default: centred ((44 - 28) / 2 = 8).
+   */
+  discInset?: number;
   testID?: string;
 }
 
@@ -47,6 +55,7 @@ export default function OptionAudioCircle({
   label,
   placement = 'inline',
   size: sizeName = 'regular',
+  discInset = (MIN_TOUCH - COMPACT_AUDIO_SIZE) / 2,
   testID,
 }: OptionAudioCircleProps) {
   const theme = useTheme();
@@ -67,13 +76,15 @@ export default function OptionAudioCircle({
   const glyph = compact ? 11 : 14;
   const r = (size - ring) / 2;
   const circumference = 2 * Math.PI * r;
-  const corner = compact ? ORDERING_COMPACT_AUDIO_OFFSET : 7;
+  // The touch target: the circle itself (regular), or 44 x 44 (compact).
+  const target = compact ? MIN_TOUCH : size;
+  const corner = compact ? 0 : 7;
 
   const place: ViewStyle | null =
     placement === 'bottom-right'
       ? { position: 'absolute', right: corner, bottom: corner }
       : placement === 'trailing-center'
-        ? { position: 'absolute', right: 5, top: '50%', marginTop: -size / 2 }
+        ? { position: 'absolute', right: 5, top: '50%', marginTop: -target / 2 }
         : null;
 
   // playing -> Pause, paused -> Resume, loading -> cancel, idle -> Play.
@@ -86,24 +97,21 @@ export default function OptionAudioCircle({
         ? t(`kit.audio.${verb}Option`, { label })
         : t(`kit.audio.${verb}OptionNoLabel`);
 
-  return (
-    <Pressable
-      testID={testID}
-      onPress={toggle}
-      accessibilityRole="button"
-      accessibilityLabel={a11yLabel}
-      accessibilityState={{ busy: loading }}
-      hitSlop={compact ? 8 : undefined}
-      style={[
-        styles.base,
-        { width: size, height: size, borderRadius: size / 2 },
-        place,
-        !playing && {
-          borderWidth: 1.5,
-          borderColor: failed ? theme.colors.error : theme.colors.primary,
-          backgroundColor: theme.colors.surface,
-        },
-      ]}>
+  const discStyle: ViewStyle[] = [
+    styles.base,
+    { width: size, height: size, borderRadius: size / 2 },
+    ...(!playing
+      ? [
+          {
+            borderWidth: 1.5,
+            borderColor: failed ? theme.colors.error : theme.colors.primary,
+            backgroundColor: theme.colors.surface,
+          },
+        ]
+      : []),
+  ];
+  const content = (
+    <>
       {playing ? (
         <>
           <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
@@ -150,6 +158,30 @@ export default function OptionAudioCircle({
         <View style={{ marginLeft: compact ? 1.5 : 2 }}>
           <PlayGlyph color={theme.colors.primary} size={compact ? 12 : 16} />
         </View>
+      )}
+    </>
+  );
+
+  return (
+    <Pressable
+      testID={testID}
+      onPress={toggle}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityState={{ busy: loading }}
+      style={
+        compact
+          ? [{ width: target, height: target }, place]
+          : [discStyle, place]
+      }>
+      {compact ? (
+        <View
+          pointerEvents="none"
+          style={[discStyle, { position: 'absolute', right: discInset, bottom: discInset }]}>
+          {content}
+        </View>
+      ) : (
+        content
       )}
     </Pressable>
   );

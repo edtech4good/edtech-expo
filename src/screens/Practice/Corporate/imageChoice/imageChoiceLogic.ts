@@ -12,10 +12,10 @@
 
 import type { BodyLayout } from '../types';
 import {
-  COMPACT_AUDIO_SIZE,
   compactCaptionShown,
-  TINY_TILE_BELOW,
-  type CornerSpot,
+  MCQ_COMPACT_FRAME,
+  mcqCompactControlSize,
+  mcqCompactMarkSize,
 } from '../../../../components/kit/compactTile';
 
 export {
@@ -34,7 +34,7 @@ export const COMPACT_GRID_GAP = 8;
  * default, 2 + 6 chosen), so a card never changes size when it is chosen.
  */
 export const CARD_FRAME = 8;
-export const COMPACT_CARD_FRAME = 4;
+export const COMPACT_CARD_FRAME = MCQ_COMPACT_FRAME;
 /** Space under the picture in the regular layout: the gap, then the caption row. */
 export const CARD_CAPTION = 6 + 48;
 /**
@@ -49,23 +49,22 @@ export const REGULAR_MIN_TILE = 72;
  * Submit the result strip takes much of a short screen; the shell gives
  * back room by clamping the question to one line (see shellLayout's
  * questionClamped), so at 812 x 375 a row of four stays at or above this
- * even for a two-line Khmer question with heading audio. Below it a photo
- * is too small to recognise, and the page scrolls instead.
+ * even for a two-line Khmer question with heading audio (63 measured).
+ * Below it a photo is too small to recognise, and the page scrolls instead.
+ * 60 is also the smallest card whose 44 x 44 audio target clears the mark
+ * and the control (compactTile's mcqCompactRects; see the tests).
  */
-export const COMPACT_MIN_TILE = 56;
+export const COMPACT_MIN_TILE = 60;
 
 /**
  * Compact cards: the result mark in the picture's top-right corner, the
- * small audio circle flush in its bottom-right corner (so a tiny tile's
- * mark is never covered), the control top-left. A tiny picture (under
- * TINY_TILE_BELOW) drops its caption: the mark, the accessible label and
- * the result strip already say which answer it is.
+ * control top-left, and the small audio disc flush in the bottom-right
+ * corner inside a 44 x 44 target (compactTile's mcqCompactRects). A tiny
+ * picture (under 64) gets the smaller mark and control and drops its
+ * caption: the mark, the accessible label and the result strip already say
+ * which answer it is.
  */
-export function compactCardMark(side: number): CornerSpot {
-  const tiny = side < TINY_TILE_BELOW;
-  return { size: tiny ? 16 : 22, vertical: 3, right: 3 };
-}
-export const COMPACT_CARD_AUDIO: CornerSpot = { size: COMPACT_AUDIO_SIZE, vertical: 0, right: 0 };
+export { mcqCompactControlSize, mcqCompactMarkSize };
 export { compactCaptionShown };
 
 export interface ImageGridPlan {

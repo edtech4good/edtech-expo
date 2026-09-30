@@ -10,6 +10,7 @@ import { ReorderableList } from '@/components/drag';
 import type { ReorderItem, ReorderStatus } from '@/components/drag';
 import MovableTile from '@/components/kit/MovableTile';
 import OptionAudioCircle from '@/components/kit/OptionAudioCircle';
+import { ORDERING_COMPACT_AUDIO_DISC_OFFSET } from '@/components/kit/compactTile';
 import { useSmallText } from '@/components/kit/kitText';
 import { tileFrameStyle } from '@/components/kit/tileStyle';
 import { useReportAnswer } from '../useReportAnswer';
@@ -274,8 +275,10 @@ function PictureAudio({ item, compact }: { item: PictureItem; compact: boolean }
       source={audio}
       label={item.label}
       placement="bottom-right"
-      // Compact: the small circle, clear of the result mark (compactTile.ts).
+      // Compact: the small disc in a 44 x 44 target, clear of the mark and
+      // the grip (compactTile.ts).
       size={compact ? 'compact' : 'regular'}
+      discInset={ORDERING_COMPACT_AUDIO_DISC_OFFSET}
     />
   );
 }

@@ -9,7 +9,11 @@ import hexAlpha from '@/utils/hexAlpha';
 import {
   COMPACT_AUDIO_RESERVE,
   compactCaptionShown,
+  ORDERING_COMPACT_BADGE,
+  ORDERING_COMPACT_GRIP,
   ORDERING_COMPACT_MARK,
+  orderingGripShown,
+  orderingMarkCorner,
 } from './compactTile';
 import { FLAT, LIFTED, RAISED } from './elevation';
 import { useSmallText, useTileText } from './kitText';
@@ -88,8 +92,16 @@ export default function MovableTile({
     />
   ) : null;
   const picked = state === 'picked' || state === 'dragging';
-  const badgeSize = compactImage ? 24 : 28;
-  const gripSize = compactImage ? 26 : 32;
+  const badgeSize = compactImage ? ORDERING_COMPACT_BADGE.size : 28;
+  const gripSize = compactImage ? ORDERING_COMPACT_GRIP.size : 32;
+  // Compact: no grip on a tiny picture (it would meet the audio target; the
+  // whole tile is the handle), and there the mark moves to the bottom-left.
+  const showGrip = frame.showGrip && (!compactImage || orderingGripShown(imageHeight));
+  const m = ORDERING_COMPACT_MARK;
+  const compactMarkPlace =
+    orderingMarkCorner(imageHeight) === 'top-right'
+      ? { top: m.inset, right: m.inset }
+      : { bottom: m.inset, left: m.inset };
   const showCompactCaption =
     compactImage && !imageSlot.showPlaceholder && label !== '' && compactCaptionShown(imageHeight);
 
@@ -148,7 +160,7 @@ export default function MovableTile({
               style={[
                 styles.badge,
                 compactImage
-                  ? { top: 4, left: 4, width: badgeSize, height: badgeSize, borderRadius: badgeSize / 2 }
+                  ? { top: ORDERING_COMPACT_BADGE.inset, left: ORDERING_COMPACT_BADGE.inset, width: badgeSize, height: badgeSize, borderRadius: badgeSize / 2 }
                   : null,
                 {
                   backgroundColor: picked ? theme.colors.primary : theme.colors.surface,
@@ -171,8 +183,9 @@ export default function MovableTile({
               </Text>
             </View>
           ) : null}
-          {frame.showGrip ? (
+          {showGrip ? (
             <View
+              testID={testID ? `${testID}-grip` : undefined}
               style={[
                 styles.gripBadge,
                 compactImage ? { width: gripSize, height: gripSize, borderRadius: 8 } : null,
@@ -185,11 +198,7 @@ export default function MovableTile({
             <View
               style={
                 compactImage
-                  ? {
-                      position: 'absolute',
-                      top: ORDERING_COMPACT_MARK.vertical,
-                      right: ORDERING_COMPACT_MARK.right,
-                    }
+                  ? { position: 'absolute', ...compactMarkPlace }
                   : styles.markCorner
               }>
               {mark}

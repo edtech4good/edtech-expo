@@ -354,20 +354,20 @@ check('compact refits after Submit: smaller with the strip, down to the floor, n
   assert.equal(plan(4, L(120, 600, true), 175).side, cellSide(120, plan(4, L(120, 600, true), 175).columns, COMPACT_CARD_FRAME, COMPACT_GRID_GAP));
 });
 
-check('compact floor is 56: a recognisable photo; below that room the page scrolls rather than shrink it', () => {
-  assert.equal(COMPACT_MIN_TILE, 56);
+check('compact floor is 60: a recognisable photo whose 44pt audio target clears the mark; below that room the page scrolls', () => {
+  assert.equal(COMPACT_MIN_TILE, 60);
   // 812 x 375 on the web, after Submit, with the question clamped: the body
-  // has about 79 (English) to 70 (two-line Khmer with heading audio).
-  for (const room of [79, 70, 64]) {
+  // has about 79 (English) to 71 (two-line Khmer with heading audio).
+  for (const room of [79, 71, 68]) {
     const p = plan(4, L(684, room, true), 175);
     assert.equal(p.columns, 4);
     assert.equal(p.side, room - 2 * COMPACT_CARD_FRAME);
     assert.ok(p.side >= COMPACT_MIN_TILE && planHeight(p, 4) <= room, `room ${room}`);
   }
   // Less room than a 56 picture needs: the floor, and it no longer fits.
-  const tight = plan(4, L(684, 60, true), 175);
+  const tight = plan(4, L(684, 64, true), 175);
   assert.equal(tight.side, COMPACT_MIN_TILE);
-  assert.ok(planHeight(tight, 4) > 60);
+  assert.ok(planHeight(tight, 4) > 64);
 });
 
 check('compact wraps to more rows only when the row cannot fit at the smallest size', () => {

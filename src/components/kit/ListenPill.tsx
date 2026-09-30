@@ -14,7 +14,7 @@ export interface ListenPillProps {
   /** Resolved by `useResource` (a URI), or a bundled asset. '' hides the pill. */
   source: ClipSource | undefined;
   /**
-   * The disc alone (32pt, padded to 44 with hitSlop): the clamped question
+   * The disc alone (32pt, in a transparent 44 x 44 target): the clamped question
    * card on a short screen after Submit. Same control and labels; a clip
    * that is playing keeps playing when it switches.
    */
@@ -48,32 +48,16 @@ export default function ListenPill({ clipId, source, compact = false, testID }: 
       ? `${formatClock(state.positionMs)} / ${formatClock(state.durationMs)}`
       : formatClock(state.positionMs);
 
-  return (
-    <Pressable
-      testID={testID}
-      onPress={toggle}
-      accessibilityRole="button"
-      accessibilityLabel={
-        failed
-          ? t('kit.audio.unavailableRetry')
-          : loading
-            ? t('kit.audio.loadingA11y')
-            : paused
-              ? t('kit.audio.resumeA11y')
-              : playing
-                ? t('kit.audio.pauseA11y')
-                : t('kit.audio.listenA11y')
-      }
-      accessibilityState={{ busy: loading }}
-      hitSlop={compact ? 6 : undefined}
-      style={[
-        styles.pill,
-        compact ? styles.compactPill : null,
-        {
-          backgroundColor: playing ? theme.colors.primary : theme.colors.surface,
-          borderColor: failed ? theme.colors.error : theme.colors.primary,
-        },
-      ]}>
+  const pillStyle = [
+    styles.pill,
+    compact ? styles.compactPill : null,
+    {
+      backgroundColor: playing ? theme.colors.primary : theme.colors.surface,
+      borderColor: failed ? theme.colors.error : theme.colors.primary,
+    },
+  ];
+  const children = (
+    <>
       <View
         style={[
           styles.disc,
@@ -118,6 +102,31 @@ export default function ListenPill({ clipId, source, compact = false, testID }: 
           {label}
         </Text>
       )}
+    </>
+  );
+
+  return (
+    <Pressable
+      testID={testID}
+      onPress={toggle}
+      accessibilityRole="button"
+      accessibilityLabel={
+        failed
+          ? t('kit.audio.unavailableRetry')
+          : loading
+            ? t('kit.audio.loadingA11y')
+            : paused
+              ? t('kit.audio.resumeA11y')
+              : playing
+                ? t('kit.audio.pauseA11y')
+                : t('kit.audio.listenA11y')
+      }
+      accessibilityState={{ busy: loading }}
+      // Compact: a transparent 44 x 44 target around the 32pt disc (hitSlop
+      // is not honoured on the web). The -6 margins keep its layout at 32,
+      // so the clamped card stays as short as before.
+      style={compact ? styles.compactTarget : pillStyle}>
+      {compact ? <View style={pillStyle}>{children}</View> : children}
     </Pressable>
   );
 }
@@ -132,6 +141,14 @@ const styles = StyleSheet.create({
     columnGap: 10,
     paddingLeft: 5,
     paddingRight: 18,
+    alignSelf: 'center',
+  },
+  compactTarget: {
+    width: 44,
+    height: 44,
+    margin: -6,
+    alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'center',
   },
   compactPill: {

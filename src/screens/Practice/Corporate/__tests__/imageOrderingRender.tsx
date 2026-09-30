@@ -203,6 +203,23 @@ function main() {
     assert.deepEqual(probe({ availableWidth: 760, availableHeight: 800, compact: false }), { columns: undefined, compact: false, accessory: false });
   });
 
+  check('compact tiny pictures: no grip, and the mark moves bottom-left; regular and roomy compact keep the grip', () => {
+    const grips = (layout: any, over: Record<string, unknown> = {}) => {
+      const r = mount(base(question, { layout, ...over }));
+      const tile = list.renderItem(list.items[0], { index: 0, count: 3, picked: false, lifted: false });
+      let tr!: ReactTestRenderer;
+      act(() => { tr = TestRenderer.create(tile); });
+      const ids = tr.root.findAll(n => typeof n.props?.testID === 'string' && /-(grip|mark)$/.test(n.props.testID)).map(n => n.props.testID.replace(/.*-/, ''));
+      const h = tr.root.findAll(n => n.props?.variant === 'image' && 'imageHeight' in n.props)[0].props.imageHeight;
+      act(() => { tr.unmount(); r.unmount(); });
+      return { h, grip: ids.includes('grip'), mark: ids.includes('mark') };
+    };
+    assert.deepEqual(grips({ availableWidth: 684, availableHeight: 60, compact: true }), { h: 52, grip: false, mark: false });
+    assert.deepEqual(grips({ availableWidth: 684, availableHeight: 150, compact: true }), { h: 128, grip: true, mark: false });
+    assert.deepEqual(grips({ availableWidth: 335, availableHeight: 800, compact: false }), { h: 104, grip: true, mark: false });
+    assert.deepEqual(grips({ availableWidth: 684, availableHeight: 60, compact: true }, { marks: { a: 'correct', b: 'incorrect', c: 'correct' }, disabled: true, resultState: 'incorrect' }).grip, false);
+  });
+
   check('a picture with no text gets a letter label that follows the starting order, not the answer', () => {
     const realRandom = Math.random;
     let seed = 7;
