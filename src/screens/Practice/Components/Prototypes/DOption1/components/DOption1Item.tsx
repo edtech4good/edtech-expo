@@ -58,7 +58,7 @@ export default function DOption1Item({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={slot.accessibilityLabel}
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
       accessibilityState={{ selected: isSelected, disabled }}
       style={{
         borderRadius: theme.layouts.defaultRadius,

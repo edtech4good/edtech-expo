@@ -69,9 +69,9 @@ export default function MCQImageItem({
       disabled={disabled || isShowingAnswer}
       accessibilityRole="button"
       accessibilityLabel={slot.accessibilityLabel}
-      aria-selected={isSelected || !!highlightItem}
+      aria-pressed={isSelected}
       accessibilityState={{
-        selected: isSelected || !!highlightItem,
+        selected: isSelected,
         disabled: disabled || isShowingAnswer,
       }}
       onPress={handleImagePress}>

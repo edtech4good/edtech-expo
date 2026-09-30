@@ -217,7 +217,7 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={slot.accessibilityLabel}
-        aria-selected={isSelected}
+        aria-pressed={isSelected}
         accessibilityState={{ selected: isSelected, disabled }}
         style={{
           width: 300,

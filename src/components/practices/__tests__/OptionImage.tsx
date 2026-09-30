@@ -208,9 +208,9 @@ async function main() {
     const els = labelled(r);
     assert.equal(els.length, 1);
     assert.equal(els[0].props['aria-label'], 'Cat');
-    assert.notEqual(els[0].props['aria-selected'], true);
+    assert.notEqual(els[0].props['aria-pressed'], true);
     const sel = render(h(MCQImageItem, { option: opt, index: 0, isSelected: true, onPress: () => undefined }));
-    assert.equal(labelled(sel)[0].props['aria-selected'], true);
+    assert.equal(labelled(sel)[0].props['aria-pressed'], true);
   });
 
   await check('MCQImageItem: image and placeholder press the identical option and share selected styling', () => {
@@ -245,18 +245,66 @@ async function main() {
     assert.equal(got[0], opt);
   });
 
-  await check('tile text token reaches 4.5:1 on the tile fill in both themes', () => {
-    const lum = (hex: string) => {
-      const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const lum = (hex: string) => {
+    const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  // The colours the rendered tile actually uses (composite nodes keep the raw style).
+  const RNW = require('react-native-web');
+  const tileColours = (r: ReactTestRenderer) => {
+    const tile = r.root.findAll(n => n.props.testID === 'image-placeholder' && typeof n.type !== 'string')[0];
+    const text = r.root.findAll(n => n.props.numberOfLines !== undefined && typeof n.type !== 'string')[0];
+    return {
+      fill: RNW.StyleSheet.flatten(tile.props.style).backgroundColor as string,
+      text: RNW.StyleSheet.flatten(text.props.style).color as string,
     };
-    const ratio = (a: string, b: string) => {
-      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-      return (hi + 0.05) / (lo + 0.05);
-    };
-    for (const t of [kidsTokens, corporateTokens]) {
-      assert.ok(ratio(t.colors.onSurface, t.colors.surfaceVariant) >= 4.5, t.name);
+  };
+
+  await check('rendered label colour reaches 4.5:1 on the rendered tile fill (both themes)', () => {
+    const c = tileColours(render(h(OptionImage, { source: '', label: 'Cat', style: { width: 150, height: 150 } })));
+    assert.equal(c.fill, corporateTokens.colors.surfaceVariant);
+    assert.ok(ratio(c.text, c.fill) >= 4.5, `corporate ${ratio(c.text, c.fill)}`);
+    // the same token names resolve to these values in the kids theme
+    assert.equal(c.text, corporateTokens.colors.onSurface);
+    assert.ok(ratio(kidsTokens.colors.onSurface, kidsTokens.colors.surfaceVariant) >= 4.5, 'kids');
+  });
+
+  // Height a tile's content needs: border + padding + optional icon block + capped lines.
+  await check('line cap keeps a long Khmer label inside the real slot sizes', () => {
+    const LONG = KHMER_TEXT.repeat(6);
+    const lineHeight = corporateTokens.typeScale.en.phone.caption.lineHeight;
+    const cases = [
+      { name: 'ArrangeImage mobile 125px, 5px border', style: { width: 125, height: 125, borderWidth: 5 }, border: 5, icon: true },
+      { name: '130px with the same 5px border (border width decides the cap)', style: { width: 130, height: 130, borderWidth: 5 }, border: 5, icon: true },
+      { name: 'MCQ mobile 150px', style: { width: 150, height: 150 }, border: 1, icon: true },
+      { name: '100px, no icon', style: { width: 100, height: 100 }, border: 1, icon: false },
+    ];
+    for (const c of cases) {
+      const r = render(h(OptionImage, { source: '', label: LONG, style: c.style }));
+      const lines = r.root.findAll(n => n.props.numberOfLines !== undefined && typeof n.type !== 'string')[0].props.numberOfLines;
+      assert.ok(lines >= 1, c.name);
+      assert.equal(r.root.findAll(n => n.type === 'svg').length, c.icon ? 1 : 0, c.name);
+      const needed = c.border * 2 + 16 + (c.icon ? 32 : 0) + lines * lineHeight;
+      assert.ok(needed <= c.style.height, `${c.name}: needs ${needed}px in ${c.style.height}px (${lines} lines)`);
+      // and one more line would not fit, so the cap is not needlessly small
+      assert.ok(needed + lineHeight > c.style.height, `${c.name}: cap is too small`);
     }
+  });
+
+  await check('MCQImageItem: the revealed correct option is highlighted but not announced as selected', () => {
+    const opt = option({ filename: 'cat.png', filetype: 6 }, 'Cat'); // questionoptioniscorrect: true
+    const r = render(h(MCQImageItem, { option: opt, index: 0, isSelected: false, isShowingAnswer: true, onPress: () => undefined }));
+    assert.equal(wrapper(r).props.isSelected, true); // visual highlight kept
+    const el = labelled(r)[0];
+    assert.notEqual(el.props['aria-pressed'], true);
+    assert.equal(wrapper(r).props.accessibilityState.selected, false);
+    const picked = render(h(MCQImageItem, { option: opt, index: 0, isSelected: true, isShowingAnswer: true, onPress: () => undefined }));
+    assert.equal(picked.root.findAll(n => n.props['data-testid'] === 'answer-option-0')[0].props['aria-pressed'], true);
   });
 
   const dropOption = (file: unknown, text: string) =>

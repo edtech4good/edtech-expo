@@ -1,6 +1,9 @@
 import { useTypeRole } from '@/services';
 import {
   hasImageSource,
+  ICON_GAP,
+  ICON_SIZE,
+  maxLabelLines,
   placeholderLabel,
   shouldShowPlaceholder,
 } from '@/utils/optionImage';
@@ -20,8 +23,6 @@ import ImageOffIcon from '../ui/icons/ImageOffIcon';
 
 /** Slots shorter than this drop the icon so a wrapped (Khmer) label has room. */
 const SHORT_SLOT_HEIGHT = 120;
-/** Border (1 + 1) plus the tile's vertical padding, subtracted before counting lines. */
-const TILE_CHROME = 2;
 
 export interface OptionImageSlot {
   source: string;
@@ -110,18 +111,22 @@ export default function OptionImage({
     );
   }
 
-  const height = StyleSheet.flatten(style as StyleProp<ViewStyle>)?.height;
+  const flat = StyleSheet.flatten(style as StyleProp<ViewStyle>);
+  const height = flat?.height;
   const isShort = typeof height === 'number' && height < SHORT_SLOT_HEIGHT;
+  // The caller's style can widen the border (ArrangeImage uses 5), so read it.
+  const borderWidth =
+    typeof flat?.borderWidth === 'number' ? flat.borderWidth : 1;
   // Keep the wrapped label inside the box: ellipsis instead of a clipped line.
   const numberOfLines =
     typeof height === 'number'
-      ? Math.max(
-          1,
-          Math.floor(
-            (height - TILE_CHROME - theme.layouts.small * 2) /
-              caption.lineHeight,
-          ),
-        )
+      ? maxLabelLines({
+          height,
+          borderWidth,
+          padding: theme.layouts.small,
+          lineHeight: caption.lineHeight,
+          showIcon: !isShort,
+        })
       : undefined;
 
   const inParent = slot !== undefined;
@@ -149,12 +154,15 @@ export default function OptionImage({
         },
         style as StyleProp<ViewStyle>,
       ]}>
-      {!isShort && <ImageOffIcon color={theme.colors.onSurfaceVariant} />}
+      {!isShort && <ImageOffIcon
+          color={theme.colors.onSurfaceVariant}
+          size={ICON_SIZE}
+        />}
       <Text
         numberOfLines={numberOfLines}
         ellipsizeMode="tail"
         style={{
-          marginTop: isShort ? 0 : theme.layouts.small,
+          marginTop: isShort ? 0 : ICON_GAP,
           maxWidth: '100%',
           textAlign: 'center',
           fontFamily: caption.fontFamily,

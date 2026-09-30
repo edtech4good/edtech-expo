@@ -156,7 +156,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           disabled={isShowingAnswer}
           accessibilityRole="button"
           accessibilityLabel={slot.accessibilityLabel}
-          aria-selected={indexToSwap === index}
+          aria-pressed={indexToSwap === index}
           accessibilityState={{
             selected: indexToSwap === index,
             disabled: isShowingAnswer,
