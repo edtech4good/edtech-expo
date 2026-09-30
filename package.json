@@ -31,6 +31,7 @@
     "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx",
     "test:ordering": "tsx src/screens/Practice/Corporate/__tests__/textOrdering.ts",
     "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts",
+    "test:questionkey": "tsx src/components/practices/__tests__/questionKey.ts && tsx src/components/practices/__tests__/questionRemount.tsx",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {
