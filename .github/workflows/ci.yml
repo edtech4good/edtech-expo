@@ -63,8 +63,14 @@ jobs:
       - name: Drag primitive logic
         run: yarn test:drag
 
+      - name: Corporate question kit logic
+        run: yarn test:kit
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
+
+      - name: No dev-only assets in the web export
+        run: bash scripts/check-web-export.sh /tmp/expo-web-export
 
       - name: Set up Node 18.19.1 (EAS floor)
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

@@ -129,7 +129,12 @@ export default function QuizOption({
           marginLeft: 12,
           fontFamily,
           fontSize: 15,
-          color: theme.colors.onSurface,
+          // Selected: teal text per the design, from `selectionText` (4.77:1
+          // on white) rather than `selection` (4.14:1, under 4.5 for text).
+          color:
+            state === 'selected'
+              ? theme.colors.selectionText
+              : theme.colors.onSurface,
         }}>
         {label}
       </Text>

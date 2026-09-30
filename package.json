@@ -25,7 +25,8 @@
     "test:answer": "tsx src/utils/__tests__/answerV1.ts",
     "test:image": "tsx src/components/practices/__tests__/OptionImage.tsx",
     "test:layout": "tsx src/screens/Practice/Components/__tests__/imageLayout.ts",
-    "test:drag": "tsx src/components/drag/__tests__/reorder.ts"
+    "test:drag": "tsx src/components/drag/__tests__/reorder.ts",
+    "test:kit": "tsx src/components/kit/__tests__/audioManager.ts && tsx src/components/kit/__tests__/resultStrip.ts && tsx src/components/kit/__tests__/announcer.ts && tsx src/components/kit/__tests__/tileStyle.ts && tsx src/components/kit/__tests__/i18n.ts && tsx src/components/kit/__tests__/contrast.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.21.0",

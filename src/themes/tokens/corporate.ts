@@ -36,11 +36,17 @@ const colors: ThemeTokens['colors'] = {
   shadow: 'rgba(9,16,29,0.05)',
   // U-24: onPrimary-on-error (white text/icons) 2.97 -> 4.99
   error: '#C7420A',
+  // "Not quite" title on the 8% error tint: `error` is 4.46:1 there (< 4.5);
+  // this darker orange is 5.05:1.
+  errorText: '#B93C08',
   customAppBar: '#FFFFFF',
   customHeaderTitle: '#09101D',
 
   // U-23: selection ring on white 2.67 -> 4.14
   selection: '#078A95',
+  // Selected-option TEXT on white: #078A95 is 4.14:1 (< 4.5 for 14px), this
+  // is 4.77:1. Same hue; the radio ring keeps `selection` (UI floor 3:1).
+  selectionText: '#067F89',
   success: '#22DB8D',
   // StatusIcon's done-check mark on the mint `success` disc: #064E32 on
   // #22DB8D is 5.40:1 (WCAG UI-component floor is 3:1).

@@ -33,10 +33,15 @@ const colors: ThemeTokens['colors'] = {
   placeholder: '#94A3B8',
   shadow: '#00000015',
   error: '#FF640D',
+  // Parity with corporate; only the corporate result strip uses it.
+  errorText: '#B93C08',
   customAppBar: '#F8FAFC',
   customHeaderTitle: '#334155',
 
   selection: '#06AFBC',
+  // Parity with corporate; kids never renders a selected-option label in it
+  // (the corporate QuizOption is the only user). 4.77:1 on white.
+  selectionText: '#067F89',
   success: '#22DB8D',
   // Same value and same rationale as corporate: #064E32 on #22DB8D is 5.40:1.
   onSuccess: '#064E32',
