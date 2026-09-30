@@ -69,6 +69,9 @@ jobs:
       - name: Corporate question shell, registry and one audio player
         run: yarn test:shell
 
+      - name: Corporate fill in the blank
+        run: yarn test:fillblank
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

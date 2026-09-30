@@ -263,5 +263,11 @@
     "review": "Review",
     "continueLesson": "Continue Lesson {{n}}",
     "startLesson": "Start Lesson {{n}}"
+  },
+  "corporate": {
+    "fillBlank": {
+      "hintActive": "Blank {{n}} of {{total}}. Tap a word to fill it.",
+      "hintDone": "All blanks are filled. Tap a blank to change its word."
+    }
   }
 }
