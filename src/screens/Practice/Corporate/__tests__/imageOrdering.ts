@@ -20,6 +20,8 @@ import {
   optionMedia,
   optionsInOrder,
   pictureTileState,
+  shuffleNotCorrect,
+  SHUFFLE_TRIES,
 } from '../ImageOrdering/imageOrderingLogic';
 import {
   DESKTOP_IMAGE_HEIGHT,
@@ -119,6 +121,47 @@ check('tile state: answer shown beats marks beats drag beats pick', () => {
   assert.equal(pictureTileState('a', { picked: true, lifted: false, marks: null, showAnswer: false }), 'picked');
   assert.equal(pictureTileState('a', { picked: true, lifted: true, marks: null, showAnswer: false }), 'dragging');
   assert.equal(pictureTileState('a', { ...base, marks: null, showAnswer: false }), 'default');
+});
+
+// ---- the starting shuffle ---------------------------------------------------
+const seeded = (seed: number) => () => {
+  seed = (seed * 1664525 + 1013904223) % 4294967296;
+  return seed / 4294967296;
+};
+check('2, 3, 4 and 6 pictures never start correct, across 3000 seeds', () => {
+  for (const n of [2, 3, 4, 6]) {
+    const set = Array.from({ length: n }, (_, i) => ({ questionoptionid: `p${i}`, questionoptionsequence: i + 1 }));
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 3000; seed++) {
+      const order = shuffleNotCorrect(set, seeded(seed));
+      assert.equal(order.length, n);
+      assert.equal(evaluateImageOrdering(set, order.map(o => o.questionoptionid)).iscorrect, false, `n=${n} seed=${seed}`);
+      seen.add(order.map(o => o.questionoptionid).join());
+    }
+    assert.ok(n === 2 ? seen.size === 1 : seen.size > 1, 'varies when it can');
+  }
+});
+check('a run of unlucky draws is retried, not accepted', () => {
+  const set = [1, 2, 3].map(i => ({ questionoptionid: `p${i}`, questionoptionsequence: i }));
+  // rng of 0.99 never swaps in the first pass, so the first shuffle is the identity (correct)
+  let calls = 0;
+  const rng = () => (calls++ < 2 ? 0.99 : 0);
+  const order = shuffleNotCorrect(set, rng);
+  assert.equal(evaluateImageOrdering(set, order.map(o => o.questionoptionid)).iscorrect, false);
+});
+check('when no order is wrong (all sequences equal, or one picture) it still ends', () => {
+  const same = [1, 2, 3].map(i => ({ questionoptionid: `s${i}`, questionoptionsequence: 5 }));
+  let calls = 0;
+  const order = shuffleNotCorrect(same, () => (calls++, 0.5));
+  assert.equal(order.length, 3);
+  assert.ok(calls <= SHUFFLE_TRIES * same.length, `calls ${calls}`);
+  assert.equal(shuffleNotCorrect([same[0]]).length, 1);
+  assert.equal(shuffleNotCorrect([]).length, 0);
+});
+check('the body starts each attempt from shuffleNotCorrect', () => {
+  const s = src('ImageOrdering/ImageOrderingBody.tsx');
+  assert.match(s, /shuffleNotCorrect\(questionOptions\)/);
+  assert.doesNotMatch(s, /_\.shuffle\(/);
 });
 
 // ---- option media ----------------------------------------------------------

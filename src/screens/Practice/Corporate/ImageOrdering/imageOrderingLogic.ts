@@ -98,3 +98,31 @@ export function optionMedia(option: {
     (f?.filetype === undefined && f?.fileext?.toLowerCase() === 'mp3');
   return isAudio ? { imageName: '', audioName: name } : { imageName: name, audioName: '' };
 }
+
+/** Tries before giving up on finding a wrong order (see shuffleNotCorrect). */
+export const SHUFFLE_TRIES = 50;
+
+/**
+ * The starting order of an attempt: shuffled, and never already correct when
+ * a wrong order exists. Every picture starts placed, so an untouched Submit
+ * would otherwise record a pass (1 time in 6 for three pictures). It reshuffles
+ * until the shared grade says wrong, at most SHUFFLE_TRIES times; when there is
+ * no wrong order (one picture, or every sequence equal) the last shuffle is
+ * used, so it always ends.
+ */
+export function shuffleNotCorrect<T extends OrderingOption>(
+  options: ReadonlyArray<T>,
+  random: () => number = Math.random,
+): T[] {
+  const once = () => {
+    const a = [...options];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  let order = once();
+  for (let n = 1; n < SHUFFLE_TRIES && gradeArrangeImage(order).correct; n++) order = once();
+  return order;
+}

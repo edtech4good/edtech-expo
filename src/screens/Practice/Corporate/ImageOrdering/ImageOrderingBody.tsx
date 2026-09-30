@@ -20,6 +20,7 @@ import {
   evaluateImageOrdering,
   optionMedia,
   pictureTileState,
+  shuffleNotCorrect,
 } from './imageOrderingLogic';
 import { imageOrderingLayout } from './imageOrderingLayout';
 
@@ -60,7 +61,7 @@ export default function ImageOrderingBody({
   // Reshuffled per attempt, as today (keyed on tries). Show answer swaps in
   // the correct order, which also clears the learner's arrangement.
   const items: PictureItem[] = useMemo(() => {
-    const shown = showAnswer ? correctOrder(questionOptions) : _.shuffle(questionOptions);
+    const shown = showAnswer ? correctOrder(questionOptions) : shuffleNotCorrect(questionOptions);
     return shown.map(o => ({
       id: o.questionoptionid,
       label: o.questionoptiontext,
@@ -122,31 +123,29 @@ export default function ImageOrderingBody({
 
   return (
     <View style={{ rowGap: 12 }}>
-      {hintText ? (
-        <View
-          accessibilityLiveRegion="polite"
-          style={
-            picked
-              ? {
-                  backgroundColor: theme.colors.primaryLight,
-                  borderRadius: 12,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                }
-              : { minHeight: 20 }
-          }>
-          <Text
-            testID="image-ordering-hint"
-            style={{
-              fontFamily: small.fontFamily,
-              fontSize: small.fontSize,
-              lineHeight: small.lineHeight,
-              color: picked ? theme.colors.onBackground : theme.colors.onSurfaceVariant,
-            }}>
-            {hintText}
-          </Text>
-        </View>
-      ) : null}
+      {/* The line keeps two lines of room whatever it says (or after
+          submit, when it says nothing), so the grid never shifts. */}
+      <View
+        accessibilityLiveRegion="polite"
+        style={{
+          minHeight: small.lineHeight * 2 + 16,
+          backgroundColor: picked ? theme.colors.primaryLight : 'transparent',
+          borderRadius: 12,
+          paddingHorizontal: picked ? 12 : 0,
+          paddingVertical: picked ? 8 : 0,
+          justifyContent: 'center',
+        }}>
+        <Text
+          testID="image-ordering-hint"
+          style={{
+            fontFamily: small.fontFamily,
+            fontSize: small.fontSize,
+            lineHeight: small.lineHeight,
+            color: picked ? theme.colors.onBackground : theme.colors.onSurfaceVariant,
+          }}>
+          {hintText ?? ''}
+        </Text>
+      </View>
       <View
         ref={gridRef}
         onLayout={e => {
