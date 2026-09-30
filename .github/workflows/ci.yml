@@ -72,6 +72,8 @@ jobs:
       - name: Corporate question shell, registry and one audio player
         run: yarn test:shell
 
+      - name: Corporate picture ordering (marks, sizing, wiring)
+        run: yarn test:image-ordering
       - name: Corporate word ordering (marks, read-back)
         run: yarn test:ordering
       - name: Corporate fill in the blank

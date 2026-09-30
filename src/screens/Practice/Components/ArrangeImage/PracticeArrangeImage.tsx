@@ -16,7 +16,7 @@ import { PracticeProps } from '../../PracticeScreen';
 import { useTheme } from 'styled-components/native';
 import { useBreakpoint, useResource, useScreenDimension } from '@/services';
 import _ from 'lodash';
-import { orderAnswer } from '@/utils/answerV1';
+import { gradeArrangeImage } from './arrangeImageGrade';
 import {
   Container,
   Expanded,
@@ -109,28 +109,9 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         onSubmit(attempt.tries, false, true);
         return;
       }
-      let isCorrect = true;
-      const answers = Object.values(attempt.selections);
+      const { correct, answer } = gradeArrangeImage(options);
 
-      const { correct } = _.reduce(
-        options,
-        (result, value, index) => {
-          console.log('Current Seq: ', value.questionoptionsequence);
-          console.log('Seq: ', result.currentSequence);
-          if (value.questionoptionsequence < result.currentSequence)
-            result.correct = false;
-          result.currentSequence = value.questionoptionsequence;
-          return result;
-        },
-        { correct: true, currentSequence: 0 },
-      );
-
-      onSubmit(
-        attempt.tries,
-        correct,
-        false,
-        orderAnswer(_.map(options, o => o.questionoptionid)),
-      );
+      onSubmit(attempt.tries, correct, false, answer);
     };
 
     const handleRetry = (chargeAttempt = false) => {
