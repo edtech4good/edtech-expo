@@ -89,6 +89,9 @@ check('gap to target index: later gaps shift down by one', () => {
   assert.equal(targetIndexForGap(0, 4), 3);
   // To the very end.
   assert.equal(targetIndexForGap(0, 6), 5);
+  // Both gaps beside the item leave it where it is.
+  assert.equal(targetIndexForGap(2, 2), 2);
+  assert.equal(targetIndexForGap(2, 3), 2);
   assert.equal(isNoopGap(2, 2), true);
   assert.equal(isNoopGap(2, 3), true);
   assert.equal(isNoopGap(2, 1), false);
