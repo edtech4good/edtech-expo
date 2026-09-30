@@ -263,5 +263,16 @@
     "review": "Review",
     "continueLesson": "Continue Lesson {{n}}",
     "startLesson": "Start Lesson {{n}}"
+  },
+  "corporate": {
+    "textOrdering": {
+      "hintBefore": "Drag a word",
+      "hintAfter": "to move it, or tap two words to swap them.",
+      "picked": "“{{label}}” picked.",
+      "pickedHelp": "Tap the word to swap it with, or tap it again to cancel.",
+      "moving": "Moving “{{label}}”.",
+      "movingTo": "Release to place it {{place}}.",
+      "movingBack": "Release to put it back."
+    }
   }
 }

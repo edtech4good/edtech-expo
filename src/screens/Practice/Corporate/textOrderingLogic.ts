@@ -98,3 +98,77 @@ export function wordState(
   if (opts.marks) return opts.marks[id] ?? 'default';
   return opts.picked ? 'picked' : 'default';
 }
+
+/** A source of numbers in [0, 1), like Math.random (tests pass a seeded one). */
+export type Rng = () => number;
+
+function fisherYates<T>(xs: ReadonlyArray<T>, rng: Rng): T[] {
+  const a = [...xs];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Whether some order of these options grades wrong (false when all sequences are equal, or under two options). */
+export function hasWrongOrder(options: ReadonlyArray<OrderingOption>): boolean {
+  return new Set(options.map(o => o.questionoptionsequence)).size > 1;
+}
+
+/**
+ * The starting order of an attempt: shuffled, and never already correct
+ * (an untouched Submit must not pass). It reshuffles a bounded number of
+ * times, then falls back to the correct order with one out-of-order pair
+ * swapped, so it always ends. When every sequence is equal no wrong order
+ * exists, and the plain shuffle is used.
+ */
+export function shuffledNotSolved<T extends OrderingOption>(
+  options: ReadonlyArray<T>,
+  rng: Rng = Math.random,
+  maxTries = 30,
+): T[] {
+  if (!hasWrongOrder(options)) return fisherYates(options, rng);
+  for (let i = 0; i < maxTries; i++) {
+    const candidate = fisherYates(options, rng);
+    if (!gradeArrangeText(options, candidate).isCorrect) return candidate;
+  }
+  const sorted = correctOrder(options);
+  const k = sorted.findIndex((o, i) => i > 0 && o.questionoptionsequence !== sorted[i - 1].questionoptionsequence);
+  [sorted[k - 1], sorted[k]] = [sorted[k], sorted[k - 1]];
+  return sorted;
+}
+
+export type ListStatus =
+  | { kind: 'idle' }
+  | { kind: 'picked'; id: string; label: string }
+  | { kind: 'dragging'; id: string; label: string; target: string | null };
+
+/**
+ * The instruction line's content for the list's status: which i18n keys,
+ * and with what values. `lead` is the part shown in bold.
+ */
+export function bannerFor(status: ListStatus): {
+  live: boolean;
+  lead?: { key: string; values?: Record<string, string> };
+  rest: { key: string; values?: Record<string, string> } | null;
+} {
+  switch (status.kind) {
+    case 'picked':
+      return {
+        live: true,
+        lead: { key: 'corporate.textOrdering.picked', values: { label: status.label } },
+        rest: { key: 'corporate.textOrdering.pickedHelp' },
+      };
+    case 'dragging':
+      return {
+        live: true,
+        lead: { key: 'corporate.textOrdering.moving', values: { label: status.label } },
+        rest: status.target
+          ? { key: 'corporate.textOrdering.movingTo', values: { place: status.target } }
+          : { key: 'corporate.textOrdering.movingBack' },
+      };
+    default:
+      return { live: false, rest: null };
+  }
+}
