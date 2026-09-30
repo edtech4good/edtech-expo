@@ -6,7 +6,7 @@ import _ from 'lodash';
 
 import { QuestionOption } from '@/models';
 import { useResource } from '@/services';
-import { GripGlyph, ReorderableList, ReorderItem } from '@/components/drag';
+import { ReorderableList, ReorderItem } from '@/components/drag';
 import { useSmallText } from '@/components/kit/kitText';
 import MovableTile from '@/components/kit/MovableTile';
 import OptionAudioCircle from '@/components/kit/OptionAudioCircle';
@@ -112,17 +112,10 @@ export default function TextOrderingBody({
             {t(banner.rest.key, banner.rest.values)}
           </Text>
         ) : (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              columnGap: 4,
-            }}>
-            <Text style={line}>{t('corporate.textOrdering.hintBefore')}</Text>
-            <GripGlyph color={theme.colors.placeholder} />
-            <Text style={line}>{t('corporate.textOrdering.hintAfter')}</Text>
-          </View>
+          <Text style={line}>
+            {t('corporate.textOrdering.hintBefore')}{' '}⠿{' '}
+            {t('corporate.textOrdering.hintAfter')}
+          </Text>
         )}
       </View>
       <View
