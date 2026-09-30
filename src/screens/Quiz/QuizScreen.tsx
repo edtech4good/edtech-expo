@@ -42,7 +42,7 @@ import {
 } from 'react-native';
 import { createTimeStamp } from '@/utils';
 import { router, useNavigation } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from 'react-native';
 import { useTheme } from 'styled-components/native';
@@ -57,6 +57,8 @@ import PracticeArrangeImage from '../Practice/Components/ArrangeImage/PracticeAr
 import PracticeDragDrop from '../Practice/Components/DragDrop/PracticeDragDrop';
 import { useTranslation } from 'react-i18next';
 import type { AnswerV1 } from '@/utils/answerV1';
+import type { SubmitOptions } from '../Practice/Corporate/types';
+import { AnnouncerProvider } from '@/components/kit/Announcer';
 
 // Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
 // for the full rationale; kept identical here so both screens' headers
@@ -267,6 +269,7 @@ export default function QuizScreen() {
     isCorrect: boolean,
     isShowingAnswer?: boolean,
     answer?: AnswerV1 | null,
+    options?: SubmitOptions,
   ) => {
     const result = toQuizQuestionResult(isCorrect, currentQuestion, answer);
     const currentResults = methods.getValues('result');
@@ -281,7 +284,9 @@ export default function QuizScreen() {
         : undefined;
     setModal(val => ({
       isCorrect,
-      isVisible: true,
+      // An inline result (corporate question shell) replaces the popup; the
+      // renderer calls onContinue for the popup's button instead.
+      isVisible: !options?.inlineResult,
       customMessages,
     }));
     console.log('Cur Result: ', methods.getValues('result'));
@@ -290,6 +295,14 @@ export default function QuizScreen() {
   const handleRetryPress = () => {
     if (!practiceRef.current) return;
   };
+
+  // PracticeContent memoises the renderer; hand it a stable function that
+  // always runs the current handleModalPress (see PracticeScreen).
+  const modalPressRef = useRef(handleModalPress);
+  modalPressRef.current = handleModalPress;
+  const handleContinue = useCallback(() => {
+    void modalPressRef.current();
+  }, []);
 
   if (_.isEmpty(currentQuestion)) {
     if (isCorporate) {
@@ -309,122 +322,127 @@ export default function QuizScreen() {
   }
 
   return (
-    <LayoutScrollView backgroundColor={theme.colors.background}>
-      {isCorporate && (
-        <ProgressBar
-          testID="practice-progress-track"
-          variant="quiz"
-          progress={
-            questions.length > 0 ? (question + 1) / questions.length : 0
-          }
-        />
-      )}
-      <PracticeContent
-        ref={practiceRef}
-        key={currentQuestion.question.questionnid}
-        question={currentQuestion.question}
-        currentQuestionIndex={question + 1}
-        maxQuestion={questions.length}
-        onSubmit={handleSubmitPress}
-        onRetry={handleRetryPress}
-        // Quiz is scored, not retried — no Retry equivalent exists here
-        // (handleRetryPress above is a no-op stub), so hide the pill.
-        hideRetry
-      />
-      {/* {currentQuestion.question.templatetypeid === 7 && (
-        <PracticeDragDrop
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )}
-      {(currentQuestion.question.templatetypeid === 1 ||
-        currentQuestion.question.templatetypeid === 3) && (
-        <PracticeMCQText
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )}
-      {(currentQuestion.question.templatetypeid === 4 ||
-        currentQuestion.question.templatetypeid === 2) && (
-        <PracticeMCQImage
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )}
-
-      {currentQuestion.question.templatetypeid === 5 && (
-        <PracticeArrangeText
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )}
-
-      {currentQuestion.question.templatetypeid === 8 && (
-        <PracticeFillBlank
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )}
-
-      {currentQuestion.question.templatetypeid === 6 && (
-        <PracticeArrangeImage
-          ref={practiceRef}
-          key={currentQuestion.question.questionnid}
-          question={currentQuestion.question}
-          currentQuestionIndex={question + 1}
-          maxQuestion={questions.length}
-          onSubmit={handleSubmitPress}
-          onRetry={handleRetryPress}
-        />
-      )} */}
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        presentationStyle="overFullScreen"
-        visible={isVisible}>
-        <BlackVeil opacity={0.8} />
-        <Expanded justifyContent="center" alignItems="center">
-          <ResultPopUp
-            isCorrect={isCorrect}
-            customMessages={customMessages}
-            onPress={handleModalPress}
+    // One announcer per screen: the corporate result strip speaks through it.
+    <AnnouncerProvider>
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        {isCorporate && (
+          <ProgressBar
+            testID="practice-progress-track"
+            variant="quiz"
+            progress={
+              questions.length > 0 ? (question + 1) / questions.length : 0
+            }
           />
-        </Expanded>
-      </Modal>
-      <GenericModal
-        ref={promptModalRef}
-        type="prompt"
-        onCancel={() => {
-          promptModalRef.current?.hide();
-        }}
-        onConfirm={handleGoBack}
-      />
-    </LayoutScrollView>
+        )}
+        <PracticeContent
+          ref={practiceRef}
+          key={currentQuestion.question.questionnid}
+          question={currentQuestion.question}
+          currentQuestionIndex={question + 1}
+          maxQuestion={questions.length}
+          onSubmit={handleSubmitPress}
+          onRetry={handleRetryPress}
+          // Quiz is scored, not retried — no Retry equivalent exists here
+          // (handleRetryPress above is a no-op stub), so hide the pill.
+          hideRetry
+          mode="quiz"
+          onContinue={handleContinue}
+        />
+        {/* {currentQuestion.question.templatetypeid === 7 && (
+          <PracticeDragDrop
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )}
+        {(currentQuestion.question.templatetypeid === 1 ||
+          currentQuestion.question.templatetypeid === 3) && (
+          <PracticeMCQText
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )}
+        {(currentQuestion.question.templatetypeid === 4 ||
+          currentQuestion.question.templatetypeid === 2) && (
+          <PracticeMCQImage
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )}
+
+        {currentQuestion.question.templatetypeid === 5 && (
+          <PracticeArrangeText
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )}
+
+        {currentQuestion.question.templatetypeid === 8 && (
+          <PracticeFillBlank
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )}
+
+        {currentQuestion.question.templatetypeid === 6 && (
+          <PracticeArrangeImage
+            ref={practiceRef}
+            key={currentQuestion.question.questionnid}
+            question={currentQuestion.question}
+            currentQuestionIndex={question + 1}
+            maxQuestion={questions.length}
+            onSubmit={handleSubmitPress}
+            onRetry={handleRetryPress}
+          />
+        )} */}
+
+        <Modal
+          animationType="fade"
+          transparent={true}
+          presentationStyle="overFullScreen"
+          visible={isVisible}>
+          <BlackVeil opacity={0.8} />
+          <Expanded justifyContent="center" alignItems="center">
+            <ResultPopUp
+              isCorrect={isCorrect}
+              customMessages={customMessages}
+              onPress={handleModalPress}
+            />
+          </Expanded>
+        </Modal>
+        <GenericModal
+          ref={promptModalRef}
+          type="prompt"
+          onCancel={() => {
+            promptModalRef.current?.hide();
+          }}
+          onConfirm={handleGoBack}
+        />
+      </LayoutScrollView>
+    </AnnouncerProvider>
   );
 }

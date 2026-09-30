@@ -8,9 +8,9 @@ import { Image, Text } from 'react-native';
 import { Images } from '@/assets';
 import BaseButton from '../buttons/BaseButton';
 import _ from 'lodash';
-import { Audio } from 'expo-av';
-import { useEffect, useMemo } from 'react';
 import { useDesign, useFont, useResource } from '@/services';
+// Direct path, not the kit barrel: the barrel pulls in every kit component.
+import { useReplayClip } from '../kit/audio/useReplayClip';
 
 interface Props {
   heading: QuestionHeading;
@@ -23,40 +23,19 @@ export default function PracticeHeading({ heading }: Props) {
 
   console.log('Practice Heading: ', heading.headingtext);
 
-  const playbackObject = useMemo(() => new Audio.Sound(), []);
   const audioSource = useResource(
     {
       name: _.get(heading, 'headingfile.filename', ''),
     },
     [heading],
   );
-
-  useEffect(() => {
-    if (_.isEmpty(audioSource)) return;
-    handleLoadAudio();
-
-    return () => {
-      playbackObject.unloadAsync();
-    };
-  }, [audioSource]);
-
-  const handleLoadAudio = async () => {
-    await playbackObject.unloadAsync();
-    await playbackObject.loadAsync(
-      { uri: audioSource },
-      { shouldPlay: false, isLooping: false },
-    );
-  };
+  // The shared player: starting this clip stops any other (an option's
+  // audio, another question's), and it stops when the screen goes away.
+  const clip = useReplayClip('heading', audioSource);
 
   const handlePlayAudio = async () => {
     if (_.isEmpty(heading.headingfile)) return;
-    // const { sound: playbackObject } = await Audio.Sound.createAsync(
-    //   {
-    //     uri: audioSource,
-    //   },
-    //   { shouldPlay: true },
-    // );
-    await playbackObject.playFromPositionAsync(0);
+    await clip.play();
   };
 
   const gutter = isCorporate

@@ -24,9 +24,8 @@ export interface QuestionColumnProps {
  * gutters sit outside it.
  *
  * Corporate only. Kids-theme screens keep today's full-width layout, so
- * nothing renders this for them. It is not applied to any screen yet
- * (steps 2 to 6 use it), because the practice screens still own their own
- * padding and scrolling.
+ * nothing renders this for them. CorporateQuestionShell
+ * (screens/Practice/Corporate) wraps every rebuilt question type in it.
  */
 export default function QuestionColumn({
   children,

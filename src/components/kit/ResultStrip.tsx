@@ -29,6 +29,12 @@ export interface ResultStripProps {
   /** Correct state only: the finished answer read back, e.g. the sentence. */
   readBack?: string;
   /**
+   * The question's own feedback (questionfeedback.correctmessage or
+   * incorrectmessage), when the author wrote one. It replaces the generic
+   * summary line, as it replaced the popup's message.
+   */
+  message?: string;
+  /**
    * Footer actions. Give the handlers you want shown; the strip lays out
    * "Next" (correct) or "Show answer" + "Try again" (incorrect). Leave them
    * all out to render only the strip and put the buttons in the screen's
@@ -73,6 +79,7 @@ function ResultStripBody({
   correctCount,
   total,
   readBack,
+  message,
   onNext,
   onShowAnswer,
   onTryAgain,
@@ -90,8 +97,11 @@ function ResultStripBody({
 
   const input = { kind, correctCount, total };
   const title = resultTitle(kind, t);
-  const summary = resultSummary(input, t);
-  const spoken = resultAnnouncement({ ...input, readBack: correct ? readBack : undefined }, t);
+  const summary = message || resultSummary(input, t);
+  const spoken = message
+    ? t('kit.result.announce', { title, summary: message }) +
+      (correct && readBack ? ` ${t('kit.result.readBack', { text: readBack })}` : '')
+    : resultAnnouncement({ ...input, readBack: correct ? readBack : undefined }, t);
 
   // Announce on appearance and whenever the words change. Native: one
   // announce call. Web: the host's always-mounted region (see announcerLogic.ts).

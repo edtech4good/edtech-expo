@@ -7,6 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { audioManager } from '@/components/kit/audio/audioManager';
 import { BlackVeil, Expanded, LayoutScrollView } from '@/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -228,6 +229,12 @@ export default function LessonScreen() {
   };
 
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    // One sound at a time: when the video starts playing (our controls, the
+    // native iOS ones, or autoplay), stop any question or option audio still
+    // playing on the shared player.
+    const wasPlaying = methods.getValues('stat.isPlaying');
+    if (status.isLoaded && status.isPlaying && !wasPlaying)
+      void audioManager.stop();
     methods.setValue('stat', status);
   };
 

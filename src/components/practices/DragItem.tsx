@@ -3,13 +3,13 @@ import { MatchingItemHandler, MatchingItemProps } from '@/models';
 import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { Animated, Image, Pressable } from 'react-native';
 import { useTheme } from 'styled-components/native';
-import { Audio } from 'expo-av';
 import H4 from '../texts/H4';
 import _ from 'lodash';
 import { useResource } from '@/services';
 import H6 from '../texts/H6';
 import SH3 from '../texts/SH3';
 import OptionImage, { useOptionImageSlot } from './OptionImage';
+import { useReplayClip } from '../kit/audio/useReplayClip';
 
 interface DragItemProps extends MatchingItemProps {
   isShowingAnswer?: boolean;
@@ -52,7 +52,8 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
   );
   const slot = useOptionImageSlot(fileSource, associateText);
 
-  const playbackObject = useMemo(() => new Audio.Sound(), []);
+  // The associate's audio on the shared player (one clip at a time).
+  const clip = useReplayClip('associate', fileSource);
 
   useImperativeHandle(
     ref,
@@ -91,23 +92,6 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
     if (isShowingAnswer) zoomOutFadeOut();
     else zoomInFadeIn();
   }, [isShowingAnswer]);
-
-  useEffect(() => {
-    if (_.isEmpty(fileSource)) return;
-    handleLoadAudio();
-
-    return () => {
-      playbackObject.unloadAsync();
-    };
-  }, [fileSource]);
-
-  const handleLoadAudio = async () => {
-    await playbackObject.unloadAsync();
-    await playbackObject.loadAsync(
-      { uri: fileSource },
-      { shouldPlay: false, isLooping: false },
-    );
-  };
 
   const startShaking = () => {
     animatedObject = Animated.loop(
@@ -173,14 +157,12 @@ export default forwardRef<MatchingItemHandler, DragItemProps>(function DragItem(
   };
 
   const handleAudioIconPress = async () => {
-    if (_.isEmpty(option.questionoptionfile)) return;
-    await playbackObject.playFromPositionAsync(0);
-    // const { sound: playbackObject } = await Audio.Sound.createAsync(
-    //   {
-    //     uri: fileSource,
-    //   },
-    //   { shouldPlay: true },
-    // );
+    // The button is drawn for the associate's own (non-image) file, so that
+    // is the file to check and play. This used to check the option's file
+    // instead, so an associate with audio and an option without any gave a
+    // button that did nothing.
+    if (_.isEmpty(file?.filename)) return;
+    await clip.play();
   };
 
   return (
