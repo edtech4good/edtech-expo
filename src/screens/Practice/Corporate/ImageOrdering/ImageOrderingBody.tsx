@@ -135,7 +135,7 @@ export default function ImageOrderingBody({
   // or Show answer): it gives its room back. While it shows, two lines of
   // room are kept so picking a photo never moves the grid. The list itself
   // announces a pick, so the line is not a live region (it would be read twice).
-  const hintShown = !disabled && resultState === 'answering' && !compact;
+  const hintShown = resultState === 'answering' && !compact;
   const hintText =
     status.kind === 'picked'
       ? t('corporate.imageOrdering.picked', { label: status.label })

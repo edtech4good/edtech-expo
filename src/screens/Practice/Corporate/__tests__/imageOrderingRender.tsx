@@ -157,8 +157,7 @@ function main() {
   check('the hint shows while answering, and not compact, after Submit or Show answer; it is not a live region', () => {
     const r = mount(base(question));
     assert.equal(hint(r).length, 1);
-    const wrapper = hint(r)[0].parent!;
-    assert.equal(wrapper.props.accessibilityLiveRegion, undefined, 'the list announces; the line must not repeat it');
+    assert.equal(r.root.findAll(n => !!n.props?.accessibilityLiveRegion).length, 0, 'the list announces; the line must not repeat it');
     update(r, base(question, { layout: { ...LAYOUT, compact: true } }));
     assert.equal(hint(r).length, 0, 'compact');
     update(r, base(question, { disabled: true, resultState: 'correct', marks: {} }));
