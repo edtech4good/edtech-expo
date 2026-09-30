@@ -31,6 +31,8 @@ import {
 } from '../../screens/Practice/Corporate/mcqTextLogic';
 import { gradeArrangeText } from '../../screens/Practice/Components/ArrangeText/arrangeTextGrade';
 import { evaluateTextOrdering } from '../../screens/Practice/Corporate/textOrderingLogic';
+import { gradeFillBlank } from '../../screens/Practice/Components/FillBlank/fillBlankGrade';
+import { emptyBlanks, evaluateFillBlank, fillActive, tapBlank } from '../../screens/Practice/Corporate/FillBlank/fillBlankLogic';
 import { INITIAL_SHELL_STATE, shellPress } from '../../screens/Practice/Corporate/shellLogic';
 
 // Every answer any test maps goes through these wrappers, which assert the
@@ -648,5 +650,124 @@ check('the shared word-ordering rule equals the old inline one for partial and e
   }
 });
 
+
+// ---------------------------------------------------------------------------
+// Corporate fill in the blank (template 8): for the same final filling, the
+// corporate shell sends exactly what the kids renderer sends, and the
+// server's grader agrees with both. Every filling of the blanks from the
+// bank (real options and distractors) is tried, by tapping words in and by
+// emptying and refilling.
+// ---------------------------------------------------------------------------
+
+/**
+ * PracticeFillBlank's submit, as it was written inline before it moved to
+ * fillBlankGrade.ts. Kept verbatim here so a change to the shared rule shows.
+ */
+function kidsFillBlankAsBefore(questionOptions: Opt[], selections: Opt[]) {
+  const requiredNumberOfAnswer = questionOptions.length;
+  let isCorrect = false;
+  if (selections.length < requiredNumberOfAnswer) isCorrect = false;
+  else {
+    const { correct } = _.reduce(
+      selections,
+      (result, value) => {
+        if (
+          (!_.isBoolean(value.questionoptioniscorrect) && questionOptions.length > 1) ||
+          !_.isNumber(value.questionoptionsequence)
+        ) {
+          result.correct = false;
+        } else if (value.questionoptionsequence < result.currentSequence) {
+          result.correct = false;
+        } else if (!value.questionoptioniscorrect && questionOptions.length > 1) {
+          result.correct = false;
+        }
+        result.currentSequence = value.questionoptionsequence as number;
+        return result;
+      },
+      { correct: true, currentSequence: 0 },
+    );
+    isCorrect = correct;
+  }
+  return { isCorrect, answer: B.blanksAnswer(_.map(selections, o => o.questionoptionid)) };
+}
+
+// A distractor as fromQuestionDistractorToQuestionOption builds it.
+const distract = (n: number, text: string): Opt => ({
+  questionoptionid: U(n),
+  questionoptiontext: text,
+  questionoptioniscorrect: false,
+});
+const distractorA = distract(17, 'ស្អប់');
+const distractorB = distract(18, 'ភ្លេច');
+
+for (const [label, bank] of [
+  ['3 tiles, one distractor', [...fillBlank, distractorA]],
+  ['4 tiles, two distractors', [...fillBlank, distractorA, distractorB]],
+] as const) {
+  check(`corporate fill in the blank, ${label}: answer and iscorrect equal the kids path and the server for every filling`, () => {
+    let n = 0;
+    let right = 0;
+    for (const first of bank) {
+      for (const second of bank) {
+        if (first === second) continue;
+        // The kids renderer appends taps; corporate fills the active blank.
+        const kids = kidsFillBlankAsBefore(fillBlank, [first, second]);
+        assert.deepEqual(gradeFillBlank(fillBlank, [first, second]), kids, 'the shared rule is the old inline one');
+
+        // Path 1: tap the two words in order. Path 2: tap blank 2, place the
+        // second word, then the first (active moves back to blank 1). Path 3:
+        // fill both wrong, empty both, refill.
+        const tap = (s = emptyBlanks(2), ...w: Opt[]) => w.reduce((st, o) => fillActive(st, o.questionoptionid), s);
+        const p1 = tap(undefined, first, second);
+        const p2 = tap(tapBlank(emptyBlanks(2), 1), second, first);
+        const junk = bank.filter(o => o !== first && o !== second);
+        const p3 = tap(tapBlank(tapBlank(tap(undefined, junk[0] ?? second, junk[1] ?? first), 1), 0), first, second);
+        for (const path of [p1, p2, p3]) {
+          assert.deepEqual(path.filled, [first.questionoptionid, second.questionoptionid]);
+          const corp = evaluateFillBlank(fillBlank, bank, path.filled);
+          assert.equal(corp.iscorrect, kids.isCorrect);
+          assert.deepEqual(corp.answer, kids.answer);
+          noEmpty(corp.answer);
+          // The server grades the corporate answer the same way the device did.
+          assert.equal(serverGrade(8, fillBlank, corp.answer), corp.iscorrect);
+          if (corp.iscorrect) right++;
+          // The marks agree with the grade.
+          const all = Object.values(corp.perItem).every(m => m === 'correct') && Object.keys(corp.perItem).length === 2;
+          assert.equal(all, corp.iscorrect);
+        }
+        n++;
+      }
+    }
+    assert.equal(n, bank.length * (bank.length - 1));
+    assert.equal(right, 3, 'only the right filling is right (on each of the three paths)');
+  });
+}
+
+check('corporate fill in the blank: what the shell hands the screen equals the kids result items', () => {
+  const bank = [...fillBlank, distractorA];
+  for (const [first, second] of [[fillBlank[0], fillBlank[1]], [fillBlank[1], distractorA]]) {
+    const kids = kidsFillBlankAsBefore(fillBlank, [first, second]);
+    const filled = [first.questionoptionid, second.questionoptionid];
+    for (const tries of [1, 2, 3]) {
+      const practice = shellPress({ ...INITIAL_SHELL_STATE, tries }, 'submit', {
+        mode: 'practice', ready: true, evaluate: () => evaluateFillBlank(fillBlank, bank, filled),
+      });
+      const quiz = shellPress(INITIAL_SHELL_STATE, 'submit', {
+        mode: 'quiz', ready: true, evaluate: () => evaluateFillBlank(fillBlank, bank, filled),
+      });
+      assert.equal(practice.effect.kind, 'submit');
+      assert.equal(quiz.effect.kind, 'submit');
+      if (practice.effect.kind !== 'submit' || quiz.effect.kind !== 'submit') return;
+      assert.deepEqual(
+        toPracticeQuestionResult(practice.effect.iscorrect, practice.effect.tries, practiceRes, practice.effect.answer),
+        toPracticeQuestionResult(kids.isCorrect, tries, practiceRes, kids.answer),
+      );
+      assert.deepEqual(
+        toQuizQuestionResult(quiz.effect.iscorrect, quizRes, quiz.effect.answer),
+        toQuizQuestionResult(kids.isCorrect, quizRes, kids.answer),
+      );
+    }
+  }
+});
 
 console.log(`answerV1: ${passed} checks passed`);

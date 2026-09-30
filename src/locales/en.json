@@ -273,6 +273,10 @@
       "moving": "Moving “{{label}}”.",
       "movingTo": "Release to place it {{place}}.",
       "movingBack": "Release to put it back."
+    },
+    "fillBlank": {
+      "hintActive": "Blank {{n}} of {{total}}. Tap a word to fill it.",
+      "hintDone": "All blanks are filled. Tap a blank to change its word."
     }
   }
 }
