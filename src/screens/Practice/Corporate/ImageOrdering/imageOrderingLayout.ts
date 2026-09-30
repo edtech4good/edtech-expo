@@ -2,63 +2,57 @@
 // imports (tested in plain node).
 //
 // The approved design is 2 across on a phone (picture 104 high) and 4 across
-// from 600pt (picture 128 high). The shell scrolls its content above a pinned
-// footer, so tiles can never sit behind Submit; this only makes the pictures
-// as large as the window allows, so on a short window (a landscape phone) as
-// many rows as possible are visible without scrolling. It is the same idea as
-// expo#109's imageTileSize: clamp the preferred size to a MEASURED height
-// (where the grid starts, from the window), never a hard minHeight.
+// from 600pt (picture 128 high). The shell measures the room the body has
+// (`layout.availableHeight`, from below the question card to the top of the
+// footer, and less once the result strip is showing), so this only makes the
+// pictures as large as that room allows, and refits when it changes: every
+// row is in view after Submit whenever it can be. It is the same idea as
+// expo#109's imageTileSize, clamped to a measured height and never a hard
+// minHeight. Where even the floor does not fit (a phone on its side) the
+// shell's ScrollView scrolls: nothing is cut off.
 import { gridColumns, gridItemWidth } from '../../../../components/drag/reorder';
 
-/** Smallest picture height; below this a photo stops being legible. */
+/** Smallest picture height: regular, and compact (a phone on its side). */
 export const MIN_IMAGE_HEIGHT = 72;
+export const MIN_IMAGE_HEIGHT_COMPACT = 64;
 /** Design heights: phone (2 across) and desktop (4 across). */
 export const PHONE_IMAGE_HEIGHT = 104;
 export const DESKTOP_IMAGE_HEIGHT = 128;
 /** A tile beyond its picture: 7 + 7 padding, 6 gap and the 44 caption / audio row. */
 export const TILE_CHROME = 64;
-/** The pinned footer: 16 + 52 (Submit) + 16 padding, and its 1px rule. */
-export const FOOTER_HEIGHT = 85;
 
 export interface ImageOrderingLayout {
   columns: number;
   gap: number;
-  /** Tile width, or 0 until the grid's width is measured. */
   tileWidth: number;
   imageHeight: number;
 }
 
 export function imageOrderingLayout({
-  containerWidth,
-  windowHeight,
+  availableWidth,
+  availableHeight,
   gridTop,
-  tabBarHeight = 0,
   count,
+  compact,
 }: {
-  /** Width of the grid, from onLayout (0 before it is measured). */
-  containerWidth: number;
-  windowHeight: number;
-  /** The grid's top edge in the window, measured (null before it is). */
-  gridTop: number | null;
-  /** The bottom tab bar (phones), which sits under the pinned footer. */
-  tabBarHeight?: number;
+  /** The shell's `layout.availableWidth`. */
+  availableWidth: number;
+  /** The shell's `layout.availableHeight`. */
+  availableHeight: number;
+  /** Where the grid starts inside the body (the instruction line above it). */
+  gridTop: number;
   count: number;
+  compact: boolean;
 }): ImageOrderingLayout {
-  const columns = gridColumns(containerWidth);
-  const gap = columns === 4 ? 16 : 12;
-  const tileWidth = gridItemWidth(containerWidth, columns, gap);
+  const columns = gridColumns(availableWidth);
+  const gap = compact ? 10 : columns === 4 ? 16 : 12;
+  const tileWidth = gridItemWidth(availableWidth, columns, gap);
   const preferred = columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT;
-  if (gridTop === null || windowHeight <= 0 || count <= 0) {
-    return { columns, gap, tileWidth, imageHeight: preferred };
-  }
+  const floor = compact ? MIN_IMAGE_HEIGHT_COMPACT : MIN_IMAGE_HEIGHT;
+  const room = availableHeight - gridTop;
+  if (!(room > 0) || count <= 0) return { columns, gap, tileWidth, imageHeight: preferred };
   const rows = Math.ceil(count / columns);
-  const available = windowHeight - gridTop - FOOTER_HEIGHT - tabBarHeight;
-  const perRow = (available - gap * (rows - 1)) / rows;
+  const perRow = (room - gap * (rows - 1)) / rows;
   const fit = Math.floor(perRow - TILE_CHROME);
-  return {
-    columns,
-    gap,
-    tileWidth,
-    imageHeight: Math.min(preferred, Math.max(MIN_IMAGE_HEIGHT, fit)),
-  };
+  return { columns, gap, tileWidth, imageHeight: Math.min(preferred, Math.max(floor, fit)) };
 }

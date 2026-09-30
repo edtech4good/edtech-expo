@@ -126,3 +126,8 @@ export function shuffleNotCorrect<T extends OrderingOption>(
   for (let n = 1; n < SHUFFLE_TRIES && gradeArrangeImage(order).correct; n++) order = once();
   return order;
 }
+
+/** "A", "B", ... for the nth picture in the starting order (26 is plenty). */
+export function pictureLetter(index: number): string {
+  return String.fromCharCode(65 + (index % 26));
+}

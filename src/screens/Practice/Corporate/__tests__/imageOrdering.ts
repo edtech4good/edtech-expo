@@ -25,7 +25,7 @@ import {
 } from '../ImageOrdering/imageOrderingLogic';
 import {
   DESKTOP_IMAGE_HEIGHT,
-  FOOTER_HEIGHT,
+  MIN_IMAGE_HEIGHT_COMPACT,
   MIN_IMAGE_HEIGHT,
   PHONE_IMAGE_HEIGHT,
   TILE_CHROME,
@@ -89,6 +89,27 @@ check('equal sequences are interchangeable: swapping them stays correct', () => 
     assert.equal(e.iscorrect, true);
     assert.equal(e.summary?.correctCount, 3);
   }
+});
+
+check('a sequence that is not a number grades correct today; its picture is still ticked (the grade wins)', () => {
+  const odd = [
+    { questionoptionid: 'p', questionoptionsequence: 1 },
+    { questionoptionid: 'q', questionoptionsequence: NaN },
+  ];
+  const e = evaluateImageOrdering(odd, ['p', 'q']);
+  assert.equal(e.iscorrect, true);
+  assert.deepEqual(e.perItem, { p: 'correct', q: 'correct' });
+  assert.equal(e.summary?.correctCount, 2);
+});
+
+check('negative sequences grade as today (the first is compared with 0), and the count matches the ticks', () => {
+  const neg = [
+    { questionoptionid: 'n1', questionoptionsequence: -1 },
+    { questionoptionid: 'n2', questionoptionsequence: 1 },
+  ];
+  const e = evaluateImageOrdering(neg, ['n1', 'n2']);
+  assert.equal(e.iscorrect, false);
+  assert.equal(e.summary?.correctCount, Object.values(e.perItem).filter(m => m === 'correct').length);
 });
 
 check('the answer sent is the ids in the learner order', () => {
@@ -178,80 +199,81 @@ check('option media: a picture, an audio file (placeholder picture), or nothing'
 });
 
 // ---- picture sizing --------------------------------------------------------
-// gridTop is where the grid starts in the window: about 236 on a phone (the
-// question card and the instruction line above it), 190 in landscape.
-const at = (w: number, h: number, gridTop: number | null, count: number, tabBar = 0) =>
-  imageOrderingLayout({ containerWidth: w, windowHeight: h, gridTop, tabBarHeight: tabBar, count });
+// The shell measures the room (`layout.availableHeight`); gridTop is where the
+// grid starts inside the body (the instruction line above it: 52 regular, 0 compact).
+const at = (w: number, availableHeight: number, gridTop: number, count: number, compact = false) =>
+  imageOrderingLayout({ availableWidth: w, availableHeight, gridTop, count, compact });
+const usedBy = (l: ReturnType<typeof at>, count: number, gridTop: number) => {
+  const rows = Math.ceil(count / l.columns);
+  return gridTop + rows * (l.imageHeight + TILE_CHROME) + (rows - 1) * l.gap;
+};
 
 check('375x812: 2 across, four pictures (two rows) fit at the design height', () => {
-  const l = at(335, 812, 236, 4);
+  const l = at(335, 520, 52, 4);
   assert.equal(l.columns, 2);
   assert.equal(l.gap, 12);
   assert.equal(l.tileWidth, 161);
   assert.equal(l.imageHeight, PHONE_IMAGE_HEIGHT);
 });
 
-check('375x812: six pictures (three rows) shrink just enough to fit above the footer', () => {
-  const l = at(335, 812, 236, 6);
-  assert.equal(l.imageHeight, 91);
-  const rows = 3;
-  const used = 236 + rows * (l.imageHeight + TILE_CHROME) + (rows - 1) * l.gap + FOOTER_HEIGHT;
-  assert.ok(used <= 812 && used > 812 - rows, `used ${used}`);
-  // With a tab bar under the footer they shrink further, never past the floor.
-  const withBar = at(335, 812, 236, 6, 80);
-  assert.ok(withBar.imageHeight < l.imageHeight && withBar.imageHeight >= MIN_IMAGE_HEIGHT);
+check('375x812: six pictures (three rows) shrink just enough to fit the measured room', () => {
+  const l = at(335, 520, 52, 6);
+  assert.ok(l.imageHeight < PHONE_IMAGE_HEIGHT && l.imageHeight >= MIN_IMAGE_HEIGHT);
+  assert.ok(usedBy(l, 6, 52) <= 520 && usedBy(l, 6, 52) > 520 - 3, `used ${usedBy(l, 6, 52)}`);
 });
 
-check('812x375: landscape phone, 4 across, six pictures: the smallest legible picture', () => {
-  const l = at(760, 375, 190, 6);
+check('after Submit the strip takes room: availableHeight drops and the pictures refit, all rows still in view', () => {
+  const before = at(335, 600, 0, 6);
+  const after = at(335, 600 - 96, 0, 6);
+  assert.ok(after.imageHeight < before.imageHeight);
+  assert.ok(usedBy(after, 6, 0) <= 600 - 96);
+});
+
+check('812x375, compact: six pictures get the compact floor of 64 and 4 across', () => {
+  const l = at(760, 120, 0, 6, true);
   assert.equal(l.columns, 4);
-  assert.equal(l.gap, 16);
-  assert.equal(l.tileWidth, 178);
-  assert.equal(l.imageHeight, MIN_IMAGE_HEIGHT);
+  assert.equal(l.gap, 10);
+  assert.equal(l.imageHeight, MIN_IMAGE_HEIGHT_COMPACT);
+  assert.ok(MIN_IMAGE_HEIGHT_COMPACT < MIN_IMAGE_HEIGHT);
 });
 
-check('812x375: not even one row fits above the footer, so four pictures also get the floor (the page scrolls)', () => {
-  assert.equal(at(760, 375, 190, 4).imageHeight, MIN_IMAGE_HEIGHT);
-});
-
-check('a window tall enough for one row but not two: four pictures are bigger than six', () => {
-  const four = at(760, 520, 190, 4);
-  const six = at(760, 520, 190, 6);
-  assert.equal(four.imageHeight, DESKTOP_IMAGE_HEIGHT);
-  assert.equal(six.imageHeight, MIN_IMAGE_HEIGHT);
-  assert.ok(190 + four.imageHeight + TILE_CHROME + FOOTER_HEIGHT <= 520);
+check('compact: a picture can be smaller than the regular floor where the room is tight, and never smaller than 64', () => {
+  const room = 2 * (68 + TILE_CHROME) + 10; // two rows at 68
+  assert.equal(at(760, room, 0, 6, true).imageHeight, 68);
+  assert.equal(at(760, room, 0, 6, false).imageHeight, MIN_IMAGE_HEIGHT);
+  assert.equal(at(760, 10, 0, 6, true).imageHeight, MIN_IMAGE_HEIGHT_COMPACT);
 });
 
 check('768x1024: tablet, 4 across at the design height', () => {
-  const l = at(728, 1024, 260, 6);
+  const l = at(728, 700, 52, 6);
   assert.equal(l.columns, 4);
   assert.equal(l.imageHeight, DESKTOP_IMAGE_HEIGHT);
 });
 
 check('1280x800: desktop, the 760 column, 4 across at the design height', () => {
-  const l = at(760, 800, 260, 6);
+  const l = at(760, 560, 52, 6);
   assert.equal(l.columns, 4);
   assert.equal(l.tileWidth, 178);
   assert.equal(l.imageHeight, DESKTOP_IMAGE_HEIGHT);
 });
 
-check('never below the floor and never above the design height, whatever the window', () => {
-  for (const h of [100, 300, 375, 600, 812, 1024, 4000]) {
+check('never below the floor and never above the design height, whatever the room', () => {
+  for (const h of [1, 100, 300, 600, 4000]) {
     for (const w of [335, 728, 760]) {
       for (const count of [1, 3, 4, 6, 8]) {
-        const l = at(w, h, 200, count);
-        assert.ok(l.imageHeight >= MIN_IMAGE_HEIGHT, `${w}x${h} n=${count}`);
-        assert.ok(l.imageHeight <= (l.columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT));
+        for (const compact of [false, true]) {
+          const l = at(w, h, 20, count, compact);
+          assert.ok(l.imageHeight >= (compact ? MIN_IMAGE_HEIGHT_COMPACT : MIN_IMAGE_HEIGHT), `${w}x${h} n=${count}`);
+          assert.ok(l.imageHeight <= (l.columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT));
+        }
       }
     }
   }
 });
 
-check('before anything is measured: the design height, no crash', () => {
-  const l = at(0, 812, null, 6);
-  assert.equal(l.tileWidth, 0);
-  assert.equal(l.imageHeight, PHONE_IMAGE_HEIGHT);
-  assert.equal(at(335, 0, 236, 6).imageHeight, PHONE_IMAGE_HEIGHT);
+check('before anything is measured (no room): the design height, no crash', () => {
+  assert.equal(at(0, 0, 0, 6).imageHeight, PHONE_IMAGE_HEIGHT);
+  assert.equal(at(335, 0, 0, 6).imageHeight, PHONE_IMAGE_HEIGHT);
 });
 
 // ---- wiring and strings ----------------------------------------------------
