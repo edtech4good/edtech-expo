@@ -25,7 +25,6 @@ import {
 } from '../ImageOrdering/imageOrderingLogic';
 import {
   DESKTOP_IMAGE_HEIGHT,
-  MIN_IMAGE_HEIGHT_COMPACT,
   MIN_IMAGE_HEIGHT,
   PHONE_IMAGE_HEIGHT,
   TILE_CHROME,
@@ -229,19 +228,19 @@ check('after Submit the strip takes room: availableHeight drops and the pictures
   assert.ok(usedBy(after, 6, 0) <= 600 - 96);
 });
 
-check('812x375, compact: six pictures get the compact floor of 64 and 4 across', () => {
+check('812x375, compact: six pictures get the floor of 64, 4 across, and the tighter 10 gap', () => {
   const l = at(760, 120, 0, 6, true);
   assert.equal(l.columns, 4);
   assert.equal(l.gap, 10);
-  assert.equal(l.imageHeight, MIN_IMAGE_HEIGHT_COMPACT);
-  assert.ok(MIN_IMAGE_HEIGHT_COMPACT < MIN_IMAGE_HEIGHT);
+  assert.equal(l.imageHeight, 64);
+  assert.equal(MIN_IMAGE_HEIGHT, 64);
 });
 
-check('compact: a picture can be smaller than the regular floor where the room is tight, and never smaller than 64', () => {
+check('a picture can shrink to 68 where the room is tight, and never below 64', () => {
   const room = 2 * (68 + TILE_CHROME) + 10; // two rows at 68
   assert.equal(at(760, room, 0, 6, true).imageHeight, 68);
-  assert.equal(at(760, room, 0, 6, false).imageHeight, MIN_IMAGE_HEIGHT);
-  assert.equal(at(760, 10, 0, 6, true).imageHeight, MIN_IMAGE_HEIGHT_COMPACT);
+  assert.equal(at(760, 10, 0, 6, true).imageHeight, 64);
+  assert.equal(at(335, 10, 0, 6, false).imageHeight, 64);
 });
 
 check('768x1024: tablet, 4 across at the design height', () => {
@@ -263,7 +262,7 @@ check('never below the floor and never above the design height, whatever the roo
       for (const count of [1, 3, 4, 6, 8]) {
         for (const compact of [false, true]) {
           const l = at(w, h, 20, count, compact);
-          assert.ok(l.imageHeight >= (compact ? MIN_IMAGE_HEIGHT_COMPACT : MIN_IMAGE_HEIGHT), `${w}x${h} n=${count}`);
+          assert.ok(l.imageHeight >= MIN_IMAGE_HEIGHT, `${w}x${h} n=${count}`);
           assert.ok(l.imageHeight <= (l.columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT));
         }
       }

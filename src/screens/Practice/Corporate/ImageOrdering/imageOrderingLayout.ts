@@ -12,9 +12,12 @@
 // shell's ScrollView scrolls: nothing is cut off.
 import { gridColumns, gridItemWidth } from '../../../../components/drag/reorder';
 
-/** Smallest picture height: regular, and compact (a phone on its side). */
-export const MIN_IMAGE_HEIGHT = 72;
-export const MIN_IMAGE_HEIGHT_COMPACT = 64;
+/**
+ * Smallest picture height, regular and compact alike. 64 is what the shell's
+ * contract allows a compact tile; a regular phone needs it too when Khmer's
+ * taller lines and the tab bar leave three rows of six pictures little room.
+ */
+export const MIN_IMAGE_HEIGHT = 64;
 /** Design heights: phone (2 across) and desktop (4 across). */
 export const PHONE_IMAGE_HEIGHT = 104;
 export const DESKTOP_IMAGE_HEIGHT = 128;
@@ -48,11 +51,10 @@ export function imageOrderingLayout({
   const gap = compact ? 10 : columns === 4 ? 16 : 12;
   const tileWidth = gridItemWidth(availableWidth, columns, gap);
   const preferred = columns === 4 ? DESKTOP_IMAGE_HEIGHT : PHONE_IMAGE_HEIGHT;
-  const floor = compact ? MIN_IMAGE_HEIGHT_COMPACT : MIN_IMAGE_HEIGHT;
   const room = availableHeight - gridTop;
   if (!(room > 0) || count <= 0) return { columns, gap, tileWidth, imageHeight: preferred };
   const rows = Math.ceil(count / columns);
   const perRow = (room - gap * (rows - 1)) / rows;
   const fit = Math.floor(perRow - TILE_CHROME);
-  return { columns, gap, tileWidth, imageHeight: Math.min(preferred, Math.max(floor, fit)) };
+  return { columns, gap, tileWidth, imageHeight: Math.min(preferred, Math.max(MIN_IMAGE_HEIGHT, fit)) };
 }
