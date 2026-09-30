@@ -79,9 +79,29 @@ import {
  * It reports the order as an array of item ids through onOrderChange,
  * which is what answerV1's orderAnswer() takes.
  *
- * Scrolling: put it in react-native-gesture-handler's ScrollView (or give
- * the enclosing scroll view's gesture to the same gesture tree) so the
- * scroll and the drag negotiate through one gesture system.
+ * Structure (web: <div><div stage><ul><li><button/>accessory</li>...</ul>
+ * caret lifted</div> live</div>): the list holds only list items; the
+ * caret, the lifted copy and the live region sit outside it.
+ *
+ * Step 2 notes (things this spike did not settle):
+ * - Scroll arbitration was only proven inside gesture-handler's own
+ *   ScrollView (the drag lab). The real question screens scroll with
+ *   KeyboardAwareScrollView, a plain React Native ScrollView, which is not
+ *   part of the gesture-handler tree; on iOS in particular the scroll and a
+ *   drag may run at once. Check inside the real screen, and expect to need
+ *   simultaneousWithExternalGesture / blocksExternalGesture or a
+ *   Gesture.Native() wrapper around that scroll view.
+ * - `items` must be referentially stable (useMemo it): a new array rebuilds
+ *   the id map and every callback that depends on it. Tile is memoised but
+ *   its `children` are a fresh element every render, so the memo does not
+ *   stop re-renders; that is fine at these list sizes (under ~12 items).
+ * - WEB_COARSE_POINTER is read once at module load, so a hybrid device that
+ *   switches between mouse and touch keeps the rules it started with.
+ * - The live region only speaks when its text changes: the same
+ *   announcement twice in a row (e.g. two identical swaps) is read once.
+ * - Escape on a tile that is not picked does nothing (keyboardAction).
+ * - Strings (hints, announcements, action labels) are English only; their
+ *   i18n belongs to the step 1 kit.
  */
 
 export interface ReorderItem {
@@ -109,14 +129,36 @@ export interface ReorderableListProps<T extends ReorderItem> {
   layout: 'inline' | 'grid';
   /** "Word" or "Photo": used in "Word 3 of 6" and "moved to word 1". */
   noun: string;
+  /**
+   * The tile's content. It is rendered INSIDE the tile's button (a real
+   * <button> on the web), so it must not contain anything interactive: no
+   * Pressable, button, link or input. Nested interactive elements are
+   * invalid HTML, and a screen reader can't reach them. Put per-item
+   * controls (e.g. an audio button) in renderAccessory instead.
+   */
   renderItem: (item: T, state: TileState) => ReactNode;
+  /**
+   * Optional per-item controls, such as a 44pt audio button. They render
+   * in the list item as a SIBLING of the tile button, in a layer over the
+   * tile (absolute fill, pointerEvents box-none), so the caller positions
+   * them (e.g. bottom-right) and leaves room for them in renderItem.
+   * A touch or click on an accessory never starts a drag or a pick, and a
+   * screen reader reaches it as its own element after the tile.
+   */
+  renderAccessory?: (item: T, state: TileState) => ReactNode;
   onOrderChange?: (ids: string[]) => void;
   onStatusChange?: (status: ReorderStatus) => void;
   disabled?: boolean;
   /** Horizontal / vertical space between tiles. */
   gapX?: number;
   gapY?: number;
+  /**
+   * Applied to an outer wrapper. Padding and border here are safe: tile
+   * rects, the caret and the lifted copy all share an inner frame with no
+   * padding or border of its own.
+   */
   style?: StyleProp<ViewStyle>;
+  /** On the list element; the live region gets `${testID}-live`. */
   testID?: string;
 }
 
@@ -189,7 +231,17 @@ interface DragValues {
   ty: SharedValue<number>;
   gap: SharedValue<number>;
   atLineEnd: SharedValue<boolean>;
+  /** Which pan of which tile owns the drag in progress (-1: none). */
+  owner: SharedValue<number>;
+  /** Whether the pointer has moved past the slop since the drag began. */
+  moved: SharedValue<boolean>;
 }
+
+// Pan kinds, for the owner token (index * PAN_KINDS + kind).
+const PAN_MOUSE = 0;
+const PAN_HORIZONTAL = 1;
+const PAN_HELD = 2;
+const PAN_KINDS = 3;
 
 interface TileProps {
   id: string;
@@ -202,8 +254,6 @@ interface TileProps {
   ghost: boolean;
   disabled: boolean;
   layout: 'inline' | 'grid';
-  width?: number;
-  columns: number;
   frameStyle: ViewStyle;
   pickedStyle: ViewStyle;
   ghostStyle: ViewStyle;
@@ -213,8 +263,8 @@ interface TileProps {
   onDragStart: (index: number) => void;
   onDragTarget: (index: number, gap: number) => void;
   onDrop: (index: number, gap: number) => void;
+  onHoldTap: (index: number) => void;
   onKey: (id: string, key: string) => boolean;
-  onTileLayout: (id: string, e: LayoutChangeEvent) => void;
   setRef: (id: string, node: View | null) => void;
   children: ReactNode;
 }
@@ -229,7 +279,6 @@ const Tile = memo(function Tile({
   somethingPicked,
   ghost,
   disabled,
-  width,
   frameStyle,
   pickedStyle,
   ghostStyle,
@@ -239,18 +288,23 @@ const Tile = memo(function Tile({
   onDragStart,
   onDragTarget,
   onDrop,
+  onHoldTap,
   onKey,
-  onTileLayout,
   setRef,
   children,
 }: TileProps) {
   const gesture = useMemo(() => {
-    const makePan = () =>
-      Gesture.Pan()
+    const makePan = (kind: number) => {
+      const token = index * PAN_KINDS + kind;
+      return Gesture.Pan()
         .enabled(!disabled)
         .onStart(e => {
           const r = drag.rects.value[index];
           if (!r) return;
+          drag.owner.value = token;
+          // The mouse and horizontal pans only activate after moving past
+          // the slop; the held pan activates standing still.
+          drag.moved.value = kind !== PAN_HELD;
           drag.from.value = index;
           drag.originX.value = r.x;
           drag.originY.value = r.y;
@@ -265,7 +319,14 @@ const Tile = memo(function Tile({
           runOnJS(onDragStart)(index);
         })
         .onUpdate(e => {
-          if (drag.from.value !== index) return;
+          if (drag.owner.value !== token) return;
+          if (
+            !drag.moved.value &&
+            (Math.abs(e.translationX) > DRAG_START_DISTANCE ||
+              Math.abs(e.translationY) > DRAG_START_DISTANCE)
+          ) {
+            drag.moved.value = true;
+          }
           drag.tx.value = e.translationX;
           drag.ty.value = e.translationY;
           const t = insertionTarget(
@@ -283,11 +344,20 @@ const Tile = memo(function Tile({
           }
         })
         .onFinalize((_e, success) => {
-          // Finalize also runs for a touch that never became a drag (a tap);
-          // from.value is only ours if onStart ran.
-          if (drag.from.value !== index) return;
+          // Finalize runs for every pan in the Race, including one that
+          // never started (a tap) and the losers the winner cancelled. Only
+          // the pan that started this drag (same token) may end it, so a
+          // losing pan's finalize can never end a drag early.
+          if (drag.owner.value !== token) return;
+          drag.owner.value = -1;
+          if (success && !drag.moved.value) {
+            // A press held past LONG_PRESS_MS without moving: a slow tap.
+            runOnJS(onHoldTap)(index);
+            return;
+          }
           runOnJS(onDrop)(index, success ? drag.gap.value : -1);
         });
+    };
 
     const tap = Gesture.Tap()
       .enabled(!disabled)
@@ -298,19 +368,19 @@ const Tile = memo(function Tile({
 
     if (Platform.OS === 'web' && !WEB_COARSE_POINTER) {
       // Mouse and pen: no scroll to share with, so any 8pt movement drags.
-      const pan = makePan().minDistance(DRAG_START_DISTANCE);
+      const pan = makePan(PAN_MOUSE).minDistance(DRAG_START_DISTANCE);
       return Gesture.Race(pan, tap);
     }
     // Touch: a mostly-horizontal 8pt move drags at once; a vertical-first
     // move fails this pan and goes to the scroll view, unless the finger
     // first held still for LONG_PRESS_MS, which starts a drag in any
     // direction.
-    const horizontal = makePan()
+    const horizontal = makePan(PAN_HORIZONTAL)
       .activeOffsetX([-DRAG_START_DISTANCE, DRAG_START_DISTANCE])
       .failOffsetY([-DRAG_START_DISTANCE, DRAG_START_DISTANCE]);
-    const held = makePan().activateAfterLongPress(LONG_PRESS_MS);
+    const held = makePan(PAN_HELD).activateAfterLongPress(LONG_PRESS_MS);
     return Gesture.Race(horizontal, held, tap);
-  }, [id, index, disabled, drag, onTap, onDragStart, onDragTarget, onDrop]);
+  }, [id, index, disabled, drag, onTap, onDragStart, onDragTarget, onDrop, onHoldTap]);
 
   // gesture-handler sets touch-action: none on the tile when it attaches
   // (after this effect, hence the timeout), which would stop a touch that
@@ -376,7 +446,6 @@ const Tile = memo(function Tile({
           setRef(id, node);
         }}
         collapsable={false}
-        onLayout={e => onTileLayout(id, e)}
         accessible
         accessibilityRole="button"
         accessibilityLabel={itemAccessibilityLabel(label, noun, index, count)}
@@ -388,7 +457,6 @@ const Tile = memo(function Tile({
         {...webKeyProps}
         style={[
           frameStyle,
-          width !== undefined ? { width } : null,
           picked ? pickedStyle : null,
           ghost ? ghostStyle : null,
         ]}>
@@ -405,6 +473,7 @@ function ReorderableListInner<T extends ReorderItem>({
   layout,
   noun,
   renderItem,
+  renderAccessory,
   onOrderChange,
   onStatusChange,
   disabled = false,
@@ -450,14 +519,21 @@ function ReorderableListInner<T extends ReorderItem>({
     ty: useSharedValue(0),
     gap: useSharedValue(-1),
     atLineEnd: useSharedValue(false),
+    owner: useSharedValue(-1),
+    moved: useSharedValue(false),
   };
   const dragRef = useRef(drag);
   const stableDrag = dragRef.current;
 
-  // ---- Measuring. Rects are in the container's coordinates, in order.
-  const containerRef = useRef<View>(null);
+  // ---- Measuring. Rects are each list item's frame in the stage's
+  // coordinates (the list sits at the stage's origin with no padding), in
+  // the current order. The caret and lifted copy are positioned in the
+  // same frame.
+  const stageRef = useRef<View>(null);
   const rectById = useRef<Record<string, Rect>>({});
+  const itemRefs = useRef<Record<string, View | null>>({});
   const tileRefs = useRef<Record<string, View | null>>({});
+  const draggingIdRef = useRef<string | null>(null);
 
   const publishRects = useCallback(() => {
     stableDrag.rects.value = orderRef.current.map(
@@ -465,40 +541,91 @@ function ReorderableListInner<T extends ReorderItem>({
     );
   }, [stableDrag]);
 
-  const onTileLayout = useCallback(
-    (id: string, e: LayoutChangeEvent) => {
-      const { x, y, width, height } = e.nativeEvent.layout;
-      rectById.current[id] = { x, y, width, height };
-      publishRects();
-    },
-    [publishRects],
-  );
-
-  // onLayout does not fire on the web when a tile only changes position
-  // (react-native-web watches size), so re-measure every tile against the
-  // container after each reorder and width change.
+  // measureLayout every item against the stage. Needed on the web, where
+  // onLayout only fires when an element's SIZE changes: a tile that moves
+  // to another line at the same size (after a reorder, a late font, a
+  // sibling growing) would otherwise keep a stale rect and the drop would
+  // land in the wrong gap. Harmless on native.
   const remeasure = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const stage = stageRef.current;
+    if (!stage) return;
     orderRef.current.forEach(id => {
-      const node = tileRefs.current[id];
+      const node = itemRefs.current[id];
       if (!node) return;
       node.measureLayout(
-        container,
+        stage,
         (x, y, width, height) => {
           rectById.current[id] = { x, y, width, height };
+          // A drag that started on a stale rect: move its origin too.
+          if (draggingIdRef.current === id) {
+            stableDrag.originX.value = x;
+            stableDrag.originY.value = y;
+          }
           publishRects();
         },
         () => undefined,
       );
     });
-  }, [publishRects]);
+  }, [publishRects, stableDrag]);
+
+  // Coalesce bursts (every item's onLayout, font events) into one pass.
+  const remeasureFrame = useRef<number | null>(null);
+  const scheduleRemeasure = useCallback(() => {
+    if (remeasureFrame.current !== null) return;
+    remeasureFrame.current = requestAnimationFrame(() => {
+      remeasureFrame.current = null;
+      remeasure();
+    });
+  }, [remeasure]);
+  useEffect(
+    () => () => {
+      if (remeasureFrame.current !== null) cancelAnimationFrame(remeasureFrame.current);
+    },
+    [],
+  );
+
+  const onItemLayout = useCallback(
+    (id: string, e: LayoutChangeEvent) => {
+      const { x, y, width, height } = e.nativeEvent.layout;
+      rectById.current[id] = { x, y, width, height };
+      publishRects();
+      // One item changing size can move others without resizing them.
+      if (Platform.OS === 'web') scheduleRemeasure();
+    },
+    [publishRects, scheduleRemeasure],
+  );
 
   useEffect(() => {
     publishRects();
-    const raf = requestAnimationFrame(remeasure);
-    return () => cancelAnimationFrame(raf);
-  }, [order, containerWidth, remeasure, publishRects]);
+    scheduleRemeasure();
+  }, [order, containerWidth, publishRects, scheduleRemeasure]);
+
+  // Web: re-measure when the stage resizes (content or wrapping changed)
+  // and when any web font finishes loading (Khmer glyphs change widths).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const cleanups: Array<() => void> = [];
+    const el = stageRef.current as unknown as Element | null;
+    const RO = (window as unknown as { ResizeObserver?: typeof ResizeObserver })
+      .ResizeObserver;
+    if (el && RO) {
+      const ro = new RO(() => scheduleRemeasure());
+      ro.observe(el);
+      cleanups.push(() => ro.disconnect());
+    }
+    const fonts = (document as unknown as { fonts?: FontFaceSet }).fonts;
+    if (fonts?.addEventListener) {
+      const onFonts = () => scheduleRemeasure();
+      fonts.addEventListener('loadingdone', onFonts);
+      cleanups.push(() => fonts.removeEventListener('loadingdone', onFonts));
+      fonts.ready?.then(onFonts).catch(() => undefined);
+    }
+    return () => cleanups.forEach(c => c());
+  }, [scheduleRemeasure]);
+
+  const setItemRef = useCallback((id: string, node: View | null) => {
+    itemRefs.current[id] = node;
+  }, []);
 
   const setRef = useCallback((id: string, node: View | null) => {
     tileRefs.current[id] = node;
@@ -606,18 +733,26 @@ function ReorderableListInner<T extends ReorderItem>({
     [layout, columns, onTap, onMove, byId],
   );
 
+  // The pick in force when a drag began, so a hold that turns out to be a
+  // slow tap (onHoldTap) is judged against it.
+  const pickBeforeDrag = useRef<string | null>(null);
+
   const onDragStart = useCallback(
     (index: number) => {
       const id = orderRef.current[index];
       if (!id) return;
+      pickBeforeDrag.current = pickedRef.current;
       if (pickedRef.current) {
         pickedRef.current = null;
         setPicked(null);
       }
+      draggingIdRef.current = id;
       setDraggingId(id);
+      // Belt and braces for stale rects (see remeasure).
+      remeasure();
       statusRef.current?.({ kind: 'dragging', id, label: byId[id]?.label ?? id, target: null });
     },
-    [byId],
+    [byId, remeasure],
   );
 
   const onDragTarget = useCallback(
@@ -634,16 +769,36 @@ function ReorderableListInner<T extends ReorderItem>({
     [byId, labelsOf],
   );
 
+  const endDrag = useCallback(() => {
+    stableDrag.from.value = -1;
+    stableDrag.gap.value = -1;
+    draggingIdRef.current = null;
+    setDraggingId(null);
+  }, [stableDrag]);
+
   const onDrop = useCallback(
     (index: number, gap: number) => {
-      stableDrag.from.value = -1;
-      stableDrag.gap.value = -1;
-      setDraggingId(null);
+      endDrag();
       statusRef.current?.({ kind: 'idle' });
       if (gap < 0 || isNoopGap(index, gap)) return;
       onMove(index, targetIndexForGap(index, gap));
     },
-    [stableDrag, onMove],
+    [endDrag, onMove],
+  );
+
+  // A hold that never moved past the slop is a tap: pick, swap or cancel,
+  // judged against the pick that was in force before the hold.
+  const onHoldTap = useCallback(
+    (index: number) => {
+      endDrag();
+      const id = orderRef.current[index];
+      if (!id) return;
+      pickedRef.current = pickBeforeDrag.current;
+      setPicked(pickBeforeDrag.current);
+      if (!pickBeforeDrag.current) statusRef.current?.({ kind: 'idle' });
+      onTap(id);
+    },
+    [endDrag, onTap],
   );
 
   // ---- Styles.
@@ -695,6 +850,11 @@ function ReorderableListInner<T extends ReorderItem>({
     [colors],
   );
 
+  const stageWidth = useSharedValue(0);
+  useEffect(() => {
+    stageWidth.value = containerWidth;
+  }, [containerWidth, stageWidth]);
+
   const liftedStyle = useAnimatedStyle(() => {
     if (stableDrag.from.value < 0) return { opacity: 0, left: 0, top: 0 };
     return {
@@ -720,6 +880,7 @@ function ReorderableListInner<T extends ReorderItem>({
       stableDrag.rects.value,
       gapX,
       CARET_WIDTH,
+      stageWidth.value,
     );
     if (!r) return { opacity: 0, left: 0, top: 0, height: 0 };
     return { opacity: 1, left: r.x, top: r.y, height: r.height };
@@ -727,105 +888,127 @@ function ReorderableListInner<T extends ReorderItem>({
 
   const draggingItem = draggingId ? byId[draggingId] : undefined;
 
+  const tileState = (item: T, index: number, lifted: boolean): TileState => ({
+    index,
+    count: order.length,
+    picked: !lifted && picked === item.id,
+    lifted,
+  });
+
+  const tileContent = (item: T, state: TileState) =>
+    layout === 'inline' ? (
+      <View style={styles.inlineContent}>
+        <GripGlyph color={state.picked ? colors.primary : colors.placeholder} />
+        {renderItem(item, state)}
+      </View>
+    ) : (
+      renderItem(item, state)
+    );
+
+  // Web: <ul role=list> may only hold <li> items.
+  const webListItemRole = Platform.OS === 'web' ? ({ role: 'listitem' } as object) : {};
+
   return (
-    <View
-      ref={containerRef}
-      collapsable={false}
-      testID={testID}
-      accessibilityRole="list"
-      onLayout={e => setContainerWidth(e.nativeEvent.layout.width)}
-      style={[
-        styles.container,
-        { columnGap: gapX, rowGap: gapY },
-        style,
-      ]}>
-      {order.map((id, index) => {
-        const item = byId[id];
-        if (!item) return null;
-        const isPicked = picked === id;
-        return (
-          <Tile
-            key={id}
-            id={id}
-            index={index}
-            count={order.length}
-            label={item.label}
-            noun={noun}
-            picked={isPicked}
-            somethingPicked={picked !== null}
-            ghost={draggingId === id}
-            disabled={disabled}
-            layout={layout}
-            width={itemWidth}
-            columns={columns}
-            frameStyle={frameStyle}
-            pickedStyle={pickedStyle}
-            ghostStyle={ghostStyle}
-            drag={stableDrag}
-            onTap={onTap}
-            onMove={onMove}
-            onDragStart={onDragStart}
-            onDragTarget={onDragTarget}
-            onDrop={onDrop}
-            onKey={onKey}
-            onTileLayout={onTileLayout}
-            setRef={setRef}>
-            {layout === 'inline' ? (
-              <View style={styles.inlineContent}>
-                <GripGlyph color={isPicked ? colors.primary : colors.placeholder} />
-                {renderItem(item, { index, count: order.length, picked: isPicked, lifted: false })}
+    <View style={style}>
+      <View
+        ref={stageRef}
+        collapsable={false}
+        onLayout={e => setContainerWidth(e.nativeEvent.layout.width)}
+        style={styles.stage}>
+        <View
+          testID={testID}
+          accessibilityRole="list"
+          style={[styles.container, { columnGap: gapX, rowGap: gapY }]}>
+          {order.map((id, index) => {
+            const item = byId[id];
+            if (!item) return null;
+            const state = tileState(item, index, false);
+            const isGhost = draggingId === id;
+            return (
+              <View
+                key={id}
+                ref={node => setItemRef(id, node)}
+                collapsable={false}
+                onLayout={e => onItemLayout(id, e)}
+                {...webListItemRole}
+                style={itemWidth !== undefined ? { width: itemWidth } : null}>
+                <Tile
+                  id={id}
+                  index={index}
+                  count={order.length}
+                  label={item.label}
+                  noun={noun}
+                  picked={state.picked}
+                  somethingPicked={picked !== null}
+                  ghost={isGhost}
+                  disabled={disabled}
+                  layout={layout}
+                  frameStyle={frameStyle}
+                  pickedStyle={pickedStyle}
+                  ghostStyle={ghostStyle}
+                  drag={stableDrag}
+                  onTap={onTap}
+                  onMove={onMove}
+                  onDragStart={onDragStart}
+                  onDragTarget={onDragTarget}
+                  onDrop={onDrop}
+                  onHoldTap={onHoldTap}
+                  onKey={onKey}
+                  setRef={setRef}>
+                  {tileContent(item, state)}
+                </Tile>
+                {renderAccessory ? (
+                  <View
+                    pointerEvents="box-none"
+                    style={[StyleSheet.absoluteFill, isGhost ? styles.hidden : null]}>
+                    {renderAccessory(item, state)}
+                  </View>
+                ) : null}
               </View>
-            ) : (
-              renderItem(item, { index, count: order.length, picked: isPicked, lifted: false })
-            )}
-          </Tile>
-        );
-      })}
+            );
+          })}
+        </View>
 
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.caret, { backgroundColor: colors.primary }, caretStyle]}>
-        <View style={[styles.caretDot, styles.caretDotTop, { backgroundColor: colors.primary }]} />
-        <View style={[styles.caretDot, styles.caretDotBottom, { backgroundColor: colors.primary }]} />
-      </Animated.View>
-
-      {draggingItem ? (
         <Animated.View
           pointerEvents="none"
           importantForAccessibility="no-hide-descendants"
           accessibilityElementsHidden
-          style={[
-            styles.lifted,
-            frameStyle,
-            {
-              borderWidth: 2,
-              borderColor: colors.primary,
-              transform: [{ rotate: layout === 'inline' ? '-3deg' : '-2deg' }],
-            },
-            LIFTED,
-            layout === 'inline' ? { paddingLeft: 8.5, paddingRight: 13.5 } : { padding: 6.5 },
-            liftedStyle,
-          ]}>
-          {layout === 'inline' ? (
-            <View style={styles.inlineContent}>
-              <GripGlyph color={colors.placeholder} />
-              {renderItem(draggingItem, {
-                index: order.indexOf(draggingItem.id),
-                count: order.length,
-                picked: false,
-                lifted: true,
-              })}
-            </View>
-          ) : (
-            renderItem(draggingItem, {
-              index: order.indexOf(draggingItem.id),
-              count: order.length,
-              picked: false,
-              lifted: true,
-            })
-          )}
+          style={[styles.caret, { backgroundColor: colors.primary }, caretStyle]}>
+          <View style={[styles.caretDot, styles.caretDotTop, { backgroundColor: colors.primary }]} />
+          <View style={[styles.caretDot, styles.caretDotBottom, { backgroundColor: colors.primary }]} />
         </Animated.View>
-      ) : null}
+
+        {draggingItem ? (
+          <Animated.View
+            pointerEvents="none"
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            aria-hidden
+            style={[styles.lifted, liftedStyle]}>
+            <View
+              style={[
+                frameStyle,
+                {
+                  borderWidth: 2,
+                  borderColor: colors.primary,
+                  transform: [{ rotate: layout === 'inline' ? '-3deg' : '-2deg' }],
+                },
+                LIFTED,
+                layout === 'inline' ? { paddingLeft: 8.5, paddingRight: 13.5 } : { padding: 6.5 },
+              ]}>
+              {tileContent(draggingItem, tileState(draggingItem, order.indexOf(draggingItem.id), true))}
+            </View>
+            {renderAccessory ? (
+              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                {renderAccessory(
+                  draggingItem,
+                  tileState(draggingItem, order.indexOf(draggingItem.id), true),
+                )}
+              </View>
+            ) : null}
+          </Animated.View>
+        ) : null}
+      </View>
 
       <Text
         accessibilityLiveRegion="polite"
@@ -842,6 +1025,12 @@ const ReorderableList = memo(ReorderableListInner) as typeof ReorderableListInne
 export default ReorderableList;
 
 const styles = StyleSheet.create({
+  stage: {
+    position: 'relative',
+  },
+  hidden: {
+    opacity: 0,
+  },
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',

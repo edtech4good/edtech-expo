@@ -136,26 +136,40 @@ export function insertionGap(p: Point, rects: ReadonlyArray<Rect>): number {
  * Where to draw the vertical insertion caret: centred in the `gapX` space
  * before the tile at `gap`, or after the tile before it when the target is
  * at the end of a line (or the list). Returns null for an invalid gap.
+ *
+ * Before the first tile of a line (or after the last) there is no gap
+ * space inside the list, so the caret is clamped into [0, containerWidth]
+ * (when containerWidth > 0) instead of hanging outside and being clipped.
  */
 export function caretRect(
   target: InsertionTarget,
   rects: ReadonlyArray<Rect>,
   gapX: number,
   caretWidth: number,
+  containerWidth = 0,
 ): Rect | null {
   'worklet';
   const n = rects.length;
   const gap = target.gap;
   if (gap < 0 || gap > n || n === 0) return null;
   const anchorAfter = !target.atLineEnd && gap < n;
+  const clamp = (x: number) => {
+    if (containerWidth <= 0) return x;
+    return Math.max(0, Math.min(containerWidth - caretWidth, x));
+  };
   if (anchorAfter) {
     const r = rects[gap];
-    return { x: r.x - gapX / 2 - caretWidth / 2, y: r.y, width: caretWidth, height: r.height };
+    return {
+      x: clamp(r.x - gapX / 2 - caretWidth / 2),
+      y: r.y,
+      width: caretWidth,
+      height: r.height,
+    };
   }
   if (gap === 0) return null;
   const r = rects[gap - 1];
   return {
-    x: r.x + r.width + gapX / 2 - caretWidth / 2,
+    x: clamp(r.x + r.width + gapX / 2 - caretWidth / 2),
     y: r.y,
     width: caretWidth,
     height: r.height,

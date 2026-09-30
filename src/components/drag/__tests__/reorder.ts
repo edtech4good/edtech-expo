@@ -167,6 +167,16 @@ check('caret: at a line end it sits after the last tile of that line', () => {
   assert.deepEqual(end, { x: 266 + 5 - 2, y: 60, width: 4, height: 48 });
 });
 
+check('caret: clamped inside the container at a line start or a full line end', () => {
+  // Unclamped, gap 0 would sit at x -7, outside the list.
+  assert.deepEqual(caretRect({ gap: 0, atLineEnd: false }, ROW, 10, 4, 330), { x: 0, y: 0, width: 4, height: 48 });
+  assert.deepEqual(caretRect({ gap: 3, atLineEnd: false }, ROW, 10, 4, 330), { x: 0, y: 60, width: 4, height: 48 });
+  // A line that fills the width: the end caret is pulled back inside.
+  assert.deepEqual(caretRect({ gap: 3, atLineEnd: true }, ROW, 10, 4, 224), { x: 220, y: 0, width: 4, height: 48 });
+  // Inside the gaps nothing moves.
+  assert.deepEqual(caretRect({ gap: 1, atLineEnd: false }, ROW, 10, 4, 330), { x: 73, y: 0, width: 4, height: 48 });
+});
+
 check('caret: invalid gaps draw nothing', () => {
   assert.equal(caretRect({ gap: -1, atLineEnd: false }, ROW, 10, 4), null);
   assert.equal(caretRect({ gap: 7, atLineEnd: false }, ROW, 10, 4), null);

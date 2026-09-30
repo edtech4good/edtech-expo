@@ -137,13 +137,55 @@ function PhotoTile({ item, state }: { item: Photo; state: TileState }) {
           fontFamily: EN_FONT,
           fontSize: 13,
           lineHeight: 17,
-          minHeight: 34,
-          paddingHorizontal: 4,
+          minHeight: 44,
+          paddingLeft: 4,
+          // Room for the audio accessory (renderAccessory), bottom right.
+          paddingRight: 48,
           color: C.onBackground,
         }}>
         {item.label}
       </Text>
     </View>
+  );
+}
+
+// Stands in for step 2's per-option audio button: a sibling of the tile
+// button (renderAccessory), so it is never nested inside it and a press on
+// it never picks or drags the tile. It plays nothing; it just reports.
+function AudioAccessory({ item, onPlay }: { item: ReorderItem; onPlay: (label: string) => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Play ${item.label} audio`}
+      testID={`audio-${item.id}`}
+      onPress={() => onPlay(item.label)}
+      style={{
+        position: 'absolute',
+        right: 7,
+        bottom: 7,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 1.5,
+        borderColor: C.primary,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <View
+        style={{
+          marginLeft: 3,
+          width: 0,
+          height: 0,
+          borderTopWidth: 7,
+          borderBottomWidth: 7,
+          borderLeftWidth: 11,
+          borderTopColor: 'transparent',
+          borderBottomColor: 'transparent',
+          borderLeftColor: C.primary,
+        }}
+      />
+    </Pressable>
   );
 }
 
@@ -153,6 +195,7 @@ function Section<T extends ReorderItem>({
   layout,
   noun,
   render,
+  withAudio = false,
   testID,
 }: {
   title: string;
@@ -160,9 +203,11 @@ function Section<T extends ReorderItem>({
   layout: 'inline' | 'grid';
   noun: string;
   render: (item: T, state: TileState) => JSX.Element;
+  withAudio?: boolean;
   testID: string;
 }) {
   const [order, setOrder] = useState<string[]>(items.map(i => i.id));
+  const [played, setPlayed] = useState<string | null>(null);
   const [status, setStatus] = useState<ReorderStatus>({ kind: 'idle' });
   const [epoch, setEpoch] = useState(0);
   const live = status.kind !== 'idle';
@@ -193,10 +238,22 @@ function Section<T extends ReorderItem>({
           layout={layout}
           noun={noun}
           renderItem={render}
+          renderAccessory={
+            withAudio
+              ? item => <AudioAccessory item={item} onPlay={setPlayed} />
+              : undefined
+          }
           onOrderChange={setOrder}
           onStatusChange={setStatus}
         />
       </View>
+      {withAudio ? (
+        <Text
+          testID={`${testID}-played`}
+          style={{ fontFamily: 'SpaceMonoRegular', fontSize: 12, color: C.secondaryDark }}>
+          audio: {played ?? '(none)'}
+        </Text>
+      ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 12 }}>
         <Text
           testID={`${testID}-order`}
@@ -272,6 +329,7 @@ export default function DragLabScreen() {
             items={PHOTOS}
             layout="grid"
             noun="Photo"
+            withAudio
             render={(item, state) => <PhotoTile item={item} state={state} />}
           />
         </View>
