@@ -152,7 +152,10 @@ check('a run of unlucky draws is retried, not accepted', () => {
 check('when no order is wrong (all sequences equal, or one picture) it still ends', () => {
   const same = [1, 2, 3].map(i => ({ questionoptionid: `s${i}`, questionoptionsequence: 5 }));
   let calls = 0;
-  const order = shuffleNotCorrect(same, () => (calls++, 0.5));
+  const order = shuffleNotCorrect(same, () => {
+    if (++calls > 10_000) throw new Error('shuffle does not end');
+    return 0.5;
+  });
   assert.equal(order.length, 3);
   assert.ok(calls <= SHUFFLE_TRIES * same.length, `calls ${calls}`);
   assert.equal(shuffleNotCorrect([same[0]]).length, 1);

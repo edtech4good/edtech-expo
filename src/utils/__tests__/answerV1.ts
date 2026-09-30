@@ -588,7 +588,10 @@ function permutations<T>(xs: T[]): T[][] {
 const sixPictures = [1, 2, 3, 4, 5, 6].map(n => opt(60 + n, `រូបភាព ${n}`, true, n));
 const tiedPictures = [opt(70, 'ក', true, 1), opt(71, 'ខ', true, 2), opt(72, 'គ', true, 2), opt(73, 'ឃ', true, 3)];
 
-for (const [name, options] of [['4 pictures', ordering], ['6 pictures', sixPictures], ['equal sequences', tiedPictures]] as const) {
+// Sequences of 0 and below are graded as today (the first is compared with 0).
+const oddPictures = [opt(80, 'ក', true, -1), opt(81, 'ខ', true, 0), opt(82, 'គ', true, 1)];
+
+for (const [name, options] of [['4 pictures', ordering], ['6 pictures', sixPictures], ['equal sequences', tiedPictures], ['zero and negative sequences', oddPictures]] as const) {
   check(`corporate picture ordering, ${name}: answer and iscorrect equal the kids path for every order`, () => {
     let n = 0;
     for (const perm of permutations([...options] as Opt[])) {
