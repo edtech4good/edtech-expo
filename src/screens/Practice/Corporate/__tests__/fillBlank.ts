@@ -398,6 +398,7 @@ check('a blank keeps the short text after it; long text and other blanks are sep
   assert.deepEqual(g('ប្រាក់ចំណេញរបស់អ្នកគឺ-----ដក-----។', 2), [['ប្រាក់ចំណេញរបស់អ្នកគឺ', '[0]ដក', '[1]។']]);
   assert.deepEqual(g('a -----.', 1), [['a'], ['[0].']]);
   assert.deepEqual(g('-----abcdef', 1), [['[0]', 'abcdef']], 'longer text is not glued');
+  assert.deepEqual(g('a-----b', 0), [['a', '_____', 'b']], 'text is only glued to a blank');
   assert.deepEqual(g('----------', 2), [['[0]', '[1]']], 'two blanks stay apart');
 });
 
