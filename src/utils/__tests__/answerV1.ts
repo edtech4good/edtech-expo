@@ -24,6 +24,7 @@ import {
   toQuizQuestionResult,
 } from '../../transforms/Practice';
 import _ from 'lodash';
+import { evaluateMcqImage } from '../../screens/Practice/Corporate/imageChoice/imageChoiceLogic';
 import { gradeMcqText } from '../../screens/Practice/Components/MCQText/mcqTextGrade';
 import {
   evaluateMcqText,
@@ -553,5 +554,23 @@ check('corporate MCQ text marks: chosen options only, by their own correctness',
   const right = corporateSelections([multiChoice[2], multiChoice[0]]);
   assert.deepEqual(evaluateMcqText(multiChoice, right).perItem, { [U(6)]: 'correct', [U(4)]: 'correct' });
 });
+
+// Corporate multiple choice, pictures (templates 2 and 4): the same rule and
+// answer as the kids renderer (PracticeMCQImage's submit is the text one word
+// for word). The exhaustive tap-sequence check, with un-taps, is
+// `yarn test:mcqimage`; this is the round trip through the server mirror.
+for (const [templateId, options] of [[2, singleChoice], [4, multiChoice]] as const) {
+  check(`corporate MCQ pictures, template ${templateId}: answer and iscorrect equal the kids path and the server agrees`, () => {
+    const sequences = tapSequences(options as Opt[]);
+    for (const taps of [...sequences, ...sequences.filter(s => s.length > 1).map(s => [...s, s[0]])]) {
+      const kSel = kidsSelections(taps);
+      const corp = evaluateMcqImage(options as Opt[], corporateSelections(taps));
+      const kids = kidsSubmitAsBefore(options as Opt[], kSel);
+      assert.equal(corp.iscorrect, kids.isCorrect);
+      assert.deepEqual(corp.answer, kids.answer);
+      assert.equal(serverGrade(templateId, options as Opt[], corp.answer), corp.iscorrect);
+    }
+  });
+}
 
 console.log(`answerV1: ${passed} checks passed`);

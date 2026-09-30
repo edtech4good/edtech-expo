@@ -263,5 +263,12 @@
     "review": "Review",
     "continueLesson": "Continue Lesson {{n}}",
     "startLesson": "Start Lesson {{n}}"
+  },
+  "corporate": {
+    "mcqImage": {
+      "correct": "{{label}}, correct",
+      "incorrect": "{{label}}, your answer, incorrect",
+      "correctAnswer": "{{label}}, correct answer"
+    }
   }
 }

@@ -257,5 +257,12 @@
     "review": "មើលឡើងវិញ",
     "continueLesson": "បន្តមេរៀនទី {{n}}",
     "startLesson": "ចាប់ផ្ដើមមេរៀនទី {{n}}"
+  },
+  "corporate": {
+    "mcqImage": {
+      "correct": "{{label}}, ត្រឹមត្រូវ",
+      "incorrect": "{{label}}, ចម្លើយរបស់អ្នក, មិនត្រឹមត្រូវ",
+      "correctAnswer": "{{label}}, ចម្លើយត្រឹមត្រូវ"
+    }
   }
 }
