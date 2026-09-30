@@ -297,6 +297,12 @@
       "hintActive": "Blank {{n}} of {{total}}. Tap a word to fill it.",
       "hintDone": "All blanks are filled. Tap a blank to change its word."
     },
+    "mcqImage": {
+      "correct": "{{label}}, correct",
+      "incorrect": "{{label}}, your answer, incorrect",
+      "correctAnswer": "{{label}}, correct answer",
+      "picture": "Picture {{letter}}"
+    },
     "imageOrdering": {
       "instruction": "Drag the photos to reorder them, or tap two to swap. Numbers read left to right.",
       "picked": "{{label}} picked. Tap the photo to swap it with.",
