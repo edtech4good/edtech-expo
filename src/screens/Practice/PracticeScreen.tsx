@@ -364,7 +364,7 @@ export default function PracticeScreen() {
   }
 
   return (
-    <LayoutScrollView backgroundColor={theme.colors.background}>
+    <LayoutScrollView useScroll backgroundColor={theme.colors.background}>
       {isCorporate && (
         <ProgressBar
           testID="practice-progress-track"

@@ -309,7 +309,7 @@ export default function QuizScreen() {
   }
 
   return (
-    <LayoutScrollView backgroundColor={theme.colors.background}>
+    <LayoutScrollView useScroll backgroundColor={theme.colors.background}>
       {isCorporate && (
         <ProgressBar
           testID="practice-progress-track"

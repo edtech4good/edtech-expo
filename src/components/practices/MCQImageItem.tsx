@@ -29,6 +29,20 @@ const MCQImageItemWrapper = styled.Pressable.attrs<MCQWrapperProps>(props => ({
     props.isSelected ? props.theme.colors.primary : 'transparent'};
 `;
 
+/**
+ * Side of a picture-choice tile (px), by breakpoint. Shared with the
+ * renderer so its answer area can be sized from the tile instead of a
+ * second copy of these numbers.
+ */
+export function useMCQImageTileSize(): number {
+  return useBreakpoint({
+    desktop: 256,
+    tablet: 175,
+    mobile: 150,
+    phablet: 150,
+  });
+}
+
 export default function MCQImageItem({
   option,
   isSelected = false,
@@ -39,12 +53,7 @@ export default function MCQImageItem({
 }: MCQImageItemProps) {
   const theme = useTheme();
 
-  const itemWidth = useBreakpoint({
-    desktop: 256,
-    tablet: 175,
-    mobile: 150,
-    phablet: 150,
-  });
+  const itemWidth = useMCQImageTileSize();
 
   const imageSource = useResource(
     { name: _.get(option, 'questionoptionfile.filename', '') },

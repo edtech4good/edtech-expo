@@ -33,6 +33,8 @@ import {
 import { Pressable } from 'react-native';
 import { changeColorOpacity } from '@/utils';
 
+const NO_SHRINK = { flexShrink: 0, flexBasis: 'auto' } as const;
+
 export default forwardRef<PracticeHandler, PracticeProps>(
   function PracticeArrangeImage(
     {
@@ -238,7 +240,12 @@ export default forwardRef<PracticeHandler, PracticeProps>(
         />
         <SizedBox.Large height />
 
+        {/* Fill the free space but never shrink below the wrapped tiles
+            (flexShrink 0, content-sized basis): on a short screen the
+            screen scrolls instead of the second row of tiles being
+            squeezed out from behind the footer. */}
         <Expanded
+          style={NO_SHRINK}
           paddingLeft={theme.layouts.large}
           paddingRight={theme.layouts.large}>
           <Expanded
@@ -247,7 +254,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
             backgroundColor={theme.colors.surface}
             justifyContent="center"
             alignItems="center"
-            style={{ flexWrap: 'wrap' }}>
+            style={[{ flexWrap: 'wrap' }, NO_SHRINK]}>
             {_.map(options, (op, index) => renderItem(op, index))}
           </Expanded>
         </Expanded>

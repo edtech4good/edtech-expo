@@ -19,6 +19,8 @@ import {
   PracticeFooter,
 } from '@/components';
 import { FlatList } from 'react-native';
+import { useMCQImageTileSize } from '@/components/practices/MCQImageItem';
+import { answerAreaMinHeight, tileRowContentStyle } from './layout';
 import _ from 'lodash';
 import { choiceAnswer } from '@/utils/answerV1';
 import { KeyExtractorHelper } from '@/utils';
@@ -43,6 +45,8 @@ export default forwardRef<PracticeHandler, PracticeProps>(
   ) {
     const theme = useTheme();
     const { isCorporate } = useDesign();
+    const tileSize = useMCQImageTileSize();
+    const answerAreaHeight = answerAreaMinHeight(tileSize, theme.layouts);
 
     useImperativeHandle(
       ref,
@@ -187,6 +191,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           borderRadius={theme.layouts.defaultRadius}
           backgroundColor={theme.colors.surface}
           style={{
+            minHeight: answerAreaHeight,
             marginHorizontal: theme.layouts.large,
             ...(isCorporate
               ? { borderWidth: 1, borderColor: theme.colors.divider }
@@ -195,11 +200,7 @@ export default forwardRef<PracticeHandler, PracticeProps>(
           <FlatList
             style={{ flex: 1 }}
             data={options}
-            contentContainerStyle={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
+            contentContainerStyle={tileRowContentStyle(theme.layouts)}
             centerContent
             renderItem={renderQuestionOption}
             ItemSeparatorComponent={renderItemSeparation}
