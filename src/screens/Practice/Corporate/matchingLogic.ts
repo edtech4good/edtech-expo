@@ -155,8 +155,11 @@ export function contentKind(c: ContentLike): { kind: ContentKind; hasFile: boole
 // ---- labels ----------------------------------------------------------------
 // Prompts are numbered by their row ("Sound 2"). Answers must NOT be: an
 // answer numbered like its prompt would tell the learner the pairing. So
-// answers get letters in the order they sit in the bank, and the bank is never
-// in the prompts' order (see `bankOrder`).
+// answers get letters in the order they sit in the bank. The bank is a
+// UNIFORM shuffle (every order equally likely), so neither the position nor
+// the letter says anything about which prompt an answer belongs to. (Ruling
+// out "an answer at its own prompt's position" would itself leak: with two
+// answers it would always be swapped.)
 
 export type Tr = (key: string, opts?: Record<string, unknown>) => string;
 
@@ -185,21 +188,14 @@ export function letterFor(i: number): string {
   return i < 26 ? String.fromCharCode(65 + i) : `Z${i - 24}`;
 }
 
-/**
- * The bank order: a shuffle in which no answer sits at its own prompt's
- * position, so bank position (and the letter that follows it) never matches
- * the prompt's row. One item cannot move, so it stays.
- */
+/** The bank order: a uniform shuffle (Fisher-Yates), every order equally likely. */
 export function bankOrder(ids: ReadonlyArray<string>, rng: () => number = Math.random): string[] {
-  if (ids.length < 2) return [...ids];
-  for (;;) {
-    const out = [...ids];
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
-    if (out.every((id, i) => id !== ids[i])) return out;
+  const out = [...ids];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
   }
+  return out;
 }
 
 /** answer id -> its letter, by bank position. It follows the chip into a slot and back. */
@@ -232,15 +228,20 @@ export function answerName(o: OptionLike, letter: string, t: Tr): string {
 
 /**
  * The slot's screen-reader label: it names its prompt, then what is in it
- * (or what would go in it).
+ * (or what would go in it), and says what a tap does: put a picked chip in
+ * (swapping a placed one), or take the placed chip back. A locked slot only
+ * says what is in it.
  */
 export function slotA11yLabel(
-  input: { prompt: string; answer: string; state: MatchSlotState; pickedName: string },
+  input: { prompt: string; answer: string; state: MatchSlotState; pickedName: string; locked?: boolean },
   t: Tr,
 ): string {
-  const { prompt, answer, state, pickedName } = input;
+  const { prompt, answer, state, pickedName, locked = false } = input;
   switch (state) {
     case 'filled':
+      if (locked) return t('corporate.matching.slotPlaced', { prompt, answer });
+      if (pickedName !== '')
+        return t('corporate.matching.slotSwap', { prompt, answer, chip: pickedName });
       return t('corporate.matching.slotFilled', { prompt, answer });
     case 'correct':
       return t('kit.mark.labelCorrect', { label: `${prompt}: ${answer}` });

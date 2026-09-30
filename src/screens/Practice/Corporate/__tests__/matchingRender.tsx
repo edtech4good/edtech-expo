@@ -99,22 +99,29 @@ function main() {
 
   check('a slot is one screen-reader stop that names its prompt', () => {
     const r = render(question);
-    const stop = (i: number) =>
-      r.root.findAll(n => n.props?.accessible === true && n.props?.accessibilityRole === 'button' &&
-        typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(['cat', 'dog', 'sun'][i]))[0];
+    const stop = (i: number) => byId(r, `match-slot-${i}`);
     assert.equal(stop(0).props.accessibilityLabel, 'corporate.matching.slotEmpty{"prompt":"cat"}');
     tap(chipFor(r, 'hat'));
     assert.equal(stop(1).props.accessibilityLabel, 'corporate.matching.slotTarget{"prompt":"dog","chip":"hat"}');
-    act(() => stop(0).props.onAccessibilityAction({ nativeEvent: { actionName: 'activate' } }));
+    // Enter, Space and a tap are all the Pressable's onPress.
+    act(() => stop(0).props.onPress({}));
     assert.equal(stop(0).props.accessibilityLabel, 'corporate.matching.slotFilled{"prompt":"cat","answer":"hat"}');
-    assert.deepEqual(stop(0).props.accessibilityActions, [{ name: 'activate' }]);
+    assert.equal(stop(0).props.accessibilityRole, 'button');
+    // With another chip picked, the filled slot says it will swap.
+    tap(chipFor(r, 'log'));
+    assert.equal(stop(0).props.accessibilityLabel, 'corporate.matching.slotSwap{"prompt":"cat","answer":"hat","chip":"log"}');
     act(() => r.unmount());
   });
 
-  check('wordless answers are labelled by bank letter: none carries its own prompt\'s row letter, across shuffles', () => {
+  check('wordless answers: letters follow bank position (A, B, C, D in bank order), and stay put when a chip is placed', () => {
     const snd = { filename: 's.wav', filetype: 1 };
     const q = Q(['a', 'b', 'c', 'd'].map(id => o(id, `prompt ${id}`, '', { a: snd })));
-    for (let tries = 1; tries <= 40; tries++) {
+    const chipLabels = (r: ReactTestRenderer) =>
+      r.root.findAll(n => typeof n.props?.testID === 'string' && n.props.testID.startsWith('match-chip-') &&
+        !n.props.testID.includes('audio') && typeof n.props.onPress === 'function' && typeof n.props.accessibilityLabel === 'string')
+        .filter((n, i, all) => all.findIndex(m => m.props.testID === n.props.testID) === i) // composite + host
+        .map(n => n.props.accessibilityLabel as string);
+    for (let tries = 1; tries <= 10; tries++) {
       let r!: ReactTestRenderer;
       act(() => {
         r = TestRenderer.create(
@@ -122,15 +129,17 @@ function main() {
             disabled: false, marks: null, showAnswer: false, report }),
         );
       });
-      const labels: string[] = [];
-      for (let row = 0; row < 4; row++) {
-        const chip = r.root.findAll(n => n.props?.testID === `match-chip-${row}` && typeof n.props.onPress === 'function' && typeof n.props.accessibilityLabel === 'string')[0];
-        const label = chip.props.accessibilityLabel as string;
-        labels.push(label);
-        assert.notEqual(label, `corporate.matching.answerSound{"letter":"${'ABCD'[row]}"}`,
-          `the answer for row ${row} carries row ${row}'s letter (try ${tries})`);
-      }
-      assert.equal(new Set(labels).size, 4, 'four distinct letters');
+      const want = ['A', 'B', 'C', 'D'].map(l => `corporate.matching.answerSound{"letter":"${l}"}`);
+      const before = chipLabels(r);
+      assert.deepEqual(before, want, 'bank order reads A, B, C, D');
+      // Place the first chip in slot 3: the others keep their letters, and the slot names it.
+      const first = r.root.findAll(n => typeof n.props?.testID === 'string' && n.props.testID.startsWith('match-chip-') &&
+        !n.props.testID.includes('audio') && typeof n.props.onPress === 'function' && n.props.accessibilityLabel === before[0])[0];
+      act(() => first.props.onPress({}));
+      act(() => byId(r, 'match-slot-3').props.onPress({}));
+      assert.deepEqual(chipLabels(r), want.slice(1), 'the rest keep their letters');
+      const slot3 = byId(r, 'match-slot-3').props.accessibilityLabel as string;
+      assert.ok(slot3.startsWith('corporate.matching.slotFilled') && slot3.includes('\\"A\\"'), slot3);
       act(() => r.unmount());
     }
   });

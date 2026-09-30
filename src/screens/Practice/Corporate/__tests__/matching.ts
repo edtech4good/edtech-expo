@@ -188,19 +188,36 @@ const opt = (id: string, prompt: string, answer: string, files: { p?: any; a?: a
 // A tiny seeded generator, so the shuffles below are reproducible.
 const seeded = (seed: number) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
 
-check('the bank is a shuffle where no answer sits at its own prompt\'s position', () => {
-  for (const n of [2, 3, 4, 5, 6]) {
+check('the bank order is a uniform shuffle: every order appears, about equally often', () => {
+  // A stronger generator than the LCG above, so the test measures bankOrder, not the seed.
+  const mulberry = (a: number) => () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+  for (const [n, trials] of [[2, 4000], [3, 12000], [4, 48000]] as const) {
     const ids = Array.from({ length: n }, (_x, i) => `id${i}`);
-    for (let seed = 1; seed <= 300; seed++) {
-      const bank = bankOrder(ids, seeded(seed));
+    const rng = mulberry(n * 7919);
+    const counts = new Map<string, number>();
+    for (let k = 0; k < trials; k++) {
+      const bank = bankOrder(ids, rng);
       assert.deepEqual([...bank].sort(), [...ids].sort(), 'a permutation');
-      bank.forEach((id, i) => assert.notEqual(id, ids[i], `chip ${id} fixed at ${i} (n=${n}, seed=${seed})`));
+      counts.set(bank.join(), (counts.get(bank.join()) ?? 0) + 1);
     }
+    const orders = [1, 2, 3, 4].slice(0, n).reduce((f, x) => f * x, 1); // n!
+    assert.equal(counts.size, orders, `n=${n}: all ${orders} orders occur (got ${counts.size})`);
+    const expected = trials / orders;
+    for (const [order, c] of counts)
+      assert.ok(Math.abs(c - expected) < 0.15 * expected, `n=${n}: ${order} seen ${c} times, expected about ${expected}`);
+    // In particular an answer sits at its own prompt's position about 1 time in n.
+    const fixedFirst = [...counts].filter(([o]) => o.startsWith('id0,')).reduce((s2, [, c]) => s2 + c, 0);
+    assert.ok(Math.abs(fixedFirst - trials / n) < 0.1 * (trials / n), `n=${n}: first chip is prompt 1's ${fixedFirst} times`);
   }
   assert.deepEqual(bankOrder(['only']), ['only']);
 });
 
-check('an answer without words is labelled by its bank letter, never by its prompt\'s row', () => {
+check('an answer without words is labelled by its bank letter (bank position), not by its prompt\'s row', () => {
   const ids = ['a', 'b', 'c', 'd'];
   const options = ids.map(id => opt(id, '', '', { a: sound }));
   for (let seed = 1; seed <= 300; seed++) {
@@ -209,10 +226,10 @@ check('an answer without words is labelled by its bank letter, never by its prom
     ids.forEach((id, row) => {
       const label = answerName(options[row], letters[id], t);
       assert.equal(label, `corporate.matching.answerSound{"letter":"${letters[id]}"}`);
-      // The label a row-numbered scheme would give this answer is not the label it has.
-      assert.notEqual(letters[id], letterFor(row), `answer ${id} would be labelled by its own row ${row}`);
+      void row;
     });
-    // The letter is a function of the bank alone: placing a chip cannot renumber it.
+    // The letter is bank position, and a function of the bank alone: placing a chip cannot renumber it.
+    bank.forEach((id, pos) => assert.equal(letters[id], letterFor(pos)));
     assert.deepEqual(answerLetters(bank), letters);
   }
 });
@@ -232,7 +249,11 @@ check('slot labels name the prompt, then the answer or the chip that would go in
   assert.equal(slotA11yLabel({ ...base, state: 'empty' }, t), 'corporate.matching.slotEmpty{"prompt":"Expenses"}');
   assert.equal(slotA11yLabel({ ...base, state: 'active' }, t), 'corporate.matching.slotActive{"prompt":"Expenses"}');
   assert.equal(slotA11yLabel({ ...base, state: 'target' }, t), 'corporate.matching.slotTarget{"prompt":"Expenses","chip":"Profit"}');
-  assert.equal(slotA11yLabel({ ...base, state: 'filled' }, t), 'corporate.matching.slotFilled{"prompt":"Expenses","answer":"Money going out"}');
+  assert.equal(slotA11yLabel({ ...base, pickedName: '', state: 'filled' }, t), 'corporate.matching.slotFilled{"prompt":"Expenses","answer":"Money going out"}');
+  // A chip is picked: tapping a filled slot swaps, it does not take back.
+  assert.equal(slotA11yLabel({ ...base, state: 'filled' }, t), 'corporate.matching.slotSwap{"prompt":"Expenses","answer":"Money going out","chip":"Profit"}');
+  // Locked: no "tap" advice.
+  assert.equal(slotA11yLabel({ ...base, pickedName: '', state: 'filled', locked: true }, t), 'corporate.matching.slotPlaced{"prompt":"Expenses","answer":"Money going out"}');
   assert.equal(slotA11yLabel({ ...base, state: 'correct' }, t), 'kit.mark.labelCorrect{"label":"Expenses: Money going out"}');
   assert.equal(slotA11yLabel({ ...base, state: 'incorrect' }, t), 'kit.mark.labelIncorrect{"label":"Expenses: Money going out"}');
 });

@@ -273,7 +273,9 @@
       "slotEmpty": "{{prompt}}៖ ទទេ",
       "slotActive": "{{prompt}}៖ ទទេ កំពុងរង់ចាំចម្លើយ",
       "slotTarget": "{{prompt}}៖ ដាក់ «{{chip}}» នៅទីនេះ",
-      "slotFilled": "{{prompt}}៖ {{answer}} បានដាក់ហើយ។ ចុចដើម្បីយកវាមកវិញ។"
+      "slotFilled": "{{prompt}}៖ {{answer}} បានដាក់ហើយ។ ចុចដើម្បីយកវាមកវិញ។",
+      "slotSwap": "{{prompt}}៖ {{answer}} បានដាក់ហើយ។ ចុចដើម្បីដាក់ «{{chip}}» នៅទីនេះជំនួស។",
+      "slotPlaced": "{{prompt}}៖ {{answer}} បានដាក់ហើយ"
     }
   }
 }

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 import _ from 'lodash';
@@ -301,41 +301,34 @@ function MatchRow({
         </View>
       </View>
       <View style={styles.slotCell}>
-        {/* The slot is one screen-reader stop that names its prompt; the inner
-            Slot is hidden so it is not read twice. Same press as a tap. */}
-        <View
-          accessible
-          accessibilityRole={locked ? undefined : 'button'}
+        {/* The slot is ONE control: a Pressable with the composed label, so a tap,
+            Enter and Space all activate it, and it is one tab stop. The Slot inside
+            only draws it: it takes no touches and (on web) is inert, so it is not a
+            second tab stop or read twice. */}
+        <Pressable
+          testID={`match-slot-${index}`}
+          accessibilityRole="button"
           accessibilityLabel={slotA11yLabel(
-            { prompt: promptA11y, answer: answerLabelText, state, pickedName },
+            { prompt: promptA11y, answer: answerLabelText, state, pickedName, locked },
             t as Tr,
           )}
-          accessibilityActions={locked ? undefined : [{ name: 'activate' }]}
-          onAccessibilityAction={locked ? undefined : () => onPress()}
+          accessibilityState={{ disabled: locked }}
+          disabled={locked}
+          onPress={onPress}
           style={{ flex: 1, flexDirection: 'row' }}>
-          <View
-            importantForAccessibility="no-hide-descendants"
-            accessibilityElementsHidden
-            aria-hidden
-            style={{ flex: 1, flexDirection: 'row' }}>
+          <DrawnSlot>
             {chip && answer?.kind === 'image' ? (
               <PlacedPicture
-                testID={`match-slot-${index}`}
                 state={state}
                 label={answerLabelText}
                 source={answerSrc}
-                onPress={locked ? undefined : onPress}
+                onPress={locked ? undefined : noop}
               />
             ) : (
-              <Slot
-                testID={`match-slot-${index}`}
-                state={state}
-                label={answerLabelText}
-                onPress={locked ? undefined : onPress}
-              />
+              <Slot state={state} label={answerLabelText} onPress={locked ? undefined : noop} />
             )}
-          </View>
-        </View>
+          </DrawnSlot>
+        </Pressable>
         {chip && answer?.kind === 'audio' ? (
           <OptionAudioCircle
             testID={`match-slot-audio-${index}`}
@@ -345,6 +338,28 @@ function MatchRow({
           />
         ) : null}
       </View>
+    </View>
+  );
+}
+
+const noop = () => undefined;
+
+/** Draws a slot without being one: no touches, hidden from screen readers, and inert on web (no tab stop). */
+function DrawnSlot({ children }: { children: ReactNode }) {
+  const ref = useRef<View>(null);
+  useEffect(() => {
+    // react-native-web passes no `inert` prop through, so set it on the element.
+    if (Platform.OS === 'web') (ref.current as unknown as HTMLElement | null)?.setAttribute('inert', '');
+  }, []);
+  return (
+    <View
+      ref={ref}
+      pointerEvents="none"
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      aria-hidden
+      style={{ flex: 1, flexDirection: 'row' }}>
+      {children}
     </View>
   );
 }

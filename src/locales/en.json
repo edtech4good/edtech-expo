@@ -279,7 +279,9 @@
       "slotEmpty": "{{prompt}}: empty",
       "slotActive": "{{prompt}}: empty, waiting for an answer",
       "slotTarget": "{{prompt}}: place “{{chip}}” here",
-      "slotFilled": "{{prompt}}: {{answer}}, placed. Tap to take it back."
+      "slotFilled": "{{prompt}}: {{answer}}, placed. Tap to take it back.",
+      "slotSwap": "{{prompt}}: {{answer}} placed. Tap to put “{{chip}}” here instead.",
+      "slotPlaced": "{{prompt}}: {{answer}}, placed"
     }
   }
 }
