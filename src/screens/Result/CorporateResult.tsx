@@ -14,9 +14,12 @@ import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
 
 import { ResultBand } from './resultBand';
-import { pickCharacter } from './mascot';
-import ResultIllustration, { hasResultIllustration, MASCOT_GAP } from './ResultIllustration';
-import useReducedMotion from './useReducedMotion';
+import { clipForBand } from './mascotClip';
+import { Mascot, pickCharacter } from '@/components/mascot';
+import useReducedMotion from '@/components/mascot/useReducedMotion';
+
+/** Space between the mascot and the eyebrow below it (inside the mascot slot, so a failed mascot leaves no gap). */
+const MASCOT_GAP = 16;
 
 export interface CorporateResultProps {
   band: ResultBand;
@@ -242,13 +245,13 @@ export default function CorporateResult({
     </View>
   );
 
-  const showMascot = hasResultIllustration();
-  const mascot = (
-    <ResultIllustration
-      band={band}
+  const mascot = (gapBelow = 0) => (
+    <Mascot
+      clip={clipForBand(band)}
       character={character}
       reducedMotion={reduced !== false}
       compact={compact}
+      gapBelow={gapBelow}
     />
   );
 
@@ -262,12 +265,10 @@ export default function CorporateResult({
       }}>
       <QuestionColumn>
         <View style={{ alignItems: 'center' }}>
-          {!compact && showMascot && (
-            <View style={{ marginBottom: MASCOT_GAP }}>{mascot}</View>
-          )}
+          {!compact && mascot(MASCOT_GAP)}
           {compact ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 28 }}>
-              {showMascot && mascot}
+              {mascot()}
               {ring}
               {textColumn}
             </View>

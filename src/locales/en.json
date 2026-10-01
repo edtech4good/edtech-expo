@@ -316,6 +316,9 @@
       "scoreSpoken": "You got {{score}} of {{max}} right, {{percent}} percent.",
       "closeHint": "A quick review and you'll have it.",
       "farHint": "Every try teaches something. Have another go when you're ready."
+    },
+    "quizIntro": {
+      "startQuiz": "Start quiz"
     }
   }
 }

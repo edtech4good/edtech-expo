@@ -36,6 +36,7 @@ import { NAV_SIDEBAR_WIDTH } from '@/components/ui/NavSidebar';
 import { PASS_PERCENTAGE } from '@/constants';
 import {
   ActivityIndicator,
+  Platform,
   Text,
   useWindowDimensions,
   View,
@@ -59,6 +60,8 @@ import { useTranslation } from 'react-i18next';
 import type { AnswerV1 } from '@/utils/answerV1';
 import type { SubmitOptions } from '../Practice/Corporate/types';
 import { AnnouncerProvider } from '@/components/kit/Announcer';
+import QuizIntro from './QuizIntro';
+import useQuizIntroGate from './useQuizIntroGate';
 
 // Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
 // for the full rationale; kept identical here so both screens' headers
@@ -107,16 +110,55 @@ export default function QuizScreen() {
 
   const methods = useForm<QuizResult>({
     defaultValues: {
+      // Reset to the moment of Start on corporate quizzes (handleStart), so
+      // time spent on the intro is not counted as quiz time.
       starttime: createTimeStamp(),
       endtime: undefined,
       result: [],
     },
   });
 
+  // Corporate quizzes open on an intro card; question 1 shows after Start.
+  // The quiz clock restarts at Start, so intro time is not counted.
+  const {
+    visible: introVisible,
+    started,
+    loading: loadingQuestions,
+    load: loadQuestions,
+    start: handleStart,
+  } = useQuizIntroGate({
+    isCorporate,
+    fetch,
+    questionCount: questions.length,
+    onBegin: () => methods.setValue('starttime', createTimeStamp()),
+  });
+
+  // Web: after Start the button is gone and focus would fall to the page;
+  // put it on the question heading instead (as the intro does for its own).
+  useEffect(() => {
+    if (!started || !isCorporate || Platform.OS !== 'web') return;
+    let tries = 0;
+    let raf = 0;
+    const focusHeading = () => {
+      const el = document.querySelector<HTMLElement>('[data-testid="question-heading"]');
+      if (el) {
+        el.setAttribute('tabindex', '-1');
+        el.style.outline = 'none';
+        el.focus();
+      } else if (tries++ < 20) {
+        raf = requestAnimationFrame(focusHeading);
+      }
+    };
+    raf = requestAnimationFrame(focusHeading);
+    return () => cancelAnimationFrame(raf);
+  }, [started, isCorporate]);
+
   useEffect(() => {
     const quizName = (selectedModule as LessonQuiz)?.lessonquizname;
     navigation.setOptions({
-      ...(isCorporate && quizName ? { title: quizName } : {}),
+      // `title` is blank while the intro shows: iOS native-stack ignores a
+      // null headerTitle and would draw this text a second time.
+      ...(isCorporate && quizName ? { title: introVisible ? '' : quizName } : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
       // Android native-stack (react-native-screens) renders its own stock
       // back chevron alongside a custom headerLeft unless headerBackVisible
@@ -131,7 +173,9 @@ export default function QuizScreen() {
       // back button or the counter — see HEADER_SIDE_SLOT above.
       ...(isCorporate
         ? {
-            headerTitle: () => (
+            // The intro card already shows the quiz name as its heading.
+            headerTitle: () =>
+              introVisible ? null : (
               // On the tablet nav rail (or desktop sidebar), the header is
               // narrower than the window by that nav's fixed width, so subtract it too or the
               // title's max-width overshoots the header's actual space.
@@ -167,7 +211,8 @@ export default function QuizScreen() {
                 </Text>
               </View>
             ),
-            headerRight: () => (
+            headerRight: () =>
+              introVisible ? null : (
               <EyebrowText
                 testID="practice-progress-label"
                 size={theme.fontSizes.eyebrow}
@@ -192,11 +237,12 @@ export default function QuizScreen() {
     isRail,
     isSidebar,
     isKhmer,
+    introVisible,
   ]);
 
   useEffect(() => {
     if (!selectedModule) return;
-    fetch();
+    void loadQuestions();
   }, [selectedModule]);
 
   useEffect(() => {
@@ -204,6 +250,12 @@ export default function QuizScreen() {
   }, [currentQuestion]);
 
   const handleBackPress = () => {
+    // On the intro nothing has been answered, so there is nothing to lose:
+    // leave straight away, to the same place the confirmed exit goes.
+    if (introVisible) {
+      handleGoBack();
+      return;
+    }
     if (!promptModalRef.current) return;
     promptModalRef.current.show(t('screen.practice.exitQuizMessage'));
   };
@@ -303,6 +355,17 @@ export default function QuizScreen() {
   const handleContinue = useCallback(() => {
     void modalPressRef.current();
   }, []);
+
+  if (introVisible) {
+    return (
+      <QuizIntro
+        title={(selectedModule as LessonQuiz)?.lessonquizname ?? ''}
+        questionCount={loadingQuestions ? null : questions.length}
+        loading={loadingQuestions}
+        onStart={handleStart}
+      />
+    );
+  }
 
   if (_.isEmpty(currentQuestion)) {
     if (isCorporate) {

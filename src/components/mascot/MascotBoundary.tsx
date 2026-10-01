@@ -1,9 +1,9 @@
 import { Component, ReactNode } from 'react';
 
 /**
- * The mascot is decoration. If anything in it fails (the lazy Lottie chunk
+ * The mascot is decoration (result screen, quiz intro, empty states). If anything in it fails (the lazy Lottie chunk
  * cannot download offline, lottie throws, bad JSON, native module missing) the
- * slot renders nothing and the result screen carries on. Never rethrows.
+ * slot renders nothing and the screen carries on. Never rethrows.
  */
 export default class MascotBoundary extends Component<
   { children?: ReactNode },
@@ -19,7 +19,7 @@ export default class MascotBoundary extends Component<
   componentDidCatch(error: unknown) {
     if (this.warned) return;
     this.warned = true;
-    console.warn('Result mascot failed to render; continuing without it.', error);
+    console.warn('Mascot failed to render; continuing without it.', error);
   }
 
   render() {

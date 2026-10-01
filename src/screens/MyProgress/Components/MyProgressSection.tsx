@@ -5,6 +5,7 @@ import type { CurriculumProgressRow, ProgressSummary } from '@/models';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { useFont } from '@/services';
+import { Mascot } from '@/components/mascot';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -763,16 +764,16 @@ export default function MyProgressSection({
           <Card padding={size.cardPadding} style={{ marginTop: 24 }}>
             {sectionHeader}
             {curricula.length === 0 ? (
-              <Text
-                style={text(
-                  'body',
-                  'normal',
-                  14,
-                  theme.colors.onSurfaceVariant,
-                  22,
-                )}>
-                {t('screen.myProgress.noCurricula')}
-              </Text>
+              <View style={{ alignItems: 'center' }}>
+                <Mascot clip="idle" compact gapBelow={12} />
+                <Text
+                  style={[
+                    text('body', 'normal', 14, theme.colors.onSurfaceVariant, 22),
+                    { textAlign: 'center' },
+                  ]}>
+                  {t('screen.myProgress.noCurricula')}
+                </Text>
+              </View>
             ) : (
               <View style={{ gap: size.rowGap }}>
                 {pairs(visibleRows).map(pair => (
@@ -824,10 +825,16 @@ export default function MyProgressSection({
 
     const rows =
       curricula.length === 0 ? (
-        <Text
-          style={text('body', 'normal', 14, theme.colors.onSurfaceVariant, 22)}>
-          {t('screen.myProgress.noCurricula')}
-        </Text>
+        <View style={{ alignItems: 'center' }}>
+          <Mascot clip="idle" compact gapBelow={12} />
+          <Text
+            style={[
+              text('body', 'normal', 14, theme.colors.onSurfaceVariant, 22),
+              { textAlign: 'center' },
+            ]}>
+            {t('screen.myProgress.noCurricula')}
+          </Text>
+        </View>
       ) : (
         <View style={{ gap: size.rowGap }}>
           {visibleRows.map(row => (
