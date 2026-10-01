@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+// Installs Metro's async-chunk loader, which the app's custom entry does not
+// (expo-router's own entry does). Needed for the lazy import() below.
+import '@expo/metro-runtime/async-require';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { clipForBand, MASCOT_ASPECT, mascotHeight } from './mascot';
@@ -7,12 +10,15 @@ import type { ResultIllustrationProps } from './ResultIllustration';
 
 /**
  * Web renderer for the mascot slot (see ResultIllustration.tsx for the
- * contract). Uses @lottiefiles/react-lottie-player directly: it is not a
- * dependency today, so without it the slot renders nothing and takes no room.
- * Plays once, no loop, and holds the last frame. With reduced motion nothing
- * is shown (the player cannot hold a chosen frame). Decorative: hidden from
+ * contract). Uses @lottiefiles/react-lottie-player directly. If the package
+ * is ever missing the slot renders nothing and takes no room.
+ * Plays once, no loop, and holds the last frame. With reduced motion it does not
+ * autoplay and shows the last frame (lottie-web `goToAndStop`), as native does. Decorative: hidden from
  * assistive tech.
  */
+// @ts-ignore tsconfig's `module` rejects import(); Metro splits it into its own chunk.
+const MascotPlayer = lazy(() => import('./MascotPlayer'));
+
 export const MASCOT_GAP = 16;
 
 export function hasResultIllustration(): boolean {
@@ -40,12 +46,10 @@ export default function ResultIllustration({
     };
   }, [playable, character, clip]);
 
-  if (!playable || reducedMotion) return null;
+  if (!playable) return null;
 
   const height = mascotHeight(compact);
   const width = Math.round(height * MASCOT_ASPECT);
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Player = source ? require('@lottiefiles/react-lottie-player').Player : null;
 
   return (
     <View
@@ -53,14 +57,16 @@ export default function ResultIllustration({
       aria-hidden
       pointerEvents="none"
       style={{ width, height, alignSelf: 'center' }}>
-      {Player && (
-        <Player
-          key={`${character}-${clip}`}
-          src={source}
-          autoplay
-          loop={false}
-          style={{ width, height }}
-        />
+      {source && (
+        <Suspense fallback={null}>
+          <MascotPlayer
+            key={`${character}-${clip}-${reducedMotion ? 'still' : 'play'}`}
+            source={source}
+            width={width}
+            height={height}
+            reducedMotion={reducedMotion}
+          />
+        </Suspense>
       )}
     </View>
   );

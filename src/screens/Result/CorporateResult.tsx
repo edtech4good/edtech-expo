@@ -3,7 +3,7 @@ import { QuestionColumn } from '@/components/kit';
 import { useFont, useTypeRole } from '@/services';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -226,7 +226,7 @@ export default function CorporateResult({
     </View>
   );
 
-  const showMascot = hasResultIllustration() && !(reduced !== false && Platform.OS === 'web');
+  const showMascot = hasResultIllustration();
   const mascot = (
     <ResultIllustration
       band={band}

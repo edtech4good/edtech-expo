@@ -12,16 +12,7 @@ export async function loadMascot(character: MascotCharacter, clip: MascotClip): 
   return res.json();
 }
 
-/**
- * lottie-react-native on web throws unless `@lottiefiles/react-lottie-player`
- * is installed (it is not a dependency today), so the slot stays empty, and
- * takes no room, until that package is added.
- */
+/** Web plays the JSON with @lottiefiles/react-lottie-player (a dependency). */
 export function mascotPlayable(): boolean {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return Boolean(require('@lottiefiles/react-lottie-player'));
-  } catch {
-    return false;
-  }
+  return true;
 }

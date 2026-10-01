@@ -38,6 +38,7 @@
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {
+    "@lottiefiles/react-lottie-player": "^3.6.0",
     "@react-native-async-storage/async-storage": "1.21.0",
     "@react-native-community/netinfo": "11.1.0",
     "@react-native-community/slider": "^4.5.2",

@@ -21,8 +21,7 @@ import type { ResultBand } from './resultBand';
  *
  * Space is reserved from the first render, so nothing jumps when the JSON
  * arrives. This file is the native (iOS/Android) renderer; web uses
- * ResultIllustration.web.tsx, which needs @lottiefiles/react-lottie-player
- * (not installed today, so on web the slot stays empty and takes no room).
+ * ResultIllustration.web.tsx (@lottiefiles/react-lottie-player).
  */
 export const MASCOT_GAP = 16;
 
