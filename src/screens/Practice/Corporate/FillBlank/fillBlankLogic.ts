@@ -152,6 +152,72 @@ export function tapBlank(state: BlankState, index: number): BlankState {
   return { filled, active: index };
 }
 
+// ---------------------------------------------------------------------------
+// Dragging
+// ---------------------------------------------------------------------------
+// A drop is the taps it stands for, run through tapBlank / fillActive, so a
+// drag ends in exactly the state those taps would (including which blank is
+// active afterwards).
+
+/** Where a word is dragged from: the bank, or the blank it sits in. */
+export type BlankDragFrom = { kind: 'bank' } | { kind: 'blank'; index: number };
+/** Where it is dropped: a blank, the bank, or nowhere (it goes back). */
+export type BlankDropTo = { kind: 'blank'; index: number } | { kind: 'bank' } | null;
+
+export type BlankTap = { kind: 'word'; tileId: string } | { kind: 'blank'; index: number };
+
+export function blankDropTaps(
+  filled: ReadonlyArray<string | null>,
+  tileId: string,
+  from: BlankDragFrom,
+  to: BlankDropTo,
+): BlankTap[] {
+  if (to === null) return [];
+  if (to.kind === 'blank' && (to.index < 0 || to.index >= filled.length)) return [];
+  if (from.kind === 'bank') {
+    if (to.kind === 'bank' || filled.includes(tileId)) return [];
+    // Tap the blank (a word in it goes back to the bank and the blank turns
+    // active; an empty blank turns active), then tap the word to fill it.
+    return [
+      { kind: 'blank', index: to.index },
+      { kind: 'word', tileId },
+    ];
+  }
+  if (filled[from.index] !== tileId) return [];
+  // Back to the bank: tap its blank.
+  if (to.kind === 'bank') return [{ kind: 'blank', index: from.index }];
+  if (to.index === from.index) return [];
+  // Onto another blank: take it out, put it there; a word that was there
+  // goes into the blank this one left (the two swap).
+  const other = filled[to.index];
+  const taps: BlankTap[] = [
+    { kind: 'blank', index: from.index },
+    { kind: 'blank', index: to.index },
+    { kind: 'word', tileId },
+  ];
+  if (other !== null) {
+    taps.push({ kind: 'blank', index: from.index }, { kind: 'word', tileId: other });
+  }
+  return taps;
+}
+
+export function applyBlankTaps(state: BlankState, taps: ReadonlyArray<BlankTap>): BlankState {
+  return taps.reduce(
+    (acc, tap) => (tap.kind === 'word' ? fillActive(acc, tap.tileId) : tapBlank(acc, tap.index)),
+    state,
+  );
+}
+
+/** The state after a drop: the drop's taps. */
+export function dropWord(
+  state: BlankState,
+  tileId: string,
+  from: BlankDragFrom,
+  to: BlankDropTo,
+): BlankState {
+  return applyBlankTaps(state, blankDropTaps(state.filled, tileId, from, to));
+}
+
 /** Every blank holds a word: Submit is enabled. */
 export function isReady(filled: ReadonlyArray<string | null>): boolean {
   return filled.every(f => f !== null);

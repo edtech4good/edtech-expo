@@ -14,13 +14,29 @@ import assert from 'node:assert/strict';
 import React from 'react';
 
 const h = React.createElement;
+const drag: { opts: any; draggables: Record<string, boolean> } = { opts: null, draggables: {} };
 const t = (key: string, o?: Record<string, unknown>) => (o ? `${key}${JSON.stringify(o)}` : key);
 const extra: Record<string, unknown> = {
   'react-i18next': { __esModule: true, useTranslation: () => ({ t }) },
   '@/redux': { __esModule: true, useAppSelector: () => 'en' },
   '@/redux/slices': { __esModule: true, getSelectedLanguage: () => 'en' },
-  // The drag list pulls in gesture-handler; MovableTile only needs its grip glyph.
-  '@/components/drag': { __esModule: true, GripGlyph: () => h('span') },
+  // The drag primitives pull in gesture-handler. These stand-ins render their
+  // children, record what each Draggable was given, and hand the test the
+  // body's drop handler, so a drop can be driven as the gesture would.
+  '@/components/drag': {
+    __esModule: true,
+    GripGlyph: () => h('span'),
+    useDragToTarget: (opts: any) => {
+      drag.opts = opts;
+      return { active: null, guardPress: (fn: any) => fn, _: {} };
+    },
+    DragStage: (p: any) => h('div', null, p.children),
+    DropTarget: (p: any) => h('div', null, p.children),
+    Draggable: (p: any) => {
+      drag.draggables[p.id] = !!(p.enabled ?? true);
+      return h('div', { 'data-draggable': p.id }, p.children);
+    },
+  },
   'expo-av': { __esModule: true, Audio: { Sound: class { unloadAsync = async () => undefined; loadAsync = async () => undefined; } } },
 };
 const anyModule = Module as any;
@@ -170,6 +186,72 @@ function main() {
     const r = render(Q([o('a', '', 'x', { p: { filename: 'p.png', filetype: 6 } }), o('b', 'dog', 'y')]));
     const labels = r.root.findAll(n => n.props?.accessible === true).map(n => n.props.accessibilityLabel);
     assert.ok(labels.includes('corporate.matching.promptPicture{"n":1}'), JSON.stringify(labels));
+    act(() => r.unmount());
+  });
+
+  check('a drag ends where the same taps end (place, swap, take back, drop nowhere)', () => {
+    const labelsOf = (r: ReactTestRenderer) =>
+      [0, 1, 2].map(i => byId(r, `match-slot-${i}`).props.accessibilityLabel as string);
+    // Taps.
+    reports.length = 0;
+    const rt = render(question);
+    tap(chipFor(rt, 'hat')); tap(byId(rt, 'match-slot-1'));           // hat -> dog
+    tap(chipFor(rt, 'log')); tap(byId(rt, 'match-slot-0'));           // log -> cat
+    // swap the two placed chips: slot 1 back, hat to slot 0 (log back), log to slot 1
+    tap(byId(rt, 'match-slot-1')); tap(chipFor(rt, 'hat')); tap(byId(rt, 'match-slot-0'));
+    tap(chipFor(rt, 'log')); tap(byId(rt, 'match-slot-1'));
+    tap(chipFor(rt, 'run')); tap(byId(rt, 'match-slot-2'));           // run -> sun
+    tap(byId(rt, 'match-slot-2'));                                    // take run back
+    const tapLabels = labelsOf(rt);
+    const tapReady = reports[reports.length - 1].ready;
+    const tapEval = reports[reports.length - 1].evaluate();
+    act(() => rt.unmount());
+    // The same through drops.
+    reports.length = 0;
+    const rd = render(question);
+    const drop = (id: string, target: string | null) => act(() => drag.opts.onDrop(id, target));
+    drop('bank:a', 'slot:b');
+    drop('bank:b', 'slot:a');
+    drop('slot:b', 'slot:a');      // hat onto log's slot: they swap
+    drop('slot:a', null);          // dropped nowhere: nothing moves
+    drop('bank:c', 'bank');        // a bank chip back onto the bank: nothing
+    drop('bank:c', 'slot:c');
+    drop('slot:c', 'bank');        // dragged back to the bank
+    assert.deepEqual(labelsOf(rd), tapLabels);
+    assert.equal(reports[reports.length - 1].ready, tapReady);
+    assert.deepEqual(reports[reports.length - 1].evaluate(), tapEval);
+    assert.equal(tapLabels[0], 'corporate.matching.slotFilled{"prompt":"cat","answer":"hat"}');
+    assert.equal(tapLabels[1], 'corporate.matching.slotFilled{"prompt":"dog","answer":"log"}');
+    act(() => rd.unmount());
+  });
+
+  check('a hold that never moved is a tap on what was held', () => {
+    const r = render(question);
+    act(() => drag.opts.onHoldTap('bank:a'));
+    assert.equal(byId(r, 'match-slot-1').props.accessibilityLabel, 'corporate.matching.slotTarget{"prompt":"dog","chip":"hat"}');
+    act(() => drag.opts.onHoldTap('slot:a'));
+    assert.equal(byId(r, 'match-slot-0').props.accessibilityLabel, 'corporate.matching.slotFilled{"prompt":"cat","answer":"hat"}');
+    act(() => r.unmount());
+  });
+
+  check('drag is offered only where it works: free bank chips and filled slots, never once locked', () => {
+    drag.draggables = {};
+    const r = render(question);
+    tap(chipFor(r, 'hat')); tap(byId(r, 'match-slot-0'));
+    assert.equal(drag.draggables['slot:a'], true, 'a filled slot drags');
+    assert.equal(drag.draggables['slot:b'], false, 'an empty slot does not');
+    assert.equal(drag.draggables['bank:b'], true, 'a free chip drags');
+    assert.equal(drag.draggables['bank:a'], false, 'a used chip (ghost) does not');
+    assert.equal(drag.opts.enabled, true);
+    // Submitted: marks are in. No drag anywhere, and the bank (and its grips) are gone.
+    drag.draggables = {};
+    act(() => r.update(h(MatchingBody, {
+      question, mode: 'practice', tries: 1, resetKey: 0, resultState: 'incorrect',
+      disabled: false, marks: { a: 'correct' }, showAnswer: false, report,
+    })));
+    assert.equal(drag.opts.enabled, false);
+    assert.ok(Object.values(drag.draggables).every(v => v === false), JSON.stringify(drag.draggables));
+    assert.equal(r.root.findAll(n => typeof n.props?.testID === 'string' && n.props.testID.startsWith('match-chip-')).length, 0);
     act(() => r.unmount());
   });
 

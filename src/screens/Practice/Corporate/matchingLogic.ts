@@ -73,6 +73,73 @@ export function pressSlot(s: MatchTapState, slotId: string): MatchTapState {
   return { ...s, activeSlot: s.activeSlot === slotId ? null : slotId };
 }
 
+// ---- dragging --------------------------------------------------------------
+// A drag is not a second state machine: each drop is the taps it stands for,
+// run through pressChip / pressSlot, so a drag ends in exactly the state
+// those taps would. A drag starts from a clean slate (a chip picked or a slot
+// waiting before the drag is put down first), as a new tap sequence would.
+
+/** Where a chip is dragged from: the bank, or the slot it sits in. */
+export type MatchDragFrom = { kind: 'bank' } | { kind: 'slot'; slotId: string };
+/** Where it is dropped: a slot, the bank, or nowhere (it goes back). */
+export type MatchDropTo = { kind: 'slot'; slotId: string } | { kind: 'bank' } | null;
+
+/** The taps a drop stands for, in order. Empty when the drop changes nothing. */
+export type MatchTap = { kind: 'chip'; chipId: string } | { kind: 'slot'; slotId: string };
+
+export function dropTaps(
+  placed: Placed,
+  chipId: string,
+  from: MatchDragFrom,
+  to: MatchDropTo,
+): MatchTap[] {
+  if (to === null) return [];
+  if (from.kind === 'bank') {
+    // Already placed (a stale bank drag) or dropped back on the bank: nothing.
+    if (to.kind === 'bank' || placedChips(placed).has(chipId)) return [];
+    // Chip, then slot: a chip already in that slot goes back to the bank.
+    return [
+      { kind: 'chip', chipId },
+      { kind: 'slot', slotId: to.slotId },
+    ];
+  }
+  if (placed[from.slotId] !== chipId) return [];
+  // Out of its slot onto the bank: tap the slot to take it back.
+  if (to.kind === 'bank') return [{ kind: 'slot', slotId: from.slotId }];
+  if (to.slotId === from.slotId) return [];
+  // Onto another slot: take it back, place it there, and if that slot held a
+  // chip, put that one where this came from (the two swap).
+  const other = placed[to.slotId];
+  const taps: MatchTap[] = [
+    { kind: 'slot', slotId: from.slotId },
+    { kind: 'chip', chipId },
+    { kind: 'slot', slotId: to.slotId },
+  ];
+  if (other !== undefined && other !== '') {
+    taps.push({ kind: 'chip', chipId: other }, { kind: 'slot', slotId: from.slotId });
+  }
+  return taps;
+}
+
+/** Run taps through the tap state machine. */
+export function applyMatchTaps(s: MatchTapState, taps: ReadonlyArray<MatchTap>): MatchTapState {
+  return taps.reduce(
+    (acc, tap) => (tap.kind === 'chip' ? pressChip(acc, tap.chipId) : pressSlot(acc, tap.slotId)),
+    s,
+  );
+}
+
+/** The state after a drop: the drop's taps, from a clean slate. */
+export function dropChip(
+  s: MatchTapState,
+  chipId: string,
+  from: MatchDragFrom,
+  to: MatchDropTo,
+): MatchTapState {
+  const clean: MatchTapState = { placed: s.placed, pickedChip: null, activeSlot: null };
+  return applyMatchTaps(clean, dropTaps(s.placed, chipId, from, to));
+}
+
 /** Submit is enabled only when every slot holds a chip. */
 export function isReady(placed: Placed, slotIds: ReadonlyArray<string>): boolean {
   return slotIds.length > 0 && slotIds.every(id => !_.isEmpty(placed[id]));
