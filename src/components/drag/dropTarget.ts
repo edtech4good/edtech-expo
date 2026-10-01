@@ -111,3 +111,18 @@ export function guardAfterDrag(until: number, moved: boolean, now: number): numb
 export function pressBlocked(dragActive: boolean, guardUntil: number, now: number): boolean {
   return dragActive || now < guardUntil;
 }
+
+/** How long after a hold-tap the browser's own click for it may arrive (ms). */
+export const HOLD_CLICK_MS = 400;
+
+/**
+ * Web only. A hold that never moved is handled as a tap by the drag
+ * (onHoldTap); the browser then fires its own click for the same touch on
+ * the same item, which would act a second time (pick, then put down). Only
+ * that click is swallowed: the first one inside the held item, soon after.
+ * A tap anywhere else, or a later one, acts as usual, so a hold-tap arms no
+ * general guard.
+ */
+export function swallowHoldClick(insideHeldItem: boolean, msSinceHold: number): boolean {
+  return insideHeldItem && msSinceHold < HOLD_CLICK_MS;
+}

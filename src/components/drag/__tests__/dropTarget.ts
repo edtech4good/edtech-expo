@@ -14,6 +14,8 @@ import {
   pointerInStage,
   pointInRect,
   guardAfterDrag,
+  HOLD_CLICK_MS,
+  swallowHoldClick,
   PRESS_AFTER_DRAG_MS,
   pressBlocked,
   TARGET_SLOP,
@@ -120,6 +122,12 @@ check('a hold-tap (a hold that never moved) arms no guard: a tap right after it 
   // Nor does it cut short a guard a moved drag had just armed.
   const armed = guardAfterDrag(0, true, 1000);
   assert.equal(guardAfterDrag(armed, false, 1100), armed);
+});
+
+check('web: after a hold-tap only the browser\'s own click inside the held item is swallowed', () => {
+  assert.equal(swallowHoldClick(true, 5), true, 'the click for the same touch');
+  assert.equal(swallowHoldClick(false, 5), false, 'a tap on anything else acts');
+  assert.equal(swallowHoldClick(true, HOLD_CLICK_MS), false, 'a later tap on the same item acts');
 });
 
 console.log(`\ndropTarget: ${passed} checks passed`);

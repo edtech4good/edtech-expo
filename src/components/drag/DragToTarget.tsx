@@ -17,7 +17,15 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 
-import { guardAfterDrag, hitTarget, pointerInStage, pressBlocked, TargetRects } from './dropTarget';
+import {
+  guardAfterDrag,
+  hitTarget,
+  HOLD_CLICK_MS,
+  pointerInStage,
+  pressBlocked,
+  swallowHoldClick,
+  TargetRects,
+} from './dropTarget';
 import type { Rect } from './reorder';
 
 /**
@@ -331,6 +339,27 @@ export function useDragToTarget({
     setActive(a => (a ? { ...a, over: target === '' ? null : target } : a));
   }, []);
 
+  // Web: after a hold-tap, swallow the browser's own click for that touch
+  // (see swallowHoldClick); it would otherwise act a second time.
+  const swallowNextClickIn = useCallback((node: View | undefined) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !node) return;
+    const el = node as unknown as HTMLElement;
+    const at = Date.now();
+    const onClick = (e: Event) => {
+      const inside = e.target instanceof Node && el.contains(e.target);
+      if (!swallowHoldClick(inside, Date.now() - at)) return;
+      e.stopPropagation();
+      e.preventDefault();
+      stop();
+    };
+    const stop = () => {
+      clearTimeout(timer);
+      window.removeEventListener('click', onClick, true);
+    };
+    const timer = setTimeout(stop, HOLD_CLICK_MS);
+    window.addEventListener('click', onClick, true);
+  }, []);
+
   const finish = useCallback(
     (id: string, target: string, held: boolean) => {
       stopScrollWatch.current?.();
@@ -342,10 +371,11 @@ export function useDragToTarget({
       // A hold that never moved is a tap: it arms no guard.
       guardUntil.current = guardAfterDrag(guardUntil.current, !held, Date.now());
       setActive(null);
+      if (held) swallowNextClickIn(nodes.current.drag[id]);
       if (held) onHoldTapRef.current?.(id);
       else onDropRef.current(id, target === '' ? null : target);
     },
-    [stable],
+    [stable, swallowNextClickIn],
   );
 
   const guardPress = useCallback(
