@@ -34,7 +34,7 @@
     "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts && tsx src/screens/Practice/Corporate/__tests__/fillBlankRender.tsx",
     "test:questionkey": "tsx src/components/practices/__tests__/questionKey.ts && tsx src/components/practices/__tests__/questionRemount.tsx",
     "test:image-ordering": "tsx src/screens/Practice/Corporate/__tests__/imageOrdering.ts && tsx src/screens/Practice/Corporate/__tests__/imageOrderingRender.tsx",
-    "test:result": "tsx src/screens/Result/__tests__/resultBand.ts",
+    "test:result": "tsx src/screens/Result/__tests__/resultBand.ts && tsx src/screens/Result/__tests__/mascot.ts",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {
