@@ -93,11 +93,12 @@ assert.equal(slotFrame(C, 'correct').borderColor, C.success);
 assert.equal(slotFrame(C, 'incorrect').borderColor, C.error);
 console.log('ok  slot rules');
 
-// 6. The list-frame helper carries the result look and nothing else.
+// 6. The list-frame helper carries the result look (and no shadow) and nothing else.
 assert.deepEqual(Object.keys(tileFrameStyle(C, 'correct')).sort(), [
   'backgroundColor',
   'borderColor',
   'borderWidth',
+  'elevation',
   'paddingLeft',
   'paddingRight',
 ]);
@@ -107,3 +108,15 @@ assert.notEqual(tileFrameStyle(C, 'correct'), tileFrameStyle(C, 'incorrect'));
 console.log('ok  tileFrameStyle (stable references)');
 
 console.log('\nall tile style checks passed');
+
+// 9. A result tile is flat: its translucent tint would show a shadow through
+// it on Android (the tile turned grey), so the frame cancels the resting
+// shadow. Raised states do not cancel it.
+for (const s of ['correct', 'incorrect', 'placed', 'disabled'] as const) {
+  const st = tileFrameStyle(C, s) as { elevation?: number };
+  assert.equal(st.elevation, 0, `${s} has no elevation`);
+}
+for (const s of ['default', 'picked'] as const) {
+  assert.equal((tileFrameStyle(C, s) as { elevation?: number }).elevation, undefined, `${s} keeps the raised shadow`);
+}
+console.log('ok  result frames are flat (elevation 0)');

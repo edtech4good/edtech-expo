@@ -322,10 +322,10 @@ function MatchRow({
                 state={state}
                 label={answerLabelText}
                 source={answerSrc}
-                onPress={locked ? undefined : noop}
+                showTakeBack={!locked}
               />
             ) : (
-              <Slot state={state} label={answerLabelText} onPress={locked ? undefined : noop} />
+              <Slot state={state} label={answerLabelText} decorative showTakeBack={!locked} />
             )}
           </DrawnSlot>
         </Pressable>
@@ -341,8 +341,6 @@ function MatchRow({
     </View>
   );
 }
-
-const noop = () => undefined;
 
 /** Draws a slot without being one: no touches, hidden from screen readers, and inert on web (no tab stop). */
 function DrawnSlot({ children }: { children: ReactNode }) {
@@ -369,14 +367,13 @@ function PlacedPicture({
   state,
   label,
   source,
-  onPress,
-  testID,
+  showTakeBack,
 }: {
   state: MatchSlotState;
   label: string;
   source: string;
-  onPress?: () => void;
-  testID?: string;
+  /** Draw the ✕ cue (the parent Pressable is what takes the touch). */
+  showTakeBack?: boolean;
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -418,32 +415,21 @@ function PlacedPicture({
       </Text>
       {result ? (
         <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={18} />
-      ) : onPress ? (
+      ) : showTakeBack ? (
         <View style={[styles.cue, { backgroundColor: theme.colors.surfaceVariant }]}>
           <CrossGlyph color={theme.colors.onSurfaceVariant} />
         </View>
       ) : null}
     </View>
   );
-  const a11y = result
-    ? t(state === 'correct' ? 'kit.mark.labelCorrect' : 'kit.mark.labelIncorrect', { label })
-    : onPress
-      ? t('kit.slot.a11yFilled', { label })
-      : label;
-  if (onPress) {
-    return (
-      <Pressable
-        testID={testID}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={a11y}
-        style={{ flex: 1 }}>
-        {body}
-      </Pressable>
-    );
-  }
+  // Drawn only: the parent Pressable is the one stop, so this is neither
+  // focusable, clickable nor read by a screen reader.
   return (
-    <View testID={testID} accessible accessibilityLabel={a11y} style={{ flex: 1 }}>
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      style={{ flex: 1 }}>
       {body}
     </View>
   );

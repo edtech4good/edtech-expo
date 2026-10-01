@@ -76,3 +76,23 @@ export function mcqOptionState(
   if (opts.marks) return opts.marks[option.questionoptionid] ?? 'default';
   return opts.selected ? 'selected' : 'default';
 }
+
+/**
+ * The locale key that adds the result to a text option's name for a screen
+ * reader, or null while answering. The wording is the picture choice's
+ * ("Circle, correct"), so both read the same. The right answer shown by
+ * "Show answer" says "correct answer": it was not the learner's choice.
+ */
+export function mcqResultLabelKey(
+  state: McqOptionState,
+  showAnswer: boolean,
+):
+  | 'corporate.mcqImage.correct'
+  | 'corporate.mcqImage.correctAnswer'
+  | 'corporate.mcqImage.incorrect'
+  | null {
+  if (state === 'correct')
+    return showAnswer ? 'corporate.mcqImage.correctAnswer' : 'corporate.mcqImage.correct';
+  if (state === 'incorrect') return 'corporate.mcqImage.incorrect';
+  return null;
+}

@@ -144,6 +144,28 @@ function main() {
     }
   });
 
+  check('a slot has exactly one accessible, clickable element (the drawn Slot inside is neither)', () => {
+    const r = render(question);
+    const inspect = (when: string) => {
+      for (const i of [0, 1, 2]) {
+        const stop = byId(r, `match-slot-${i}`);
+        const drawn = stop.findAll(n => n.props?.importantForAccessibility === 'no-hide-descendants');
+        assert.ok(drawn.length > 0, `${when}: slot ${i} has its drawn part hidden`);
+        for (const d of drawn) {
+          const bad = d.findAll(
+            n => typeof n.props?.onPress === 'function' || n.props?.accessible === true ||
+              n.props?.accessibilityRole === 'button' || n.props?.focusable === true,
+          );
+          assert.equal(bad.length, 0, `${when}: slot ${i} drawn part has a second stop`);
+        }
+      }
+    };
+    inspect('empty');
+    tap(chipFor(r, 'hat')); tap(byId(r, 'match-slot-0'));
+    inspect('filled');
+    act(() => r.unmount());
+  });
+
   check('a picture-only prompt is announced', () => {
     const r = render(Q([o('a', '', 'x', { p: { filename: 'p.png', filetype: 6 } }), o('b', 'dog', 'y')]));
     const labels = r.root.findAll(n => n.props?.accessible === true).map(n => n.props.accessibilityLabel);

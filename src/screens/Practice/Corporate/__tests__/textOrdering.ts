@@ -19,6 +19,8 @@ import {
   wordMarks,
   wordState,
   wordStatusKey,
+  wordTileMinHeight,
+  AUDIO_TILE_MIN_HEIGHT,
   type OrderingOption,
 } from '../textOrderingLogic';
 
@@ -178,3 +180,9 @@ check('screen reader status: the mark after Submit, Correct on the shown answer,
 });
 
 console.log(`textOrdering: ${passed} checks passed`);
+
+// Tiles on a row share a baseline: when any word has audio, every tile gets the audio tile's height.
+assert.equal(wordTileMinHeight([false, false, false]), undefined, 'no audio: natural height');
+assert.equal(wordTileMinHeight([false, true, false]), AUDIO_TILE_MIN_HEIGHT, 'one audio word: all tiles as tall');
+assert.equal(AUDIO_TILE_MIN_HEIGHT, 52);
+console.log('ok  word tile height is uniform when any word has audio');

@@ -220,8 +220,12 @@ export default function ImageChoiceCard({
             }}>
             <SelectionIndicator kind={indicator} checked={selected} />
             <Text
+              // Beside the audio circle there is little room: one line with an
+              // ellipsis, never a word broken across lines under the circle.
+              {...(audio ? { numberOfLines: 1, ellipsizeMode: 'tail' as const } : null)}
               style={{
                 flex: 1,
+                minWidth: 0,
                 marginLeft: 10,
                 fontFamily: small.fontFamily,
                 fontSize: captionSize,

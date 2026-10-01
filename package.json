@@ -29,7 +29,7 @@
     "test:kit": "tsx src/components/kit/__tests__/audioManager.ts && tsx src/components/kit/__tests__/resultStrip.ts && tsx src/components/kit/__tests__/announcer.ts && tsx src/components/kit/__tests__/tileStyle.ts && tsx src/components/kit/__tests__/i18n.ts && tsx src/components/kit/__tests__/contrast.ts && tsx src/components/kit/__tests__/compactTile.ts",
     "test:matching": "tsx src/screens/Practice/Corporate/__tests__/matching.ts && tsx src/screens/Practice/Corporate/__tests__/matchingRender.tsx",
     "test:mcqimage": "tsx src/screens/Practice/Corporate/imageChoice/__tests__/mcqImage.ts",
-    "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx",
+    "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx && tsx src/screens/Practice/Corporate/__tests__/mcqText.ts",
     "test:ordering": "tsx src/screens/Practice/Corporate/__tests__/textOrdering.ts",
     "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts",
     "test:questionkey": "tsx src/components/practices/__tests__/questionKey.ts && tsx src/components/practices/__tests__/questionRemount.tsx",
