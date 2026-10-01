@@ -48,7 +48,10 @@ export default function Slot({
   const tile = useTileText();
   const small = useSmallText();
   const frame = slotFrame(theme.colors, state);
-  const hasContent = state === 'filled' || state === 'correct' || state === 'incorrect';
+  // A drag hovering over a filled slot keeps showing what is in it.
+  const hoverLabel = state === 'hover' && !!label;
+  const hasContent =
+    state === 'filled' || state === 'correct' || state === 'incorrect' || hoverLabel;
   const isBlank = variant === 'blank';
   // A graded slot is locked.
   const result = state === 'correct' || state === 'incorrect';
@@ -57,7 +60,7 @@ export default function Slot({
   if (hasContent) {
     // "Tap to take it back" only when the slot can be pressed.
     a11yLabel =
-      state === 'filled'
+      state === 'filled' || state === 'hover'
         ? onPress
           ? t('kit.slot.a11yFilled', { label })
           : (label ?? '')
@@ -66,8 +69,11 @@ export default function Slot({
     a11yLabel = state === 'active' ? t('kit.slot.a11yActive') : t('kit.slot.a11yEmpty');
   }
 
+  // Something can land here ("Place here"): picked (target) or dragged over (hover).
   const emptyText =
-    state === 'target' ? t('kit.slot.target') : (placeholder ?? (isBlank ? '' : t('kit.slot.placeholder')));
+    state === 'target' || (state === 'hover' && !isBlank)
+      ? t('kit.slot.target')
+      : (placeholder ?? (isBlank ? '' : t('kit.slot.placeholder')));
 
   const body = (
     <View
@@ -103,7 +109,7 @@ export default function Slot({
                 <CrossGlyph color={theme.colors.onSurfaceVariant} />
               </View>
             ) : null
-          ) : (
+          ) : state === 'hover' ? null : (
             <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={18} />
           )}
         </View>

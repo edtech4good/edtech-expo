@@ -5,3 +5,13 @@ export type {
   ReorderableListProps,
   TileState,
 } from './ReorderableList';
+export { DragStage, Draggable, DropTarget, useDragToTarget } from './DragToTarget';
+export type {
+  ActiveDrag,
+  DragController,
+  DragStageProps,
+  DraggableProps,
+  DropTargetProps,
+  LiftAnchor,
+  UseDragToTargetOptions,
+} from './DragToTarget';

@@ -15,6 +15,7 @@ import {
   answerBlanks,
   BlankState,
   blankSlotState,
+  dropWord,
   emptyBlanks,
   evaluateFillBlank,
   fillActive,
@@ -401,5 +402,91 @@ check('a blank keeps the short text after it; long text and other blanks are sep
   assert.deepEqual(g('a-----b', 0), [['a', '_____', 'b']], 'text is only glued to a blank');
   assert.deepEqual(g('----------', 2), [['[0]', '[1]']], 'two blanks stay apart');
 });
+
+// ---- dragging: each drop ends exactly where its taps end ------------------
+
+{
+  const W = (st: BlankState, id: string) => fillActive(st, id);
+  const T = (st: BlankState, i: number) => tapBlank(st, i);
+  const x = 'x', y = 'y', z = 'z';
+
+  check('drag a bank word onto an empty blank = tap the blank, then the word', () => {
+    const s0 = emptyBlanks(3);
+    const d = dropWord(s0, x, { kind: 'bank' }, { kind: 'blank', index: 2 });
+    assert.deepEqual(d, W(T(s0, 2), x));
+    assert.deepEqual(d.filled, [null, null, x]);
+    assert.equal(d.active, 0, 'the active blank moves on to the next empty one');
+  });
+
+  check('drag a bank word onto a filled blank: the old word goes back to the bank', () => {
+    const s = W(W(emptyBlanks(2), x), y); // [x, y]
+    const d = dropWord(s, z, { kind: 'bank' }, { kind: 'blank', index: 0 });
+    assert.deepEqual(d, W(T(s, 0), z));
+    assert.deepEqual(d.filled, [z, y]);
+    assert.equal(isUsed(d.filled, x), false);
+  });
+
+  check('drag a placed word onto another blank: an empty one moves it, a filled one swaps', () => {
+    const s = W(emptyBlanks(3), x); // [x, null, null]
+    const m = dropWord(s, x, { kind: 'blank', index: 0 }, { kind: 'blank', index: 2 });
+    assert.deepEqual(m, W(T(T(s, 0), 2), x));
+    assert.deepEqual(m.filled, [null, null, x]);
+    const s2 = W(W(emptyBlanks(3), x), y); // [x, y, null]
+    const sw = dropWord(s2, x, { kind: 'blank', index: 0 }, { kind: 'blank', index: 1 });
+    assert.deepEqual(sw, W(T(W(T(T(s2, 0), 1), x), 0), y));
+    assert.deepEqual(sw.filled, [y, x, null]);
+  });
+
+  check('drag a placed word to the bank = tap its blank (it empties and turns active)', () => {
+    const s = W(W(emptyBlanks(2), x), y);
+    const d = dropWord(s, y, { kind: 'blank', index: 1 }, { kind: 'bank' });
+    assert.deepEqual(d, T(s, 1));
+    assert.deepEqual(d, { filled: [x, null], active: 1 });
+  });
+
+  check('a drop on nothing, on its own blank, or a bank word on the bank changes nothing', () => {
+    const s = W(emptyBlanks(2), x);
+    assert.deepEqual(dropWord(s, x, { kind: 'blank', index: 0 }, null), s);
+    assert.deepEqual(dropWord(s, x, { kind: 'blank', index: 0 }, { kind: 'blank', index: 0 }), s);
+    assert.deepEqual(dropWord(s, y, { kind: 'bank' }, { kind: 'bank' }), s);
+    assert.deepEqual(dropWord(s, y, { kind: 'bank' }, null), s);
+    // Stale: a bank drag of a placed word, a blank drag of a word not there, a blank out of range.
+    assert.deepEqual(dropWord(s, x, { kind: 'bank' }, { kind: 'blank', index: 1 }), s);
+    assert.deepEqual(dropWord(s, y, { kind: 'blank', index: 0 }, { kind: 'bank' }), s);
+    assert.deepEqual(dropWord(s, y, { kind: 'bank' }, { kind: 'blank', index: 5 }), s);
+  });
+
+  check('every drop from every reachable state keeps the blanks well formed and grades as the taps', () => {
+    const ids = [A.questionoptionid, B.questionoptionid, D1.questionoptionid];
+    const tiles = [A, B, D1];
+    const choices: Array<string | null> = [null, ...ids];
+    let drops = 0;
+    for (const p of choices) for (const q of choices) for (const active of [0, 1]) {
+      if (p !== null && p === q) continue;
+      const s: BlankState = { filled: [p, q], active };
+      const inBank = ids.filter(id => !s.filled.includes(id));
+      const sources: Array<[string, any]> = [
+        ...inBank.map(id => [id, { kind: 'bank' }] as [string, any]),
+        ...s.filled.flatMap((id, i) => (id ? [[id, { kind: 'blank', index: i }] as [string, any]] : [])),
+      ];
+      const targets: any[] = [null, { kind: 'bank' }, { kind: 'blank', index: 0 }, { kind: 'blank', index: 1 }];
+      for (const [id, from] of sources) for (const to of targets) {
+        const d = dropWord(s, id, from, to);
+        drops += 1;
+        const placed = d.filled.filter(f => f !== null);
+        assert.equal(new Set(placed).size, placed.length, 'no word in two blanks');
+        assert.ok(d.active >= 0 && d.active < 2);
+        if (to === null) assert.deepEqual(d, s, 'nowhere: nothing changes');
+        else if (to.kind === 'blank') assert.equal(d.filled[to.index], id, 'the word is where it was dropped');
+        else assert.ok(!d.filled.includes(id), 'the bank: the word is out of every blank');
+        // What would be submitted is today's grade of that filling.
+        const ev = evaluateFillBlank([A, B], tiles, d.filled);
+        const sel = d.filled.map(f => tiles.find(t => t.questionoptionid === f)).filter(Boolean) as Opt[];
+        assert.equal(ev.iscorrect, gradeFillBlank([A, B], sel).isCorrect);
+      }
+    }
+    assert.ok(drops > 50, `${drops} drops`);
+  });
+}
 
 console.log(`fillBlank: ${passed} checks passed`);
