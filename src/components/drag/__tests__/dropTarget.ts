@@ -13,6 +13,7 @@ import {
   hitTarget,
   pointerInStage,
   pointInRect,
+  guardAfterDrag,
   PRESS_AFTER_DRAG_MS,
   pressBlocked,
   TARGET_SLOP,
@@ -105,11 +106,20 @@ check('the pointer in the stage: its screen position less the stage\'s, plus any
   assert.equal(hitTarget(pointerInStage({ x: 250, y: 296 }, { x: 16, y: 200 }), ROWS), 'slot:b');
 });
 
-check('a press is ignored during a drag and just after it, and not later', () => {
+check('a press is ignored during a drag and just after one that moved, and not later', () => {
   assert.equal(pressBlocked(true, 0, 10_000), true);
-  assert.equal(pressBlocked(false, 1000, 1000 + PRESS_AFTER_DRAG_MS - 1), true);
-  assert.equal(pressBlocked(false, 1000, 1000 + PRESS_AFTER_DRAG_MS), false);
+  const until = guardAfterDrag(0, true, 1000);
+  assert.equal(pressBlocked(false, until, 1000 + PRESS_AFTER_DRAG_MS - 1), true);
+  assert.equal(pressBlocked(false, until, 1000 + PRESS_AFTER_DRAG_MS), false);
   assert.equal(pressBlocked(false, 0, 10_000), false);
+});
+
+check('a hold-tap (a hold that never moved) arms no guard: a tap right after it counts', () => {
+  assert.equal(guardAfterDrag(0, false, 1000), 0);
+  assert.equal(pressBlocked(false, guardAfterDrag(0, false, 1000), 1001), false);
+  // Nor does it cut short a guard a moved drag had just armed.
+  const armed = guardAfterDrag(0, true, 1000);
+  assert.equal(guardAfterDrag(armed, false, 1100), armed);
 });
 
 console.log(`\ndropTarget: ${passed} checks passed`);

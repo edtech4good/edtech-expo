@@ -28,7 +28,10 @@ import {
 import { INITIAL_SHELL_STATE, shellPress } from '../shellLogic';
 
 let passed = 0;
+// CHECK_ONLY=<text> runs only the checks whose name contains it (used to
+// show a single check catching a mutation that earlier checks also catch).
 function check(name: string, fn: () => void) {
+  if (process.env.CHECK_ONLY && !name.includes(process.env.CHECK_ONLY)) return;
   try {
     fn();
     passed += 1;
@@ -456,36 +459,77 @@ check('a blank keeps the short text after it; long text and other blanks are sep
     assert.deepEqual(dropWord(s, y, { kind: 'bank' }, { kind: 'blank', index: 5 }), s);
   });
 
-  check('every drop from every reachable state keeps the blanks well formed and grades as the taps', () => {
-    const ids = [A.questionoptionid, B.questionoptionid, D1.questionoptionid];
-    const tiles = [A, B, D1];
-    const choices: Array<string | null> = [null, ...ids];
+  // What a drop must do, written from the drop's definition (not from the
+  // tap functions the code uses). After a word is put in blank k, the active
+  // blank is the next empty one after k (wrapping round), else k.
+  const activeAfterPlacing = (filled: Array<string | null>, k: number) => {
+    for (let n = 1; n <= filled.length; n++) {
+      const i = (k + n) % filled.length;
+      if (filled[i] === null) return i;
+    }
+    return k;
+  };
+  const expectedDrop = (s: BlankState, w: string, from: any, to: any): BlankState => {
+    const filled = s.filled.slice();
+    if (to === null) return s;
+    if (to.kind === 'blank' && (to.index < 0 || to.index >= filled.length)) return s;
+    if (from.kind === 'bank') {
+      if (to.kind === 'bank' || filled.includes(w)) return s;
+      filled[to.index] = w; // a word already there goes back to the bank
+      return { filled, active: activeAfterPlacing(filled, to.index) };
+    }
+    if (filled[from.index] !== w) return s;
+    if (to.kind === 'bank') {
+      filled[from.index] = null;
+      return { filled, active: from.index };
+    }
+    if (to.index === from.index) return s;
+    const displaced = filled[to.index];
+    filled[to.index] = w;
+    filled[from.index] = displaced; // the two swap (or the word just moves)
+    return { filled, active: activeAfterPlacing(filled, displaced === null ? to.index : from.index) };
+  };
+
+  check('every drop from every reachable state: the exact expected blanks and active blank, and every word in exactly one place', () => {
+    const tiles = [A, B, D1, D2];
+    const ids = tiles.map(t => t.questionoptionid);
     let drops = 0;
-    for (const p of choices) for (const q of choices) for (const active of [0, 1]) {
-      if (p !== null && p === q) continue;
-      const s: BlankState = { filled: [p, q], active };
+    const blanksOf = (n: number): Array<Array<string | null>> => {
+      if (n === 0) return [[]];
+      const out: Array<Array<string | null>> = [];
+      for (const rest of blanksOf(n - 1)) for (const c of [null, ...ids]) {
+        if (c !== null && rest.includes(c)) continue;
+        out.push([...rest, c]);
+      }
+      return out;
+    };
+    for (const n of [2, 3]) for (const filled0 of blanksOf(n)) for (let active = 0; active < n; active++) {
+      const s: BlankState = { filled: filled0, active };
       const inBank = ids.filter(id => !s.filled.includes(id));
       const sources: Array<[string, any]> = [
         ...inBank.map(id => [id, { kind: 'bank' }] as [string, any]),
         ...s.filled.flatMap((id, i) => (id ? [[id, { kind: 'blank', index: i }] as [string, any]] : [])),
       ];
-      const targets: any[] = [null, { kind: 'bank' }, { kind: 'blank', index: 0 }, { kind: 'blank', index: 1 }];
+      const targets: any[] = [null, { kind: 'bank' }, ...Array.from({ length: n }, (_, i) => ({ kind: 'blank', index: i })), { kind: 'blank', index: n }];
       for (const [id, from] of sources) for (const to of targets) {
         const d = dropWord(s, id, from, to);
         drops += 1;
-        const placed = d.filled.filter(f => f !== null);
-        assert.equal(new Set(placed).size, placed.length, 'no word in two blanks');
-        assert.ok(d.active >= 0 && d.active < 2);
-        if (to === null) assert.deepEqual(d, s, 'nowhere: nothing changes');
-        else if (to.kind === 'blank') assert.equal(d.filled[to.index], id, 'the word is where it was dropped');
-        else assert.ok(!d.filled.includes(id), 'the bank: the word is out of every blank');
-        // What would be submitted is today's grade of that filling.
-        const ev = evaluateFillBlank([A, B], tiles, d.filled);
-        const sel = d.filled.map(f => tiles.find(t => t.questionoptionid === f)).filter(Boolean) as Opt[];
-        assert.equal(ev.iscorrect, gradeFillBlank([A, B], sel).isCorrect);
+        const where = `${JSON.stringify(s)} drop ${id} ${JSON.stringify(from)} -> ${JSON.stringify(to)}`;
+        // The whole state, against the definition.
+        assert.deepEqual(d, expectedDrop(s, id, from, to), where);
+        // Conservation: every word is in exactly one place (one blank, or
+        // the bank), and each blank holds at most one known word.
+        assert.equal(d.filled.length, n, `blank count: ${where}`);
+        for (const f of d.filled) assert.ok(f === null || ids.includes(f), `unknown word: ${where}`);
+        for (const w of ids) {
+          const blanksHolding = d.filled.filter(f => f === w).length;
+          const bank = blanksHolding === 0 ? 1 : 0;
+          assert.equal(blanksHolding + bank, 1, `word ${w} in exactly one place: ${where}`);
+        }
+        assert.ok(d.active >= 0 && d.active < n, `active in range: ${where}`);
       }
     }
-    assert.ok(drops > 50, `${drops} drops`);
+    assert.ok(drops > 1000, `${drops} drops`);
   });
 }
 

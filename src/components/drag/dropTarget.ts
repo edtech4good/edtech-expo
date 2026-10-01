@@ -95,12 +95,19 @@ export function pointerInStage(
 export const PRESS_AFTER_DRAG_MS = 350;
 
 /**
- * Whether a press must be ignored because it is the tail of a drag. On the
- * web a mouse released over the item it was pressed on also fires a click,
- * and the click can arrive before the drop is handled; a touch held past
- * the long-press time does the same. The drop (or the hold-tap) already did
- * what the gesture meant, so the press would act twice.
+ * Until when presses are ignored, after a drag ends. A drag that moved past
+ * the slop (it dropped somewhere, or nowhere) guards the next
+ * PRESS_AFTER_DRAG_MS: on the web a mouse released over the item it was
+ * pressed on also fires a click, and the click can arrive before the drop is
+ * handled. A hold that never moved is a tap (the hold-tap already did what
+ * the learner meant) and arms nothing, so a deliberate tap right after it
+ * still counts. `until` is the guard in force before this drag ended.
  */
-export function pressBlocked(dragActive: boolean, lastDragEnd: number, now: number): boolean {
-  return dragActive || now - lastDragEnd < PRESS_AFTER_DRAG_MS;
+export function guardAfterDrag(until: number, moved: boolean, now: number): number {
+  return moved ? Math.max(until, now + PRESS_AFTER_DRAG_MS) : until;
+}
+
+/** Whether a press must be ignored: a drag is on, or a moved drag just ended. */
+export function pressBlocked(dragActive: boolean, guardUntil: number, now: number): boolean {
+  return dragActive || now < guardUntil;
 }

@@ -17,7 +17,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 
-import { hitTarget, pointerInStage, pressBlocked, TargetRects } from './dropTarget';
+import { guardAfterDrag, hitTarget, pointerInStage, pressBlocked, TargetRects } from './dropTarget';
 import type { Rect } from './reorder';
 
 /**
@@ -312,7 +312,8 @@ export function useDragToTarget({
 
   // ---- Drag lifecycle (JS side).
   const dragActive = useRef(false);
-  const lastDragEnd = useRef(0);
+  /** Presses before this time are the tail of a drag (guardAfterDrag). */
+  const guardUntil = useRef(0);
 
   const begin = useCallback(
     (id: string) => {
@@ -338,7 +339,8 @@ export function useDragToTarget({
       stable.over.value = '';
       draggingIdRef.current = null;
       dragActive.current = false;
-      lastDragEnd.current = Date.now();
+      // A hold that never moved is a tap: it arms no guard.
+      guardUntil.current = guardAfterDrag(guardUntil.current, !held, Date.now());
       setActive(null);
       if (held) onHoldTapRef.current?.(id);
       else onDropRef.current(id, target === '' ? null : target);
@@ -349,7 +351,7 @@ export function useDragToTarget({
   const guardPress = useCallback(
     <A extends unknown[]>(fn: (...args: A) => void) =>
       (...args: A) => {
-        if (pressBlocked(dragActive.current, lastDragEnd.current, Date.now())) return;
+        if (pressBlocked(dragActive.current, guardUntil.current, Date.now())) return;
         fn(...args);
       },
     [],
@@ -371,7 +373,9 @@ export function useDragToTarget({
       stable.active.value = false;
       draggingIdRef.current = null;
       dragActive.current = false;
-      lastDragEnd.current = Date.now();
+      guardUntil.current = guardAfterDrag(guardUntil.current, true, Date.now());
+      stopScrollWatch.current?.();
+      stopScrollWatch.current = null;
       setActive(null);
     }
   }, [enabled, stable]);
