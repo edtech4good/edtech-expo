@@ -1,7 +1,6 @@
 import { Images } from '@/assets';
 import {
   AppButton,
-  CircularProgress,
   Container,
   DefaultBackgroundImage,
   Expanded,
@@ -24,6 +23,9 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
+
+import CorporateResult from './CorporateResult';
+import { resultBand } from './resultBand';
 
 export default function ResultScreen() {
   const theme = useTheme();
@@ -71,54 +73,14 @@ export default function ResultScreen() {
       .join(' · ');
 
     return (
-      <LayoutScrollView backgroundColor={theme.colors.background}>
-        <Container
-          backgroundColor="transparent"
-          removeHeaderSize
-          justifyContent="center"
-          alignItems="center"
-          paddingLeft={theme.layouts.pageHorizontalPadding}
-          paddingRight={theme.layouts.pageHorizontalPadding}
-          paddingTop={theme.layouts.pageVerticalPadding}
-          paddingBottom={theme.layouts.pageVerticalPadding}>
-          <EyebrowText>{t('screen.result.header')}</EyebrowText>
-          <SizedBox.Medium height />
-          <H3
-            fontWeight="bold"
-            color={hasPassed ? theme.colors.success : theme.colors.error}>
-            {title}
-          </H3>
-          <SizedBox.Large height />
-          <CircularProgress
-            progress={percentage / 100}
-            size={132}
-            label={`${Math.round(percentage)}%`}
-          />
-          <SizedBox.Large height />
-          <H6 fontWeight="semi" color={theme.colors.onSurfaceVariant}>
-            {t('screen.result.scoreLabel')}
-          </H6>
-          <SizedBox.Small height />
-          <H3 fontWeight="semi" color={theme.colors.onSurface}>
-            {`${score}/${maxScore}`}
-          </H3>
-          {metaLine.length > 0 && (
-            <>
-              <SizedBox.Large height />
-              <EyebrowText>{metaLine}</EyebrowText>
-            </>
-          )}
-          <SizedBox.Large height />
-          {/* Full-width CTA like Level Detail's Continue button (audit U-07). */}
-          <View style={{ alignSelf: 'stretch' }}>
-            <AppButton
-              label={t('screen.result.finishButton')}
-              onPress={handleFinishPress}
-              fullWidth
-            />
-          </View>
-        </Container>
-      </LayoutScrollView>
+      <CorporateResult
+        band={resultBand(hasPassed, percentage)}
+        score={score}
+        maxScore={maxScore}
+        percentage={percentage}
+        metaLine={metaLine}
+        onFinish={handleFinishPress}
+      />
     );
   }
 

@@ -307,6 +307,15 @@
       "instruction": "Drag the photos to reorder them, or tap two to swap. Numbers read left to right.",
       "picked": "{{label}} picked. Tap the photo to swap it with.",
       "picture": "Picture {{letter}}"
+    },
+    "result": {
+      "passedTitle": "You passed!",
+      "closeTitle": "So close!",
+      "farTitle": "Good start",
+      "score": "You got {{score}} of {{max}} right.",
+      "scoreSpoken": "You got {{score}} of {{max}} right, {{percent}} percent.",
+      "closeHint": "A quick review and you'll have it.",
+      "farHint": "Every try teaches something. Have another go when you're ready."
     }
   }
 }
