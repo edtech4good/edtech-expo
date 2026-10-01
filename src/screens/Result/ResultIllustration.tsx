@@ -1,46 +1,39 @@
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, View } from 'react-native';
 
+import {
+  clipForBand,
+  MASCOT_ASPECT,
+  MascotCharacter,
+  mascotHeight,
+  playConfig,
+} from './mascot';
+import { loadMascot, mascotPlayable } from './mascotSources';
 import type { ResultBand } from './resultBand';
 
 /**
- * Slot for a per-band illustration above the result headline (the corporate
- * mascot animations Jesse is making). TODAY IT RENDERS NOTHING and reserves
- * no space, so the screen looks exactly as briefed without it.
+ * Jesse's mascot animation above the result headline. One character per
+ * result screen (picked by the caller, once per mount); a pass plays
+ * `*-pass`, close and far play `*-try-again`. It plays once, no loop, and
+ * holds the last frame. With reduced motion it does not autoplay and shows
+ * the last frame. It is decorative and hidden from assistive tech: the
+ * headline carries the result.
  *
- * To plug an animation in, with no layout change:
- *   1. Add a Lottie JSON per band, e.g. `src/assets/lottie/result-passed.json`.
- *   2. Put each in ILLUSTRATIONS below, `require`d, e.g.
- *        passed: require('@/assets/lottie/result-passed.json')
- *      A band left `null` still renders nothing and reserves no space.
- *   3. Nothing else: the slot sizes itself (ILLUSTRATION_SIZE square, centred,
- *      with a gap under it) only for a band that has an asset.
- * `lottie-react-native` is already a dependency; it is required lazily here so
- * the native module is not loaded until an asset exists.
- *
- * Reduced motion: the animation does not autoplay, it shows its LAST frame
- * (`progress={1}`), so the learner sees the finished pose, never movement.
+ * Space is reserved from the first render (so nothing jumps when the JSON
+ * arrives), but only where the slot can actually play (see mascotPlayable):
+ * on web that needs @lottiefiles/react-lottie-player, which is not installed,
+ * so the slot stays empty and takes no room there.
  */
+export const MASCOT_GAP = 16;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LottieSource = any;
-
-const ILLUSTRATIONS: Record<ResultBand, LottieSource | null> = {
-  passed: null,
-  close: null,
-  far: null,
-};
-
-/** Square size of the slot (and the gap under it) when an asset exists. */
-export const ILLUSTRATION_SIZE = 160;
-const GAP = 16;
-
-/** True when the band has an asset, so the screen knows the slot is live. */
-export function hasResultIllustration(band: ResultBand): boolean {
-  return ILLUSTRATIONS[band] != null;
+/** True when the slot will draw something, so the screen can lay out around it. */
+export function hasResultIllustration(): boolean {
+  return mascotPlayable();
 }
 
 export interface ResultIllustrationProps {
   band: ResultBand;
+  character: MascotCharacter;
   reducedMotion: boolean;
   /** Smaller slot for short landscape screens. */
   compact?: boolean;
@@ -48,31 +41,57 @@ export interface ResultIllustrationProps {
 
 export default function ResultIllustration({
   band,
+  character,
   reducedMotion,
   compact = false,
 }: ResultIllustrationProps) {
-  const source = ILLUSTRATIONS[band];
-  if (source == null) return null;
+  const playable = mascotPlayable();
+  const clip = clipForBand(band);
+  const [source, setSource] = useState<object | null>(null);
 
-  // Lazy: only reached once an asset has been supplied.
+  useEffect(() => {
+    if (!playable) return;
+    let alive = true;
+    loadMascot(character, clip)
+      .then(s => alive && setSource(s))
+      .catch(() => {}); // no artwork is not an error worth a crash
+    return () => {
+      alive = false;
+    };
+  }, [playable, character, clip]);
+
+  // Web cannot show a held frame (lottie web has no `progress`), so with
+  // reduced motion it shows nothing rather than a stray first frame.
+  if (!playable || (Platform.OS === 'web' && reducedMotion)) return null;
+
+  const height = mascotHeight(compact);
+  const width = Math.round(height * MASCOT_ASPECT);
+  const cfg = playConfig(reducedMotion !== false);
+
+  // Lazy: the native module is not touched until there is something to show.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const LottieView = require('lottie-react-native').default;
-  const size = compact ? Math.round(ILLUSTRATION_SIZE * 0.7) : ILLUSTRATION_SIZE;
+  const LottieView = source ? require('lottie-react-native').default : null;
 
   return (
     <View
-      // Decorative: the headline and score carry the meaning.
       accessible={false}
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
-      style={{ width: size, height: size, marginBottom: GAP, alignSelf: 'center' }}>
-      <LottieView
-        source={source}
-        autoPlay={!reducedMotion}
-        loop={false}
-        progress={reducedMotion ? 1 : undefined}
-        style={{ width: size, height: size }}
-      />
+      aria-hidden
+      pointerEvents="none"
+      style={{ width, height, alignSelf: 'center' }}>
+      {LottieView && (
+        <LottieView
+          // Fresh player per character/clip so it always starts from frame 0.
+          key={`${character}-${clip}-${cfg.autoPlay ? 'play' : 'still'}`}
+          source={source}
+          autoPlay={cfg.autoPlay}
+          loop={cfg.loop}
+          progress={cfg.staticProgress}
+          webStyle={{ width, height }}
+          style={{ width, height }}
+        />
+      )}
     </View>
   );
 }

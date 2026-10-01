@@ -26,7 +26,6 @@ import { useTheme } from 'styled-components/native';
 
 import CorporateResult from './CorporateResult';
 import { resultBand } from './resultBand';
-import { RESULT_VARIANT } from './resultVariant';
 
 export default function ResultScreen() {
   const theme = useTheme();
@@ -76,7 +75,6 @@ export default function ResultScreen() {
     return (
       <CorporateResult
         band={resultBand(hasPassed, percentage)}
-        variant={RESULT_VARIANT}
         score={score}
         maxScore={maxScore}
         percentage={percentage}
