@@ -109,7 +109,8 @@ export default function QuizIntro({ title, questionCount, loading, onStart }: Qu
         {compact ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
             <Mascot clip="idle" compact />
-            <View style={{ flexShrink: 1, maxWidth: INTRO_START_MAX_WIDTH + 40 }}>
+            {/* Same width rule as the result screen's Finish: fill, capped at 360 (not sized by the title). */}
+            <View style={{ flexShrink: 1, width: '100%', maxWidth: INTRO_START_MAX_WIDTH }}>
               {heading}
               <View style={{ height: 16 }} />
               {start}

@@ -36,6 +36,7 @@ import { NAV_SIDEBAR_WIDTH } from '@/components/ui/NavSidebar';
 import { PASS_PERCENTAGE } from '@/constants';
 import {
   ActivityIndicator,
+  Platform,
   Text,
   useWindowDimensions,
   View,
@@ -60,7 +61,7 @@ import type { AnswerV1 } from '@/utils/answerV1';
 import type { SubmitOptions } from '../Practice/Corporate/types';
 import { AnnouncerProvider } from '@/components/kit/Announcer';
 import QuizIntro from './QuizIntro';
-import { introStartAction, showQuizIntro } from './introGate';
+import useQuizIntroGate from './useQuizIntroGate';
 
 // Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
 // for the full rationale; kept identical here so both screens' headers
@@ -89,12 +90,6 @@ export default function QuizScreen() {
     (selectedModule as LessonQuiz)?.lessonquizid ?? '',
   );
   const [question, setQuestion] = useState(0);
-  // Corporate quizzes open on an intro card; question 1 shows after Start.
-  const [started, setStarted] = useState(false);
-  const introVisible = showQuizIntro(isCorporate, started);
-  // True until the first load settles, so the intro's Start is busy rather
-  // than looking like "no questions" for the frame before the fetch begins.
-  const [loadingQuestions, setLoadingQuestions] = useState(true);
   const currentQuestion = useMemo(
     () => questions[question],
     [questions, question],
@@ -123,10 +118,47 @@ export default function QuizScreen() {
     },
   });
 
+  // Corporate quizzes open on an intro card; question 1 shows after Start.
+  // The quiz clock restarts at Start, so intro time is not counted.
+  const {
+    visible: introVisible,
+    started,
+    loading: loadingQuestions,
+    load: loadQuestions,
+    start: handleStart,
+  } = useQuizIntroGate({
+    isCorporate,
+    fetch,
+    questionCount: questions.length,
+    onBegin: () => methods.setValue('starttime', createTimeStamp()),
+  });
+
+  // Web: after Start the button is gone and focus would fall to the page;
+  // put it on the question heading instead (as the intro does for its own).
+  useEffect(() => {
+    if (!started || !isCorporate || Platform.OS !== 'web') return;
+    let tries = 0;
+    let raf = 0;
+    const focusHeading = () => {
+      const el = document.querySelector<HTMLElement>('[data-testid="question-heading"]');
+      if (el) {
+        el.setAttribute('tabindex', '-1');
+        el.style.outline = 'none';
+        el.focus();
+      } else if (tries++ < 20) {
+        raf = requestAnimationFrame(focusHeading);
+      }
+    };
+    raf = requestAnimationFrame(focusHeading);
+    return () => cancelAnimationFrame(raf);
+  }, [started, isCorporate]);
+
   useEffect(() => {
     const quizName = (selectedModule as LessonQuiz)?.lessonquizname;
     navigation.setOptions({
-      ...(isCorporate && quizName ? { title: quizName } : {}),
+      // `title` is blank while the intro shows: iOS native-stack ignores a
+      // null headerTitle and would draw this text a second time.
+      ...(isCorporate && quizName ? { title: introVisible ? '' : quizName } : {}),
       headerLeft: () => <BackButton onPress={handleBackPress} />,
       // Android native-stack (react-native-screens) renders its own stock
       // back chevron alongside a custom headerLeft unless headerBackVisible
@@ -208,17 +240,6 @@ export default function QuizScreen() {
     introVisible,
   ]);
 
-  const loadQuestions = useCallback(async () => {
-    setLoadingQuestions(true);
-    try {
-      await fetch();
-    } catch {
-      // offline or server error: questions stay empty; Start offers a retry
-    } finally {
-      setLoadingQuestions(false);
-    }
-  }, [fetch]);
-
   useEffect(() => {
     if (!selectedModule) return;
     void loadQuestions();
@@ -237,18 +258,6 @@ export default function QuizScreen() {
     }
     if (!promptModalRef.current) return;
     promptModalRef.current.show(t('screen.practice.exitQuizMessage'));
-  };
-
-  const handleStart = () => {
-    const action = introStartAction(loadingQuestions, questions.length);
-    if (action === 'wait') return;
-    if (action === 'retry') {
-      void loadQuestions();
-      return;
-    }
-    // The quiz clock starts here, not when the screen mounted.
-    methods.setValue('starttime', createTimeStamp());
-    setStarted(true);
   };
 
   const handleGoBack = () => {

@@ -36,7 +36,7 @@
     "test:image-ordering": "tsx src/screens/Practice/Corporate/__tests__/imageOrdering.ts && tsx src/screens/Practice/Corporate/__tests__/imageOrderingRender.tsx",
     "test:result": "tsx src/screens/Result/__tests__/resultBand.ts && tsx src/screens/Result/__tests__/mascotClip.ts",
     "test:mascot": "tsx src/components/mascot/__tests__/mascotLogic.ts && tsx src/components/mascot/__tests__/mascotBoundaryRender.tsx",
-    "test:quizintro": "tsx src/screens/Quiz/__tests__/introGate.ts && tsx src/screens/Quiz/__tests__/quizIntroRender.tsx",
+    "test:quizintro": "tsx src/screens/Quiz/__tests__/introGate.ts && tsx src/screens/Quiz/__tests__/quizIntroRender.tsx && tsx src/screens/Quiz/__tests__/useQuizIntroGateRender.tsx",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {
