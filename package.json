@@ -31,7 +31,7 @@
     "test:mcqimage": "tsx src/screens/Practice/Corporate/imageChoice/__tests__/mcqImage.ts",
     "test:shell": "tsx src/screens/Practice/Corporate/__tests__/shellLogic.ts && tsx src/components/practices/__tests__/audioOnePlayer.tsx && tsx src/screens/Practice/Corporate/__tests__/mcqText.ts",
     "test:ordering": "tsx src/screens/Practice/Corporate/__tests__/textOrdering.ts",
-    "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts",
+    "test:fillblank": "tsx src/screens/Practice/Corporate/__tests__/fillBlank.ts && tsx src/screens/Practice/Corporate/__tests__/fillBlankRender.tsx",
     "test:questionkey": "tsx src/components/practices/__tests__/questionKey.ts && tsx src/components/practices/__tests__/questionRemount.tsx",
     "test:image-ordering": "tsx src/screens/Practice/Corporate/__tests__/imageOrdering.ts && tsx src/screens/Practice/Corporate/__tests__/imageOrderingRender.tsx",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
