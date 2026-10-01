@@ -40,6 +40,12 @@ const ROWS = {
   bank: r(0, 220, 300, 120),
 };
 
+check('the default slop is TARGET_SLOP (repeated as a literal for the worklet)', () => {
+  const t = { a: r(0, 0, 10, 10) };
+  assert.equal(hitTarget({ x: 10 + TARGET_SLOP, y: 5 }, t), 'a');
+  assert.equal(hitTarget({ x: 10 + TARGET_SLOP + 0.5, y: 5 }, t), '');
+});
+
 check('a point is in a rect including its edges, and not outside', () => {
   assert.equal(pointInRect({ x: 0, y: 0 }, r(0, 0, 10, 10)), true);
   assert.equal(pointInRect({ x: 10, y: 10 }, r(0, 0, 10, 10)), true);
@@ -91,16 +97,12 @@ check('a rect that was never measured (no size) is never hit', () => {
   assert.equal(hitTarget({ x: 1, y: 1 }, { a: r(0, 0, 0, 0), b: r(0, 0, 10, 10) }), 'b');
 });
 
-check('the pointer in the stage: origin + grab + travel + scroll shift', () => {
-  assert.deepEqual(pointerInStage({ x: 10, y: 200 }, { x: 5, y: 6 }, { x: 30, y: -150 }), { x: 45, y: 56 });
+check('the pointer in the stage: its screen position less the stage\'s, plus any scroll since', () => {
+  assert.deepEqual(pointerInStage({ x: 45, y: 300 }, { x: 16, y: 120 }), { x: 29, y: 180 });
   // The page scrolled 40 down under a still pointer: the pointer is 40 further down the stage.
-  assert.deepEqual(
-    pointerInStage({ x: 10, y: 200 }, { x: 5, y: 6 }, { x: 0, y: 0 }, { x: 0, y: 40 }),
-    { x: 15, y: 246 },
-  );
-  // A bank chip dragged up onto the second row lands on it.
-  const p = pointerInStage({ x: 20, y: 240 }, { x: 12, y: 20 }, { x: 40, y: -164 });
-  assert.equal(hitTarget(p, ROWS), 'slot:b');
+  assert.deepEqual(pointerInStage({ x: 45, y: 300 }, { x: 16, y: 120 }, { x: 0, y: 40 }), { x: 29, y: 220 });
+  // A finger over the second row's slot, with the stage 200pt down the screen, lands on it.
+  assert.equal(hitTarget(pointerInStage({ x: 250, y: 296 }, { x: 16, y: 200 }), ROWS), 'slot:b');
 });
 
 check('a press is ignored during a drag and just after it, and not later', () => {

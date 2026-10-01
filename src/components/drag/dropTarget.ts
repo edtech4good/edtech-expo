@@ -16,7 +16,12 @@ import type { Point, Rect } from './reorder';
 /** Measured drop targets, by target id. */
 export type TargetRects = Readonly<Record<string, Rect>>;
 
-/** How far outside a target (pt) the pointer may be and still land on it. */
+/**
+ * How far outside a target (pt) the pointer may be and still land on it.
+ * hitTarget's default repeats it as a literal: a worklet on the UI thread
+ * can't see a module constant used in a default parameter (it crashed the
+ * app on Android: "Property 'TARGET_SLOP' doesn't exist").
+ */
 export const TARGET_SLOP = 12;
 
 export function pointInRect(p: Point, r: Rect): boolean {
@@ -40,7 +45,7 @@ export function distanceToRect(p: Point, r: Rect): number {
  *   sentence is not missed by a few points.
  * Rects with no size (not measured yet) never match.
  */
-export function hitTarget(p: Point, targets: TargetRects, slop: number = TARGET_SLOP): string {
+export function hitTarget(p: Point, targets: TargetRects, slop: number = 12): string {
   'worklet';
   let inside = '';
   let insideArea = Infinity;
@@ -67,22 +72,22 @@ export function hitTarget(p: Point, targets: TargetRects, slop: number = TARGET_
 }
 
 /**
- * The pointer in the stage's frame during a drag: where the dragged item
- * was (origin), where on it the pointer went down (grab), how far the
- * pointer has moved (translation), plus how far the stage itself has
- * scrolled under the pointer since the drag began (shift; web only, where a
- * mouse wheel can scroll during a drag).
+ * The pointer in the stage's frame during a drag: its position on screen,
+ * less where the stage was on screen when the drag began, plus how far the
+ * stage has since scrolled up under the pointer (shift; web only, where a
+ * mouse wheel can scroll during a drag). Built on absolute positions, not
+ * the pan's translation, which on Android starts counting only when a
+ * long-press pan activates.
  */
 export function pointerInStage(
-  origin: Point,
-  grab: Point,
-  translation: Point,
+  absolute: Point,
+  stageOnScreen: Point,
   shift: Point = { x: 0, y: 0 },
 ): Point {
   'worklet';
   return {
-    x: origin.x + grab.x + translation.x + shift.x,
-    y: origin.y + grab.y + translation.y + shift.y,
+    x: absolute.x - stageOnScreen.x + shift.x,
+    y: absolute.y - stageOnScreen.y + shift.y,
   };
 }
 

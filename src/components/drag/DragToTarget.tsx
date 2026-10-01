@@ -108,10 +108,15 @@ interface DragValues {
   originX: SharedValue<number>;
   originY: SharedValue<number>;
   originW: SharedValue<number>;
+  /** Where on the dragged view the pointer is (its own frame). */
   grabX: SharedValue<number>;
   grabY: SharedValue<number>;
-  tx: SharedValue<number>;
-  ty: SharedValue<number>;
+  /** The stage's top-left on screen when the drag began. */
+  stageAbsX: SharedValue<number>;
+  stageAbsY: SharedValue<number>;
+  /** The pointer in the stage's frame. */
+  px: SharedValue<number>;
+  py: SharedValue<number>;
   shiftX: SharedValue<number>;
   shiftY: SharedValue<number>;
   over: SharedValue<string>;
@@ -173,8 +178,10 @@ export function useDragToTarget({
     originW: useSharedValue(0),
     grabX: useSharedValue(0),
     grabY: useSharedValue(0),
-    tx: useSharedValue(0),
-    ty: useSharedValue(0),
+    stageAbsX: useSharedValue(0),
+    stageAbsY: useSharedValue(0),
+    px: useSharedValue(0),
+    py: useSharedValue(0),
     shiftX: useSharedValue(0),
     shiftY: useSharedValue(0),
     over: useSharedValue(''),
@@ -218,6 +225,10 @@ export function useDragToTarget({
             rects.current[kind][id] = { x, y, width, height };
             if (kind === 'drag' && draggingIdRef.current === id) {
               // A drag that started on a stale rect: move its origin too.
+              // Keep the pointer where the finger is: the stage's screen
+              // position was worked out from the stale rect.
+              stable.stageAbsX.value += stable.originX.value - x;
+              stable.stageAbsY.value += stable.originY.value - y;
               stable.originX.value = x;
               stable.originY.value = y;
               stable.originW.value = width;
@@ -412,22 +423,17 @@ export function DragStage({ controller, renderLifted, style, children, testID }:
   const liftedStyle = useAnimatedStyle(() => {
     if (!v.active.value) return { opacity: 0, left: 0, top: 0 };
     if (v.anchor.value === 1) {
-      const p = pointerInStage(
-        { x: v.originX.value, y: v.originY.value },
-        { x: v.grabX.value, y: v.grabY.value },
-        { x: v.tx.value, y: v.ty.value },
-        { x: v.shiftX.value, y: v.shiftY.value },
-      );
       return {
         opacity: 1,
-        left: p.x - POINTER_ANCHOR_OFFSET,
-        top: p.y - POINTER_ANCHOR_OFFSET,
+        left: v.px.value - POINTER_ANCHOR_OFFSET,
+        top: v.py.value - POINTER_ANCHOR_OFFSET,
       };
     }
+    // The copy keeps the pointer where it was on the chip.
     return {
       opacity: 1,
-      left: v.originX.value + v.tx.value + v.shiftX.value,
-      top: v.originY.value + v.ty.value + v.shiftY.value,
+      left: v.px.value - v.grabX.value,
+      top: v.py.value - v.grabY.value,
       minWidth: v.originW.value,
     };
   });
@@ -499,12 +505,19 @@ export function Draggable({ id, enabled = true, liftAnchor = 'origin', style, ch
           v.originX.value = r.x;
           v.originY.value = r.y;
           v.originW.value = r.width;
-          // The pan activates after some movement: e.x is where the pointer
-          // is now, translationX how far it has come since touch-down.
-          v.grabX.value = e.x - e.translationX;
-          v.grabY.value = e.y - e.translationY;
-          v.tx.value = e.translationX;
-          v.ty.value = e.translationY;
+          // Track the pointer by its absolute position, not the pan's
+          // translation: on Android a pan that activates after a long press
+          // measures its translation from where it activated, not from
+          // touch-down, so a translation-based pointer lagged the finger
+          // by the first move (a whole row on a phone). e.x is the pointer
+          // on this view, r its place in the stage, so this is where the
+          // stage sits on screen.
+          v.grabX.value = e.x;
+          v.grabY.value = e.y;
+          v.stageAbsX.value = e.absoluteX - e.x - r.x;
+          v.stageAbsY.value = e.absoluteY - e.y - r.y;
+          v.px.value = r.x + e.x;
+          v.py.value = r.y + e.y;
           v.shiftX.value = 0;
           v.shiftY.value = 0;
           v.over.value = '';
@@ -520,14 +533,13 @@ export function Draggable({ id, enabled = true, liftAnchor = 'origin', style, ch
           ) {
             v.moved.value = true;
           }
-          v.tx.value = e.translationX;
-          v.ty.value = e.translationY;
           const p = pointerInStage(
-            { x: v.originX.value, y: v.originY.value },
-            { x: v.grabX.value, y: v.grabY.value },
-            { x: e.translationX, y: e.translationY },
+            { x: e.absoluteX, y: e.absoluteY },
+            { x: v.stageAbsX.value, y: v.stageAbsY.value },
             { x: v.shiftX.value, y: v.shiftY.value },
           );
+          v.px.value = p.x;
+          v.py.value = p.y;
           const hit = hitTarget(p, v.targetRects.value);
           if (hit !== v.over.value) {
             v.over.value = hit;
