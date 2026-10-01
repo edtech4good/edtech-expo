@@ -60,7 +60,7 @@ console.log('ok  size');
 
 // The delivered files: every one the app can request exists, is 600x800 at
 // 30fps, and has no image assets (pure vector).
-const dir = path.resolve(__dirname, '../../../assets/mascots');
+const dir = path.resolve(__dirname, '../../../../public/mascots');
 for (const c of MASCOT_CHARACTERS)
   for (const clip of ['pass', 'try-again', 'idle'] as const) {
     const j = JSON.parse(fs.readFileSync(path.join(dir, mascotFile(c, clip)), 'utf8'));

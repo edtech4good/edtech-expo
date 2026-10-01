@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   clipForBand,
@@ -19,10 +19,10 @@ import type { ResultBand } from './resultBand';
  * the last frame. It is decorative and hidden from assistive tech: the
  * headline carries the result.
  *
- * Space is reserved from the first render (so nothing jumps when the JSON
- * arrives), but only where the slot can actually play (see mascotPlayable):
- * on web that needs @lottiefiles/react-lottie-player, which is not installed,
- * so the slot stays empty and takes no room there.
+ * Space is reserved from the first render, so nothing jumps when the JSON
+ * arrives. This file is the native (iOS/Android) renderer; web uses
+ * ResultIllustration.web.tsx, which needs @lottiefiles/react-lottie-player
+ * (not installed today, so on web the slot stays empty and takes no room).
  */
 export const MASCOT_GAP = 16;
 
@@ -60,9 +60,7 @@ export default function ResultIllustration({
     };
   }, [playable, character, clip]);
 
-  // Web cannot show a held frame (lottie web has no `progress`), so with
-  // reduced motion it shows nothing rather than a stray first frame.
-  if (!playable || (Platform.OS === 'web' && reducedMotion)) return null;
+  if (!playable) return null;
 
   const height = mascotHeight(compact);
   const width = Math.round(height * MASCOT_ASPECT);
@@ -88,7 +86,6 @@ export default function ResultIllustration({
           autoPlay={cfg.autoPlay}
           loop={cfg.loop}
           progress={cfg.staticProgress}
-          webStyle={{ width, height }}
           style={{ width, height }}
         />
       )}
