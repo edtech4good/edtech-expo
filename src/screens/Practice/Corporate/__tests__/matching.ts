@@ -21,6 +21,8 @@ import {
   Tr,
   contentKind,
   correctPlacement,
+  dropChip,
+  dropTaps,
   EMPTY_MATCH,
   evaluateMatching,
   isReady,
@@ -32,7 +34,10 @@ import {
 import { INITIAL_SHELL_STATE, shellPress } from '../shellLogic';
 
 let passed = 0;
+// CHECK_ONLY=<text> runs only the checks whose name contains it (used to
+// show a single check catching a mutation that earlier checks also catch).
 function check(name: string, fn: () => void) {
+  if (process.env.CHECK_ONLY && !name.includes(process.env.CHECK_ONLY)) return;
   try {
     fn();
     passed += 1;
@@ -266,6 +271,133 @@ check('the instruction says "word" only when every prompt is a word', () => {
   assert.equal(instructionText({ tap: picked, allText: true, ...idle }, t), 'corporate.matching.pickedHint{"label":"x"}');
   assert.equal(instructionText({ tap: picked, allText: false, ...idle }, t), 'corporate.matching.pickedHintPrompt{"label":"x"}');
   assert.equal(instructionText({ tap: run(slot(A)), allText: false, ...idle }, t), 'corporate.matching.slotHint{"label":"y"}');
+});
+
+// ---- dragging: each drop ends exactly where its taps end ------------------
+
+check('drag a bank chip onto a slot = tap the chip, then the slot (either way the old chip goes back)', () => {
+  const s0 = EMPTY_MATCH;
+  const d = dropChip(s0, A, { kind: 'bank' }, { kind: 'slot', slotId: B });
+  assert.deepEqual(d, run(chip(A), slot(B)));
+  assert.deepEqual(d.placed, { [B]: A });
+  // Onto a filled slot: the chip that was there goes back to the bank.
+  const d2 = dropChip(d, C, { kind: 'bank' }, { kind: 'slot', slotId: B });
+  assert.deepEqual(d2, run(chip(A), slot(B), chip(C), slot(B)));
+  assert.deepEqual(d2.placed, { [B]: C });
+});
+
+check('drag a placed chip onto another slot: they swap (= take back, place, place the other)', () => {
+  const s = run(chip(A), slot(A), chip(B), slot(B));
+  const d = dropChip(s, A, { kind: 'slot', slotId: A }, { kind: 'slot', slotId: B });
+  assert.deepEqual(d.placed, { [A]: B, [B]: A });
+  assert.deepEqual(d, run(chip(A), slot(A), chip(B), slot(B), slot(A), chip(A), slot(B), chip(B), slot(A)));
+  // Onto an empty slot: it simply moves.
+  const m = dropChip(s, A, { kind: 'slot', slotId: A }, { kind: 'slot', slotId: C });
+  assert.deepEqual(m.placed, { [B]: B, [C]: A });
+  assert.deepEqual(m, run(chip(A), slot(A), chip(B), slot(B), slot(A), chip(A), slot(C)));
+});
+
+check('drag a placed chip to the bank = tap its slot (take back)', () => {
+  const s = run(chip(A), slot(B));
+  const d = dropChip(s, A, { kind: 'slot', slotId: B }, { kind: 'bank' });
+  assert.deepEqual(d, run(chip(A), slot(B), slot(B)));
+  assert.deepEqual(d.placed, {});
+});
+
+check('a drop on nothing, on its own slot, or a bank chip on the bank, changes nothing', () => {
+  const s = run(chip(A), slot(B));
+  assert.deepEqual(dropChip(s, A, { kind: 'slot', slotId: B }, null), s);
+  assert.deepEqual(dropChip(s, A, { kind: 'slot', slotId: B }, { kind: 'slot', slotId: B }), s);
+  assert.deepEqual(dropChip(s, C, { kind: 'bank' }, { kind: 'bank' }), s);
+  assert.deepEqual(dropChip(s, C, { kind: 'bank' }, null), s);
+  // Stale drags (the chip is not where the drag says) do nothing.
+  assert.deepEqual(dropTaps(s.placed, A, { kind: 'bank' }, { kind: 'slot', slotId: C }), []);
+  assert.deepEqual(dropTaps(s.placed, C, { kind: 'slot', slotId: B }, { kind: 'bank' }), []);
+});
+
+check('a drag starts from a clean slate: a pick or a waiting slot is put down', () => {
+  const picked = run(chip(B));
+  assert.deepEqual(dropChip(picked, A, { kind: 'bank' }, { kind: 'slot', slotId: C }), run(chip(A), slot(C)));
+  assert.deepEqual(dropChip(picked, A, { kind: 'bank' }, null), EMPTY_MATCH);
+  const waiting = run(slot(A));
+  const d = dropChip(waiting, B, { kind: 'bank' }, { kind: 'slot', slotId: C });
+  assert.deepEqual(d, { placed: { [C]: B }, pickedChip: null, activeSlot: null });
+});
+
+// What a drop must do, written from the drop's definition (not from the
+// tap functions the code uses), for the sweep below to compare against.
+function expectedPlaced(
+  placed: Readonly<Record<string, string>>,
+  chipId: string,
+  from: { kind: 'bank' } | { kind: 'slot'; slotId: string },
+  to: { kind: 'bank' } | { kind: 'slot'; slotId: string } | null,
+): Record<string, string> {
+  const out = { ...placed };
+  if (to === null) return out;
+  if (from.kind === 'bank') {
+    if (to.kind === 'bank' || Object.values(placed).includes(chipId)) return out;
+    out[to.slotId] = chipId; // whatever was there is no longer in a slot: back in the bank
+    return out;
+  }
+  if (placed[from.slotId] !== chipId) return out;
+  if (to.kind === 'bank') {
+    delete out[from.slotId];
+    return out;
+  }
+  if (to.slotId === from.slotId) return out;
+  const displaced = placed[to.slotId];
+  out[to.slotId] = chipId;
+  if (displaced === undefined) delete out[from.slotId];
+  else out[from.slotId] = displaced; // the two swap
+  return out;
+}
+
+check('every drop from every reachable state: the exact expected answer, and every chip in exactly one place', () => {
+  // All placements of 3 chips into 3 slots (each chip at most once), with
+  // nothing picked, a chip picked, or a slot waiting; and every drop.
+  const ids = [A, B, C];
+  const placements: Array<Record<string, string>> = [];
+  const choices = [undefined, ...ids];
+  for (const x of choices) for (const y of choices) for (const z of choices) {
+    const vals = [x, y, z].filter(Boolean);
+    if (new Set(vals).size !== vals.length) continue;
+    const placed: Record<string, string> = {};
+    [x, y, z].forEach((v, i) => { if (v) placed[ids[i]] = v; });
+    placements.push(placed);
+  }
+  let drops = 0;
+  for (const placed of placements) {
+    const inBank = ids.filter(c => !Object.values(placed).includes(c));
+    const starts: MatchTapState[] = [
+      { placed, pickedChip: null, activeSlot: null },
+      ...inBank.map(c => ({ placed, pickedChip: c, activeSlot: null })),
+      ...ids.filter(sl => !(sl in placed)).map(sl => ({ placed, pickedChip: null, activeSlot: sl })),
+    ];
+    const sources: Array<[string, any]> = [
+      ...inBank.map(c => [c, { kind: 'bank' }] as [string, any]),
+      ...Object.entries(placed).map(([sl, c]) => [c, { kind: 'slot', slotId: sl }] as [string, any]),
+    ];
+    const targets: any[] = [null, { kind: 'bank' }, ...ids.map(id => ({ kind: 'slot', slotId: id }))];
+    for (const s of starts) for (const [c, from] of sources) for (const to of targets) {
+      const d = dropChip(s, c, from, to);
+      drops += 1;
+      const where = `${JSON.stringify(s)} drop ${c} ${JSON.stringify(from)} -> ${JSON.stringify(to)}`;
+      // The whole state, against the definition.
+      assert.deepEqual(d, { placed: expectedPlaced(placed, c, from, to), pickedChip: null, activeSlot: null }, where);
+      // Conservation: every chip is in exactly one place (one slot, or the
+      // bank), only known chips are placed, and only known slots hold one.
+      const vals = Object.values(d.placed);
+      assert.equal(new Set(vals).size, vals.length, `no chip in two slots: ${where}`);
+      for (const k of Object.keys(d.placed)) assert.ok(ids.includes(k), `unknown slot: ${where}`);
+      for (const id of ids) {
+        const inSlots: number = Object.keys(d.placed).filter(k => d.placed[k] === id).length;
+        const inBankToo: number = inSlots === 0 ? 1 : 0;
+        assert.equal(inSlots + inBankToo, 1, `chip ${id} in exactly one place: ${where}`);
+      }
+      assert.equal(vals.length + ids.filter(i => !vals.includes(i)).length, ids.length, `chips conserved: ${where}`);
+    }
+  }
+  assert.ok(drops > 300, `${drops} drops`);
 });
 
 console.log(`matching: ${passed} checks passed`);

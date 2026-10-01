@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
@@ -6,6 +6,7 @@ import _ from 'lodash';
 
 import { QuestionOption } from '@/models';
 import { useResource } from '@/services';
+import { DragStage, Draggable, DropTarget, useDragToTarget } from '@/components/drag';
 import MovableTile from '@/components/kit/MovableTile';
 import Slot from '@/components/kit/Slot';
 import ResultMark from '@/components/kit/ResultMark';
@@ -22,10 +23,13 @@ import {
   bankOrder,
   chipState,
   correctPlacement,
+  dropChip,
   EMPTY_MATCH,
   evaluateMatching,
   instructionText,
   isReady,
+  MatchDragFrom,
+  MatchDropTo,
   MatchSlotState,
   pressChip,
   pressSlot,
@@ -46,7 +50,13 @@ const PICTURE = 44; // thumbnail beside a picture answer inside a slot
  * with its own slot, joined in one card; its `questionassociate` is the answer
  * chip that belongs there. Chips wait in a bank below. Tap works in either
  * order (chip then slot, or slot then chip) and tapping a placed chip sends it
- * back to the bank. Dragging is not offered: only the tap path.
+ * back to the bank.
+ *
+ * Chips can also be dragged (DragToTarget): a bank chip onto a row places it,
+ * a placed chip onto another row swaps the two, onto the bank takes it back,
+ * and a drop anywhere else changes nothing. Each drop is the taps it stands
+ * for (dropChip in matchingLogic), so it ends where those taps would. Drag
+ * is pointer-only: the slot and chip Pressables stay the accessible path.
  */
 export default function MatchingBody({
   question,
@@ -93,6 +103,28 @@ export default function MatchingBody({
   const locked = disabled || showAnswer || marks !== null;
   const showBank = !locked;
 
+  // ---- Drag. Draggable ids: `bank:<chip>` and `slot:<slot>`; target ids:
+  // `slot:<slot>` (the whole row) and `bank`.
+  const placedRef = useRef(tap.placed);
+  placedRef.current = tap.placed;
+  const onDrop = useCallback((dragId: string, target: string | null) => {
+    const source = parseDragId(dragId, placedRef.current);
+    if (!source) return;
+    setTap(s => dropChip(s, source.chipId, source.from, parseTarget(target)));
+  }, []);
+  // A hold that never moved is the tap on what was held.
+  const onHoldTap = useCallback((dragId: string) => {
+    if (dragId.startsWith('bank:')) {
+      const chipId = dragId.slice(5);
+      setTap(s => pressChip(s, chipId));
+    } else if (dragId.startsWith('slot:')) {
+      const slotId = dragId.slice(5);
+      setTap(s => pressSlot(s, slotId));
+    }
+  }, []);
+  const dnd = useDragToTarget({ onDrop, onHoldTap, enabled: !locked });
+  const dragging = dnd.active;
+
   // The line above the list says what to do next.
   const tr = t as Tr;
   const nameOfChip = (id: string) => answerName(optionById.get(id)!.option, letters[id], tr);
@@ -109,7 +141,15 @@ export default function MatchingBody({
   );
 
   return (
-    <View style={{ rowGap: 14 }}>
+    <DragStage
+      controller={dnd}
+      testID="match-stage"
+      style={{ rowGap: 14 }}
+      renderLifted={id => {
+        const chipId = id.startsWith('bank:') ? id.slice(5) : tap.placed[id.slice(5)];
+        const entry = chipId ? optionById.get(chipId) : undefined;
+        return entry ? <LiftedChip option={entry.option} letter={letters[chipId]} /> : null;
+      }}>
       {showBank ? (
         <View
           accessibilityLiveRegion="polite"
@@ -132,20 +172,32 @@ export default function MatchingBody({
       ) : null}
 
       <View style={{ rowGap: 6 }}>
-        {questionOptions.map((option, index) => (
-          <MatchRow
-            key={option.questionoptionid}
-            option={option}
-            index={index}
-            chipId={placed[option.questionoptionid]}
-            chip={optionById.get(placed[option.questionoptionid])}
-            letters={letters}
-            pickedName={pickedName}
-            state={slotState(option.questionoptionid, { ...tap, placed }, { marks, showAnswer })}
-            locked={locked}
-            onPress={() => setTap(s => pressSlot(s, option.questionoptionid))}
-          />
-        ))}
+        {questionOptions.map((option, index) => {
+          const slotId = option.questionoptionid;
+          const state = slotState(slotId, { ...tap, placed }, { marks, showAnswer });
+          // While dragging: the row under the pointer is the hover, and a
+          // slot whose chip is lifted shows empty (its ghost).
+          const lifted = dragging?.id === `slot:${slotId}`;
+          const drawn: SlotLook =
+            dragging?.over === `slot:${slotId}` ? 'hover' : lifted ? 'empty' : state;
+          return (
+            <DropTarget key={slotId} id={`slot:${slotId}`}>
+              <MatchRow
+                option={option}
+                index={index}
+                chipId={placed[slotId]}
+                chip={optionById.get(placed[slotId])}
+                letters={letters}
+                pickedName={pickedName}
+                state={state}
+                drawn={drawn}
+                lifted={lifted}
+                locked={locked}
+                onPress={dnd.guardPress(() => setTap(s => pressSlot(s, slotId)))}
+              />
+            </DropTarget>
+          );
+        })}
       </View>
 
       {showBank ? (
@@ -162,31 +214,83 @@ export default function MatchingBody({
             }}>
             {t('corporate.matching.answers')}
           </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              alignItems: 'center',
-              columnGap: 10,
-              rowGap: 10,
-            }}>
+          <DropTarget
+            id="bank"
+            testID="match-bank"
+            style={[
+              styles.bank,
+              // A placed chip dragged over the bank: it will go back there.
+              dragging?.over === 'bank' && dragging.id.startsWith('slot:')
+                ? { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }
+                : null,
+            ]}>
             {bank.map(option => {
-              const entry = optionById.get(option.questionoptionid)!;
+              const chipId = option.questionoptionid;
+              const entry = optionById.get(chipId)!;
+              const state = chipState(chipId, tap);
               return (
                 <BankChip
-                  key={option.questionoptionid}
+                  key={chipId}
                   option={option}
                   index={entry.n - 1}
-                  letter={letters[option.questionoptionid]}
-                  state={chipState(option.questionoptionid, tap)}
-                  onPress={() => setTap(s => pressChip(s, option.questionoptionid))}
+                  letter={letters[chipId]}
+                  state={state}
+                  ghost={dragging?.id === `bank:${chipId}`}
+                  draggable={!locked && state !== 'used'}
+                  onPress={dnd.guardPress(() => setTap(s => pressChip(s, chipId)))}
                 />
               );
             })}
-          </View>
+          </DropTarget>
         </View>
       ) : null}
+    </DragStage>
+  );
+}
+
+/** A drag id back to the chip and where it came from (null if stale). */
+function parseDragId(
+  dragId: string,
+  placed: Readonly<Record<string, string>>,
+): { chipId: string; from: MatchDragFrom } | null {
+  if (dragId.startsWith('bank:')) return { chipId: dragId.slice(5), from: { kind: 'bank' } };
+  if (dragId.startsWith('slot:')) {
+    const slotId = dragId.slice(5);
+    const chipId = placed[slotId];
+    return chipId ? { chipId, from: { kind: 'slot', slotId } } : null;
+  }
+  return null;
+}
+
+function parseTarget(target: string | null): MatchDropTo {
+  if (target === null) return null;
+  if (target === 'bank') return { kind: 'bank' };
+  if (target.startsWith('slot:')) return { kind: 'slot', slotId: target.slice(5) };
+  return null;
+}
+
+/** What a slot is drawn as: its state, or the drag's hover. */
+type SlotLook = MatchSlotState | 'hover';
+
+/** The copy of a chip that follows the pointer: drawn only, never a control. */
+function LiftedChip({ option, letter }: { option: QuestionOption; letter: string }) {
+  const { t } = useTranslation();
+  const a = answerParts(option);
+  const src = useResource(
+    { name: _.get(option, 'questionassociate.questionassociatefile.filename', '') },
+    [option.questionoptionid],
+  );
+  const isImage = a.kind === 'image';
+  return (
+    <View style={[isImage ? { width: 150 } : null, { transform: [{ rotate: '-2deg' }] }]}>
+      <MovableTile
+        state="dragging"
+        variant={isImage ? 'image' : 'text'}
+        label={answerName(option, letter, t as Tr)}
+        imageSource={isImage ? src : undefined}
+        imageHeight={72}
+        reserveAudio={false}
+      />
     </View>
   );
 }
@@ -203,6 +307,8 @@ function MatchRow({
   letters,
   pickedName,
   state,
+  drawn,
+  lifted,
   locked,
   onPress,
 }: {
@@ -212,7 +318,12 @@ function MatchRow({
   chip: { option: QuestionOption; n: number } | undefined;
   letters: Record<string, string>;
   pickedName: string;
+  /** The slot's state (what a screen reader hears). */
   state: MatchSlotState;
+  /** What is drawn: the state, or the drag's hover / ghost. */
+  drawn: SlotLook;
+  /** Its chip is the one being dragged. */
+  lifted: boolean;
   locked: boolean;
   onPress: () => void;
 }) {
@@ -305,6 +416,13 @@ function MatchRow({
             Enter and Space all activate it, and it is one tab stop. The Slot inside
             only draws it: it takes no touches and (on web) is inert, so it is not a
             second tab stop or read twice. */}
+        {/* A placed chip can be dragged out of its slot. Draggable adds no
+            element a screen reader or the keyboard reaches. */}
+        <Draggable
+          id={`slot:${option.questionoptionid}`}
+          enabled={!locked && chipId !== undefined && state === 'filled'}
+          liftAnchor="pointer"
+          style={styles.slotDrag}>
         <Pressable
           testID={`match-slot-${index}`}
           accessibilityRole="button"
@@ -317,7 +435,7 @@ function MatchRow({
           onPress={onPress}
           style={{ flex: 1, flexDirection: 'row' }}>
           <DrawnSlot>
-            {chip && answer?.kind === 'image' ? (
+            {chip && answer?.kind === 'image' && drawn === state ? (
               <PlacedPicture
                 state={state}
                 label={answerLabelText}
@@ -325,10 +443,16 @@ function MatchRow({
                 showTakeBack={!locked}
               />
             ) : (
-              <Slot state={state} label={answerLabelText} decorative showTakeBack={!locked} />
+              <Slot
+                state={drawn}
+                label={lifted ? undefined : answerLabelText}
+                decorative
+                showTakeBack={!locked}
+              />
             )}
           </DrawnSlot>
         </Pressable>
+        </Draggable>
         {chip && answer?.kind === 'audio' ? (
           <OptionAudioCircle
             testID={`match-slot-audio-${index}`}
@@ -442,12 +566,17 @@ function BankChip({
   index,
   letter,
   state,
+  ghost,
+  draggable,
   onPress,
 }: {
   option: QuestionOption;
   index: number;
   letter: string;
   state: 'default' | 'picked' | 'used';
+  /** Being dragged: drawn as the dashed ghost, but still mounted and pressable. */
+  ghost: boolean;
+  draggable: boolean;
   onPress: () => void;
 }) {
   const theme = useTheme();
@@ -460,6 +589,7 @@ function BankChip({
   const label = answerName(option, letter, t as Tr);
   const isImage = a.kind === 'image';
   const used = state === 'used';
+  const dashed = used || ghost;
   const tile = (
     <MovableTile
       testID={`match-chip-${index}`}
@@ -477,9 +607,12 @@ function BankChip({
       accessibilityElementsHidden={used}
       importantForAccessibility={used ? 'no-hide-descendants' : 'auto'}
       style={{ flexDirection: 'row', alignItems: 'center', columnGap: 4, maxWidth: '100%' }}>
-      <View style={isImage ? { width: 150 } : { flexShrink: 1 }}>
-        <View style={used ? { opacity: 0 } : undefined}>{tile}</View>
-        {used ? (
+      <Draggable
+        id={`bank:${option.questionoptionid}`}
+        enabled={draggable}
+        style={isImage ? { width: 150 } : { flexShrink: 1 }}>
+        <View style={dashed ? { opacity: 0 } : undefined}>{tile}</View>
+        {dashed ? (
           <View
             testID={`match-ghost-${index}`}
             pointerEvents="none"
@@ -495,7 +628,7 @@ function BankChip({
             ]}
           />
         ) : null}
-      </View>
+      </Draggable>
       {a.kind === 'audio' && !used ? (
         <OptionAudioCircle
           testID={`match-chip-audio-${index}`}
@@ -523,4 +656,17 @@ const styles = StyleSheet.create({
   },
   slotCell: { width: '50%', flexDirection: 'row', alignItems: 'stretch', columnGap: 4, padding: 5 },
   cue: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  slotDrag: { flex: 1, flexDirection: 'row' },
+  bank: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: 10,
+    rowGap: 10,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 4,
+  },
 });
