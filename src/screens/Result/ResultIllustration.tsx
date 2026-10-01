@@ -9,6 +9,7 @@ import {
   playConfig,
 } from './mascot';
 import { loadMascot, mascotPlayable } from './mascotSources';
+import MascotBoundary from './MascotBoundary';
 import type { ResultBand } from './resultBand';
 
 /**
@@ -38,7 +39,7 @@ export interface ResultIllustrationProps {
   compact?: boolean;
 }
 
-export default function ResultIllustration({
+function ResultIllustrationInner({
   band,
   character,
   reducedMotion,
@@ -89,5 +90,13 @@ export default function ResultIllustration({
         />
       )}
     </View>
+  );
+}
+
+export default function ResultIllustration(props: ResultIllustrationProps) {
+  return (
+    <MascotBoundary>
+      <ResultIllustrationInner {...props} />
+    </MascotBoundary>
   );
 }

@@ -83,3 +83,18 @@ const native = fs.readFileSync(path.resolve(__dirname, '../mascotSources.ts'), '
 assert.ok(!/require\([^)]*idle/.test(native), 'mascotSources.ts must not require idle clips');
 assert.ok(/require\([^)]*bear-pass/.test(native) && /require\([^)]*rabbit-try-again/.test(native));
 console.log('ok  native loaders exclude idle');
+
+// Containment: the mascot is decoration, so each renderer's default export must
+// be wrapped in MascotBoundary (a failed chunk or player must not blank the
+// result screen), and the boundary must swallow, not rethrow.
+for (const f of ['ResultIllustration.tsx', 'ResultIllustration.web.tsx']) {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', f), 'utf8');
+  assert.match(src, /<MascotBoundary>[\s\S]*<ResultIllustrationInner[\s\S]*<\/MascotBoundary>/, `${f} must wrap the mascot in MascotBoundary`);
+}
+const boundary = fs.readFileSync(path.resolve(__dirname, '../MascotBoundary.tsx'), 'utf8');
+assert.match(boundary, /getDerivedStateFromError/);
+assert.ok(!/\bthrow\b/.test(boundary), 'MascotBoundary must never rethrow');
+// Dev must not use the lazy chunk path (HMRClient.setup() is never called by this app's entry).
+const webIll = fs.readFileSync(path.resolve(__dirname, '../ResultIllustration.web.tsx'), 'utf8');
+assert.match(webIll, /NODE_ENV === 'production'[\s\S]*import\('\.\/MascotPlayer'\)[\s\S]*require\('\.\/MascotPlayer'\)/, 'lazy chunk only in production; require in dev');
+console.log('ok  mascot failure is contained');

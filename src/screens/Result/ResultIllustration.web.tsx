@@ -6,6 +6,7 @@ import { View } from 'react-native';
 
 import { clipForBand, MASCOT_ASPECT, mascotHeight } from './mascot';
 import { loadMascot, mascotPlayable } from './mascotSources';
+import MascotBoundary from './MascotBoundary';
 import type { ResultIllustrationProps } from './ResultIllustration';
 
 /**
@@ -16,8 +17,17 @@ import type { ResultIllustrationProps } from './ResultIllustration';
  * autoplay and shows the last frame (lottie-web `goToAndStop`), as native does. Decorative: hidden from
  * assistive tech.
  */
-// @ts-ignore tsconfig's `module` rejects import(); Metro splits it into its own chunk.
-const MascotPlayer = lazy(() => import('./MascotPlayer'));
+// Production: its own chunk (@ts-ignore: tsconfig's `module` rejects import()).
+// Dev: required synchronously. Metro's dev async loader ends in
+// HMRClient.registerBundle(), which throws "Expected HMRClient.setup() call at
+// startup" because this app's custom entry (index.js) never runs
+// @expo/metro-runtime's HMR setup (only expo-router's entry does).
+const MascotPlayer = lazy(
+  process.env.NODE_ENV === 'production'
+    ? // @ts-ignore
+      () => import('./MascotPlayer')
+    : () => Promise.resolve(require('./MascotPlayer')),
+);
 
 export const MASCOT_GAP = 16;
 
@@ -25,7 +35,7 @@ export function hasResultIllustration(): boolean {
   return mascotPlayable();
 }
 
-export default function ResultIllustration({
+function ResultIllustrationInner({
   band,
   character,
   reducedMotion,
@@ -69,5 +79,13 @@ export default function ResultIllustration({
         </Suspense>
       )}
     </View>
+  );
+}
+
+export default function ResultIllustration(props: ResultIllustrationProps) {
+  return (
+    <MascotBoundary>
+      <ResultIllustrationInner {...props} />
+    </MascotBoundary>
   );
 }
