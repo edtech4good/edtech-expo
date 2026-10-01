@@ -18,6 +18,9 @@ export default function MascotPlayer({ source, width, height, reducedMotion }: M
       src={source}
       autoplay={!reducedMotion}
       loop={false}
+      // Without this the player seeks back to frame 0 when the clip ends
+      // (react-lottie-player 3.6.0 `complete` handler), losing the final pose.
+      keepLastFrame
       style={{ width, height }}
       // Reduced motion: no playback; jump to the last frame and hold it.
       lottieRef={anim => {

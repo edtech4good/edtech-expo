@@ -70,3 +70,16 @@ for (const c of MASCOT_CHARACTERS)
     assert.ok(!(j.assets ?? []).some((a: { p?: string }) => a.p), `${c}-${clip} has image assets`);
   }
 console.log('ok  artwork files');
+
+// Web player must keep the last frame: without `keepLastFrame` react-lottie-player
+// 3.6.0 seeks back to frame 0 when the clip ends and the final pose is lost.
+const webPlayer = fs.readFileSync(path.resolve(__dirname, '../MascotPlayer.web.tsx'), 'utf8');
+assert.match(webPlayer, /^\s*keepLastFrame\s*$/m, 'MascotPlayer.web.tsx must pass keepLastFrame');
+assert.match(webPlayer, /loop=\{false\}/, 'MascotPlayer.web.tsx must not loop');
+console.log('ok  web player keeps last frame');
+
+// Native must not bundle the unused idle clips (a build-time require pulls them in).
+const native = fs.readFileSync(path.resolve(__dirname, '../mascotSources.ts'), 'utf8');
+assert.ok(!/require\([^)]*idle/.test(native), 'mascotSources.ts must not require idle clips');
+assert.ok(/require\([^)]*bear-pass/.test(native) && /require\([^)]*rabbit-try-again/.test(native));
+console.log('ok  native loaders exclude idle');

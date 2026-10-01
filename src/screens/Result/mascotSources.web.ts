@@ -1,12 +1,13 @@
-import type { MascotCharacter, MascotClip } from './mascot';
+import type { MascotCharacter, WiredClip } from './mascot';
 
 /**
  * Web loader: fetches the JSON from `public/mascots/` at run time, so none of
  * the ~700 KB is in the app bundle and only the one clip shown is downloaded.
- * (Expo SDK 50 web does not load Metro's async `import()` chunks, so a dynamic
- * import of the JSON fails.)
+ * (The JSON is fetched rather than `import()`ed so it never enters a bundle.
+ * The Lottie player itself is a lazy `import()` chunk: see
+ * ResultIllustration.web.tsx and MascotPlayer.web.tsx.)
  */
-export async function loadMascot(character: MascotCharacter, clip: MascotClip): Promise<object> {
+export async function loadMascot(character: MascotCharacter, clip: WiredClip): Promise<object> {
   const res = await fetch(`/mascots/${character}-${clip}.json`);
   if (!res.ok) throw new Error(`mascot ${character}-${clip}: HTTP ${res.status}`);
   return res.json();

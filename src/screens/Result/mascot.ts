@@ -7,6 +7,8 @@ import type { ResultBand } from './resultBand';
  */
 export type MascotCharacter = 'bear' | 'rabbit';
 export type MascotClip = 'pass' | 'try-again' | 'idle';
+/** The clips the result screen can play (idle is delivered but not wired yet). */
+export type WiredClip = Exclude<MascotClip, 'idle'>;
 
 export const MASCOT_CHARACTERS: readonly MascotCharacter[] = ['bear', 'rabbit'];
 
@@ -14,7 +16,7 @@ export const MASCOT_CHARACTERS: readonly MascotCharacter[] = ['bear', 'rabbit'];
  * Jesse's mapping: a pass plays `*-pass`; "close" and "far" both play
  * `*-try-again`. `idle` is delivered but unused here (a follow-up places it).
  */
-export function clipForBand(band: ResultBand): MascotClip {
+export function clipForBand(band: ResultBand): WiredClip {
   return band === 'passed' ? 'pass' : 'try-again';
 }
 

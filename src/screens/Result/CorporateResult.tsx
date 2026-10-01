@@ -3,7 +3,7 @@ import { QuestionColumn } from '@/components/kit';
 import { useFont, useTypeRole } from '@/services';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -33,6 +33,15 @@ const RING_MS = 900;
 const FINISH_MAX_WIDTH = 360;
 /** Phones turned sideways are too short for the stacked layout. */
 const COMPACT_HEIGHT = 500;
+
+/** Readable by screen readers, invisible and out of the layout. */
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  opacity: 0,
+} as const;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -179,8 +188,12 @@ export default function CorporateResult({
   const textColumn = (
     <View style={{ alignItems: compact ? 'flex-start' : 'center', flexShrink: 1 }}>
       {headlineNode}
+      {/* Native reads the label. Web ignores aria-label on a plain Text, so
+          there the visible line is hidden from assistive tech and the full
+          sentence (with the percent) is read from a visually hidden twin. */}
       <Text
-        accessibilityLabel={spoken}
+        accessibilityLabel={Platform.OS === 'web' ? undefined : spoken}
+        aria-hidden={Platform.OS === 'web' ? true : undefined}
         style={{
           marginTop: 8,
           fontFamily: body.fontFamily,
@@ -191,6 +204,9 @@ export default function CorporateResult({
         }}>
         {score_}
       </Text>
+      {Platform.OS === 'web' && (
+        <Text style={VISUALLY_HIDDEN}>{spoken}</Text>
+      )}
       {hint && (
         <Text
           style={{
