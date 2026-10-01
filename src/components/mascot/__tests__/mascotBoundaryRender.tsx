@@ -8,7 +8,7 @@
  * Plain script run by `tsx` (package.json `test:result`). Exits non-zero on
  * the first failed check.
  */
-import '../../../components/practices/__tests__/nativeStubs';
+import '../../practices/__tests__/nativeStubs';
 import Module from 'node:module';
 import assert from 'node:assert/strict';
 import React, { lazy, Suspense } from 'react';
@@ -17,15 +17,26 @@ const h = React.createElement;
 const ThrowingPlayer = () => {
   throw new Error('player blew up');
 };
+// Switchable doubles: the contained-failure checks use the throwing player;
+// the behaviour checks swap in one that records the props it was given.
+const mock: {
+  player: (p: any) => any;
+  load: (character: string, clip: string) => Promise<object>;
+  loads: string[];
+} = { player: ThrowingPlayer, load: async () => ({ v: '5.0.0' }), loads: [] };
+const SwitchPlayer = (p: any) => mock.player(p);
 const extra: Record<string, unknown> = {
   '@expo/metro-runtime/async-require': {},
   './mascotSources': {
     __esModule: true,
-    loadMascot: async () => ({ v: '5.0.0' }),
+    loadMascot: (c: string, clip: string) => {
+      mock.loads.push(`${c}-${clip}`);
+      return mock.load(c, clip);
+    },
     mascotPlayable: () => true,
   },
-  './MascotPlayer': { __esModule: true, default: ThrowingPlayer },
-  'lottie-react-native': { __esModule: true, default: ThrowingPlayer },
+  './MascotPlayer': { __esModule: true, default: SwitchPlayer },
+  'lottie-react-native': { __esModule: true, default: SwitchPlayer },
 };
 const anyModule = Module as any;
 const load = anyModule._load;
@@ -111,7 +122,7 @@ async function main() {
     assert.equal(r.root.findAllByType(MascotBoundary).length, 1);
   });
 
-  for (const file of ['../ResultIllustration.web', '../ResultIllustration']) {
+  for (const file of ['../Mascot.web', '../Mascot']) {
     await check(`${file.slice(3)} default export contains a throwing player`, async () => {
       const Illustration = require(file).default;
       let r!: ReactTestRenderer;
@@ -120,7 +131,7 @@ async function main() {
           h(
             React.Fragment,
             null,
-            h(Illustration, { band: 'pass', character: 'bear', reducedMotion: true }),
+            h(Illustration, { clip: 'idle', character: 'bear', reducedMotion: true }),
             finish(),
           ),
         );
@@ -131,6 +142,87 @@ async function main() {
       assert.equal(r.root.findAllByType(ThrowingPlayer).length, 0, 'the failed player must not render');
     });
   }
+
+  // ---- behaviour of the shared component (a recording player) ----------
+  const seen: any[] = [];
+  const recorder = (p: any) => {
+    seen.push(p);
+    return h('Text', { testID: 'player' }, 'player');
+  };
+  const players = (r: ReactTestRenderer) => r.root.findAll(n => n.props?.testID === 'player' && typeof n.type === 'string');
+  const mount = async (el: React.ReactElement) => {
+    let r!: ReactTestRenderer;
+    act(() => {
+      r = TestRenderer.create(el);
+    });
+    await settle();
+    return r;
+  };
+
+  for (const file of ['../Mascot.web', '../Mascot']) {
+    const name = file.slice(3);
+    const Mascot = require(file).default;
+    const web = file.endsWith('.web');
+    // native passes {autoPlay, loop, progress}; web passes {autoPlay, loop, staticProgress}
+    const cfg = (p: any) => ({ autoPlay: p.autoPlay, loop: p.loop, still: web ? p.staticProgress : p.progress });
+
+    await check(`${name}: idle loops and plays`, async () => {
+      mock.player = recorder;
+      seen.length = 0;
+      await mount(h(Mascot, { clip: 'idle', character: 'rabbit', reducedMotion: false }));
+      assert.deepEqual(cfg(seen[seen.length - 1]), { autoPlay: true, loop: true, still: undefined });
+    });
+
+    await check(`${name}: pass plays once, no loop`, async () => {
+      seen.length = 0;
+      await mount(h(Mascot, { clip: 'pass', character: 'bear', reducedMotion: false }));
+      assert.deepEqual(cfg(seen[seen.length - 1]), { autoPlay: true, loop: false, still: undefined });
+    });
+
+    await check(`${name}: reduced motion shows one still frame, no playback`, async () => {
+      seen.length = 0;
+      await mount(h(Mascot, { clip: 'idle', character: 'bear', reducedMotion: true }));
+      assert.deepEqual(cfg(seen[seen.length - 1]), { autoPlay: false, loop: false, still: 0 });
+      seen.length = 0;
+      await mount(h(Mascot, { clip: 'try-again', character: 'bear', reducedMotion: true }));
+      assert.deepEqual(cfg(seen[seen.length - 1]), { autoPlay: false, loop: false, still: 1 });
+    });
+
+    await check(`${name}: character is random per mount and stable across re-renders`, async () => {
+      const realRandom = Math.random;
+      try {
+        mock.loads.length = 0;
+        Math.random = () => 0.9; // rabbit
+        const r = await mount(h(Mascot, { clip: 'idle', reducedMotion: true }));
+        assert.deepEqual(mock.loads, ['rabbit-idle']);
+        Math.random = () => 0.1; // would be bear if it re-rolled
+        act(() => r.update(h(Mascot, { clip: 'idle', reducedMotion: true, compact: true })));
+        await settle();
+        assert.deepEqual(mock.loads, ['rabbit-idle'], 'a re-render must not re-roll the character');
+        await mount(h(Mascot, { clip: 'idle', reducedMotion: true }));
+        assert.deepEqual(mock.loads, ['rabbit-idle', 'bear-idle'], 'a new mount rolls again');
+      } finally {
+        Math.random = realRandom;
+      }
+    });
+
+    await check(`${name}: artwork that fails to load leaves no slot and no gap`, async () => {
+      mock.load = () => Promise.reject(new Error('404'));
+      const r = await mount(h(React.Fragment, null, h(Mascot, { clip: 'idle', gapBelow: 16 }), finish()));
+      mock.load = async () => ({ v: '5.0.0' });
+      assert.ok(hasFinish(r));
+      const out = JSON.stringify(r.toJSON());
+      assert.ok(!/aria-hidden/.test(out), 'no reserved mascot box');
+      assert.ok(!/margin-bottom|marginBottom/.test(out), 'no leftover gap');
+    });
+
+    await check(`${name}: decorative, hidden from assistive tech`, async () => {
+      seen.length = 0;
+      const r = await mount(h(Mascot, { clip: 'idle', character: 'bear', reducedMotion: true }));
+      assert.match(JSON.stringify(r.toJSON()), /aria-hidden/);
+    });
+  }
+  mock.player = ThrowingPlayer;
   console.log(`${passed} checks passed`);
 }
 

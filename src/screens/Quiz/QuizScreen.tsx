@@ -59,6 +59,8 @@ import { useTranslation } from 'react-i18next';
 import type { AnswerV1 } from '@/utils/answerV1';
 import type { SubmitOptions } from '../Practice/Corporate/types';
 import { AnnouncerProvider } from '@/components/kit/Announcer';
+import QuizIntro from './QuizIntro';
+import { introStartAction, showQuizIntro } from './introGate';
 
 // Corporate header side slots (handoff §4, v2.1) — see PracticeScreen.tsx
 // for the full rationale; kept identical here so both screens' headers
@@ -87,6 +89,12 @@ export default function QuizScreen() {
     (selectedModule as LessonQuiz)?.lessonquizid ?? '',
   );
   const [question, setQuestion] = useState(0);
+  // Corporate quizzes open on an intro card; question 1 shows after Start.
+  const [started, setStarted] = useState(false);
+  const introVisible = showQuizIntro(isCorporate, started);
+  // True until the first load settles, so the intro's Start is busy rather
+  // than looking like "no questions" for the frame before the fetch begins.
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
   const currentQuestion = useMemo(
     () => questions[question],
     [questions, question],
@@ -107,6 +115,8 @@ export default function QuizScreen() {
 
   const methods = useForm<QuizResult>({
     defaultValues: {
+      // Reset to the moment of Start on corporate quizzes (handleStart), so
+      // time spent on the intro is not counted as quiz time.
       starttime: createTimeStamp(),
       endtime: undefined,
       result: [],
@@ -131,7 +141,9 @@ export default function QuizScreen() {
       // back button or the counter — see HEADER_SIDE_SLOT above.
       ...(isCorporate
         ? {
-            headerTitle: () => (
+            // The intro card already shows the quiz name as its heading.
+            headerTitle: () =>
+              introVisible ? null : (
               // On the tablet nav rail (or desktop sidebar), the header is
               // narrower than the window by that nav's fixed width, so subtract it too or the
               // title's max-width overshoots the header's actual space.
@@ -167,7 +179,8 @@ export default function QuizScreen() {
                 </Text>
               </View>
             ),
-            headerRight: () => (
+            headerRight: () =>
+              introVisible ? null : (
               <EyebrowText
                 testID="practice-progress-label"
                 size={theme.fontSizes.eyebrow}
@@ -192,11 +205,23 @@ export default function QuizScreen() {
     isRail,
     isSidebar,
     isKhmer,
+    introVisible,
   ]);
+
+  const loadQuestions = useCallback(async () => {
+    setLoadingQuestions(true);
+    try {
+      await fetch();
+    } catch {
+      // offline or server error: questions stay empty; Start offers a retry
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }, [fetch]);
 
   useEffect(() => {
     if (!selectedModule) return;
-    fetch();
+    void loadQuestions();
   }, [selectedModule]);
 
   useEffect(() => {
@@ -204,8 +229,26 @@ export default function QuizScreen() {
   }, [currentQuestion]);
 
   const handleBackPress = () => {
+    // On the intro nothing has been answered, so there is nothing to lose:
+    // leave straight away, to the same place the confirmed exit goes.
+    if (introVisible) {
+      handleGoBack();
+      return;
+    }
     if (!promptModalRef.current) return;
     promptModalRef.current.show(t('screen.practice.exitQuizMessage'));
+  };
+
+  const handleStart = () => {
+    const action = introStartAction(loadingQuestions, questions.length);
+    if (action === 'wait') return;
+    if (action === 'retry') {
+      void loadQuestions();
+      return;
+    }
+    // The quiz clock starts here, not when the screen mounted.
+    methods.setValue('starttime', createTimeStamp());
+    setStarted(true);
   };
 
   const handleGoBack = () => {
@@ -303,6 +346,17 @@ export default function QuizScreen() {
   const handleContinue = useCallback(() => {
     void modalPressRef.current();
   }, []);
+
+  if (introVisible) {
+    return (
+      <QuizIntro
+        title={(selectedModule as LessonQuiz)?.lessonquizname ?? ''}
+        questionCount={loadingQuestions ? null : questions.length}
+        loading={loadingQuestions}
+        onStart={handleStart}
+      />
+    );
+  }
 
   if (_.isEmpty(currentQuestion)) {
     if (isCorporate) {
