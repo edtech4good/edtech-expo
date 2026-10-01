@@ -269,8 +269,10 @@ export function tileFrameStyle(colors: KitColors, state: TileState) {
       paddingRight: f.paddingRight,
       // A flat state must also cancel the list's resting shadow: a result tint
       // is translucent, and Android paints an elevation shadow through it (the
-      // tile turns grey). Flat, as the design draws result tiles.
-      ...(f.raised || f.lifted ? null : { elevation: 0, shadowOpacity: 0 }),
+      // tile turns grey). Flat, as the design draws result tiles. (Only
+      // `elevation`, which the web ignores: ReorderableList also drops the iOS
+      // shadow on native, and the web keeps its look.)
+      ...(f.raised || f.lifted ? null : { elevation: 0 }),
     };
     byState.set(state, style);
   }
@@ -284,6 +286,5 @@ type FrameStyle = {
   paddingLeft: number;
   paddingRight: number;
   elevation?: number;
-  shadowOpacity?: number;
 };
 const frameStyleCache = new WeakMap<object, Map<TileState, FrameStyle>>();

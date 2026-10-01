@@ -222,6 +222,8 @@ const RAISED = Platform.select<ViewStyle>({
   },
 });
 
+const NO_SHADOW: ViewStyle = { shadowOpacity: 0 };
+
 const LIFTED = Platform.select<ViewStyle>({
   web: { boxShadow: '0 12px 28px rgba(9,16,29,0.18)' } as ViewStyle,
   android: { elevation: 12 },
@@ -498,6 +500,9 @@ const Tile = memo(function Tile({
           frameStyle,
           picked ? pickedStyle : null,
           toneStyle,
+          // A flat tone (elevation 0, a result tile) also drops the iOS shadow,
+          // which would show through its translucent tint. The web keeps its look.
+          toneStyle?.elevation === 0 && Platform.OS !== 'web' ? NO_SHADOW : null,
           ghost ? ghostStyle : null,
         ]}>
         <View style={{ opacity: ghost ? 0 : 1 }}>

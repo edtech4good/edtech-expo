@@ -101,7 +101,6 @@ assert.deepEqual(Object.keys(tileFrameStyle(C, 'correct')).sort(), [
   'elevation',
   'paddingLeft',
   'paddingRight',
-  'shadowOpacity',
 ]);
 assert.equal(tileFrameStyle(C, 'incorrect').borderColor, C.error);
 assert.equal(tileFrameStyle(C, 'correct'), tileFrameStyle(C, 'correct'), 'same reference every call');
@@ -114,9 +113,8 @@ console.log('\nall tile style checks passed');
 // it on Android (the tile turned grey), so the frame cancels the resting
 // shadow. Raised states do not cancel it.
 for (const s of ['correct', 'incorrect', 'placed', 'disabled'] as const) {
-  const st = tileFrameStyle(C, s) as { elevation?: number; shadowOpacity?: number };
+  const st = tileFrameStyle(C, s) as { elevation?: number };
   assert.equal(st.elevation, 0, `${s} has no elevation`);
-  assert.equal(st.shadowOpacity, 0, `${s} has no shadow`);
 }
 for (const s of ['default', 'picked'] as const) {
   assert.equal((tileFrameStyle(C, s) as { elevation?: number }).elevation, undefined, `${s} keeps the raised shadow`);

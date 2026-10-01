@@ -212,9 +212,14 @@ function McqTextOption({
           onPress={onPress}
           selectionRole={selectionRole}
           dense={width != null}
-          // After a result the name says so, as the picture choice does.
+          // After a result the name says so, as the picture choice does. The
+          // plain text is passed too while answering: on Android a label
+          // prop that goes back to undefined is not cleared, so a retried
+          // option would keep reading "incorrect".
           accessibilityLabel={
-            resultKey ? t(resultKey, { label: option.questionoptiontext }) : undefined
+            resultKey
+              ? t(resultKey, { label: option.questionoptiontext })
+              : option.questionoptiontext
           }
         />
       </View>
