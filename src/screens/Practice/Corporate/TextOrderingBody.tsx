@@ -19,6 +19,7 @@ import {
   shuffledNotSolved,
   wordState,
   wordStatusKey,
+  wordTileMinHeight,
 } from './textOrderingLogic';
 import type { QuestionBodyProps } from './types';
 import { useReportAnswer } from './useReportAnswer';
@@ -68,6 +69,7 @@ export default function TextOrderingBody({
     [questionOptions],
   );
   const items = showAnswer ? solution : shuffled;
+  const tileMinHeight = wordTileMinHeight(solution.map(w => hasAudio(w.option)));
   const small = useSmallText();
   const [status, setStatus] = useState<ListStatus>({ kind: 'idle' });
   // A new list (attempt, or the revealed answer) starts idle.
@@ -154,10 +156,12 @@ export default function TextOrderingBody({
           renderItem={(item, state) => (
             // Room for the audio circle only where there is one (a taller tile too,
             // so the circle sits inside the border).
+            // Every tile gets the audio tile's height when any word has audio,
+            // so the words on a row share a baseline.
             <View
               style={
-                hasAudio(item.option)
-                  ? { minHeight: 52, justifyContent: 'center' }
+                tileMinHeight != null
+                  ? { minHeight: tileMinHeight, justifyContent: 'center' }
                   : null
               }>
               <MovableTile

@@ -190,3 +190,18 @@ export function bannerFor(status: ListStatus): {
       return { live: false, rest: null };
   }
 }
+
+/** Height of a word tile that carries an audio circle (room for the circle inside the border). */
+export const AUDIO_TILE_MIN_HEIGHT = 52;
+
+/**
+ * The minimum height every tile in the list gets. When any word has audio,
+ * all tiles are as tall as an audio tile, so the words on one row share a
+ * baseline (an audio tile alone was taller and its word sat lower).
+ * Undefined when no word has audio: tiles keep their natural height.
+ */
+export function wordTileMinHeight(
+  hasAudioFlags: ReadonlyArray<boolean>,
+): number | undefined {
+  return hasAudioFlags.some(Boolean) ? AUDIO_TILE_MIN_HEIGHT : undefined;
+}

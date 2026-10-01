@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from 'styled-components/native';
 import _ from 'lodash';
 
@@ -16,6 +17,7 @@ import {
   compactColumns,
   evaluateMcqText,
   mcqOptionState,
+  mcqResultLabelKey,
 } from './mcqTextLogic';
 import {
   selectionModeFor,
@@ -148,6 +150,7 @@ export default function McqTextBody({
               showAnswer,
             })}
             disabled={disabled}
+            showAnswer={showAnswer}
             onPress={() =>
               setSelections(s =>
                 selectOption(s, item.questionoptionid, item, mode),
@@ -169,6 +172,7 @@ function McqTextOption({
   selectionRole,
   state,
   disabled,
+  showAnswer,
   onPress,
 }: {
   option: QuestionOption;
@@ -180,8 +184,11 @@ function McqTextOption({
   selectionRole: 'radio' | 'checkbox';
   state: ReturnType<typeof mcqOptionState>;
   disabled: boolean;
+  showAnswer: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
+  const resultKey = mcqResultLabelKey(state, showAnswer);
   const audio = useResource(
     { name: _.get(option, 'questionoptionfile.filename', '') },
     [option.questionoptionid],
@@ -205,6 +212,10 @@ function McqTextOption({
           onPress={onPress}
           selectionRole={selectionRole}
           dense={width != null}
+          // After a result the name says so, as the picture choice does.
+          accessibilityLabel={
+            resultKey ? t(resultKey, { label: option.questionoptiontext }) : undefined
+          }
         />
       </View>
       {audio ? (

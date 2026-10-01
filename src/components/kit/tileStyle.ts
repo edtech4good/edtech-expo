@@ -248,7 +248,7 @@ export function slotFrame(colors: KitColors, state: SlotState): SlotFrame {
 /**
  * The tile frame as a plain style object, for ReorderableList's `frameFor`
  * (the list draws the frame; this restyles it for a result). Colours,
- * borders and padding only: the shadow is dropped by the caller's choice.
+ * borders and padding, and no shadow for a flat state (result, placed, locked).
  */
 export function tileFrameStyle(colors: KitColors, state: TileState) {
   // Cached per colours object and state, so the same reference comes back
@@ -267,6 +267,10 @@ export function tileFrameStyle(colors: KitColors, state: TileState) {
       borderWidth: f.borderWidth,
       paddingLeft: f.paddingLeft,
       paddingRight: f.paddingRight,
+      // A flat state must also cancel the list's resting shadow: a result tint
+      // is translucent, and Android paints an elevation shadow through it (the
+      // tile turns grey). Flat, as the design draws result tiles.
+      ...(f.raised || f.lifted ? null : { elevation: 0, shadowOpacity: 0 }),
     };
     byState.set(state, style);
   }
@@ -279,5 +283,7 @@ type FrameStyle = {
   borderWidth: number;
   paddingLeft: number;
   paddingRight: number;
+  elevation?: number;
+  shadowOpacity?: number;
 };
 const frameStyleCache = new WeakMap<object, Map<TileState, FrameStyle>>();

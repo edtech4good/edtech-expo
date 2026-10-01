@@ -30,6 +30,12 @@ export interface QuizOptionProps {
    * vertical padding, instead of 56 and 16.
    */
   dense?: boolean;
+  /**
+   * The name a screen reader hears, when it is more than `label` (the
+   * corporate multiple choice adds "correct" or "incorrect" after Submit).
+   * Leave it out and the label is read as today.
+   */
+  accessibilityLabel?: string;
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -68,6 +74,7 @@ export default function QuizOption({
   testID,
   selectionRole,
   dense = false,
+  accessibilityLabel,
 }: QuizOptionProps) {
   const theme = useTheme();
   const fontFamily = useFont('semi', 'body');
@@ -190,6 +197,7 @@ export default function QuizOption({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
+      {...(accessibilityLabel ? { accessibilityLabel } : null)}
       {...(selectionRole
         ? {
             role: selectionRole,

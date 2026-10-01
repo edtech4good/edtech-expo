@@ -16,6 +16,14 @@ export interface SlotProps {
   /** Empty text; defaults to "Place an answer". Target state shows "Place here". */
   placeholder?: string;
   onPress?: () => void;
+  /**
+   * Draw the slot and nothing else: not focusable, not clickable and hidden
+   * from screen readers, for a parent control that is already the one stop
+   * (matching's Pressable names the slot and takes the touch).
+   */
+  decorative?: boolean;
+  /** Show the small ✕ "take it back" cue on a filled slot. Defaults to `!!onPress`. */
+  showTakeBack?: boolean;
   testID?: string;
 }
 
@@ -31,6 +39,8 @@ export default function Slot({
   label,
   placeholder,
   onPress,
+  decorative = false,
+  showTakeBack,
   testID,
 }: SlotProps) {
   const theme = useTheme();
@@ -88,10 +98,10 @@ export default function Slot({
             {label}
           </Text>
           {state === 'filled' ? (
-            onPress ? (
-            <View style={[styles.cue, { backgroundColor: theme.colors.surfaceVariant }]}>
-              <CrossGlyph color={theme.colors.onSurfaceVariant} />
-            </View>
+            (showTakeBack ?? !!onPress) ? (
+              <View style={[styles.cue, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <CrossGlyph color={theme.colors.onSurfaceVariant} />
+              </View>
             ) : null
           ) : (
             <ResultMark kind={state === 'correct' ? 'correct' : 'incorrect'} size={18} />
@@ -114,6 +124,18 @@ export default function Slot({
     </View>
   );
 
+  if (decorative) {
+    return (
+      <View
+        testID={testID}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+        style={isBlank ? undefined : styles.fill}>
+        {body}
+      </View>
+    );
+  }
   if (onPress) {
     return (
       <Pressable
