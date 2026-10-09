@@ -118,11 +118,11 @@ export default function LessonItem({
           {title}
         </H6>
         <SH3
-            color={
-              disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
-            }>
-            {description}
-          </SH3>
+          color={
+            disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
+          }>
+          {description}
+        </SH3>
         <SizedBox.Large height />
       </BaseButton>
     );
