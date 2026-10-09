@@ -55,6 +55,8 @@ export default function LessonItem({
           // marginLeft: theme.layouts.large,
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
+          // The preview art carries a play button; dim an item that cannot play.
+          opacity: disabled ? 0.55 : 1,
         }}>
         <Row>
           <Image
@@ -90,6 +92,8 @@ export default function LessonItem({
           flexDirection: 'column',
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
+          // The preview art carries a play button; dim an item that cannot play.
+          opacity: disabled ? 0.55 : 1,
         }}>
         <Row>
           <Image
