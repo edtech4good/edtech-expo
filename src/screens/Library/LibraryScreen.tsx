@@ -30,6 +30,7 @@ import {
   Unit,
 } from '@/models';
 import { useTranslation } from 'react-i18next';
+import { Mascot } from '@/components/mascot';
 
 const GRID_GAP = 20;
 
@@ -236,16 +237,24 @@ export default function LibraryScreen() {
           ) : isUnavailable ? (
             <View
               testID="library-unavailable"
-              style={{ paddingHorizontal: GRID_GAP / 2 }}>
-              <EyebrowText size={12} color={theme.colors.onSurfaceVariant}>
+              style={{ paddingHorizontal: GRID_GAP / 2, alignItems: 'center' }}>
+              <Mascot clip="idle" compact gapBelow={12} />
+              <EyebrowText
+                size={12}
+                color={theme.colors.onSurfaceVariant}
+                style={{ textAlign: 'center' }}>
                 {t('screen.library.unavailable')}
               </EyebrowText>
             </View>
           ) : isEmpty ? (
             <View
               testID="library-empty"
-              style={{ paddingHorizontal: GRID_GAP / 2 }}>
-              <EyebrowText size={12} color={theme.colors.onSurfaceVariant}>
+              style={{ paddingHorizontal: GRID_GAP / 2, alignItems: 'center' }}>
+              <Mascot clip="idle" compact gapBelow={12} />
+              <EyebrowText
+                size={12}
+                color={theme.colors.onSurfaceVariant}
+                style={{ textAlign: 'center' }}>
                 {t('screen.library.empty')}
               </EyebrowText>
             </View>
