@@ -18,12 +18,15 @@ export interface LessonItemProps {
   title: string;
   description: string;
   onPress?: () => void;
+  /** Not openable (an item type this build cannot render): no press, announced as disabled. */
+  disabled?: boolean;
 }
 
 export default function LessonItem({
   title,
   description,
   onPress = () => undefined,
+  disabled = false,
 }: LessonItemProps) {
   const theme = useTheme();
 
@@ -39,7 +42,9 @@ export default function LessonItem({
     console.log('rending mobile');
     return (
       <BaseButton
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+        accessibilityState={disabled ? { disabled: true } : undefined}
         backgroundColor={theme.colors.cards[0].primary}
         borderRadius={16}
         paddingHorizontal={theme.layouts.large}
@@ -74,7 +79,9 @@ export default function LessonItem({
   const renderDefaultItem = () => {
     return (
       <BaseButton
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+        accessibilityState={disabled ? { disabled: true } : undefined}
         backgroundColor={theme.colors.cards[0].primary}
         borderRadius={16}
         paddingHorizontal={theme.layouts.large}

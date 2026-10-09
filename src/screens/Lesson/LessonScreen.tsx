@@ -26,6 +26,8 @@ import {
 } from '@/services';
 import { LessonLearning } from '@/models';
 import ResumeVideoPopUp from './components/ResumeVideoPopUp';
+import UnsupportedItemNotice from './components/UnsupportedItemNotice';
+import { isLearningItemSupported } from '@/constants/LearningItems';
 import { StatusBar } from 'expo-status-bar';
 
 export default function LessonScreen() {
@@ -66,6 +68,12 @@ export default function LessonScreen() {
 
   const selectedModule = useAppSelector(getSelectedModule);
   const lessonLearningId = (selectedModule as LessonLearning)?.lessonlearningid;
+  // An item of a type this build cannot render never reaches the player: no
+  // fetch, so no source and no progress post (and so not the empty-source
+  // "complete on open" path below). The lesson list does not open such an
+  // item; this covers a persisted selection or a deep link.
+  const unsupportedItem =
+    !!selectedModule && !isLearningItemSupported(selectedModule as LessonLearning);
   const {
     fetch,
     source,
@@ -133,7 +141,7 @@ export default function LessonScreen() {
   console.log('Source is : ', source);
   React.useEffect(() => {
     // retrieveFile('sample.mp4')
-    if (!selectedModule) return;
+    if (!selectedModule || unsupportedItem) return;
     // A mid-mount id change (selectedModule changing without a full
     // unmount/remount) starts a new fetch() for a new lessonLearningId —
     // the once-per-mount guard below must reset with it, or the new item's
@@ -322,6 +330,17 @@ export default function LessonScreen() {
     : isPortrait
     ? 'center'
     : 'flex-start';
+
+  if (unsupportedItem) {
+    return (
+      <LayoutScrollView backgroundColor={theme.colors.background}>
+        <UnsupportedItemNotice
+          name={(selectedModule as LessonLearning).lessonlearningname}
+          onClose={handleClose}
+        />
+      </LayoutScrollView>
+    );
+  }
 
   return (
     <LayoutScrollView
