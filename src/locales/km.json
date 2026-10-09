@@ -218,6 +218,7 @@
         "quizTodo": "មិនទាន់ចាប់ផ្តើម · ត្រូវប្រលងជាប់ដើម្បីបញ្ចប់មេរៀន",
         "unsynced": "បានបញ្ចប់ · បានរក្សាទុកក្នុងឧបករណ៍ មិនទាន់ធ្វើសមកាលកម្ម"
       },
+      "unsupportedItem": "ធាតុនេះត្រូវការកំណែថ្មីជាងនៃកម្មវិធី",
       "stepA11yLabel": "{{type}} {{i}} ក្នុងចំណោម {{n}}, {{title}}, {{status}}",
       "stepA11yLabelSingle": "{{type}}, {{title}}, {{status}}",
       "footerCta": "{{verb}} {{type}}",

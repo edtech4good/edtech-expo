@@ -224,6 +224,7 @@
         "quizTodo": "Not started · pass to finish the lesson",
         "unsynced": "Done · saved on device, not synced"
       },
+      "unsupportedItem": "This item needs a newer version of the app",
       "stepA11yLabel": "{{type}} {{i}} of {{n}}, {{title}}, {{status}}",
       "stepA11yLabelSingle": "{{type}}, {{title}}, {{status}}",
       "footerCta": "{{verb}} {{type}}",
