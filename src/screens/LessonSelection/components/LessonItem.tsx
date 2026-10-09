@@ -22,6 +22,11 @@ export interface LessonItemProps {
   disabled?: boolean;
 }
 
+// The preview art carries a play button, so the art of an item that cannot
+// play is dimmed. The title and the notice stay at full contrast: dimming the
+// whole card put the notice at about 2:1.
+const ARTWORK_DISABLED_STYLE = { opacity: 0.4 } as const;
+
 export default function LessonItem({
   title,
   description,
@@ -55,10 +60,8 @@ export default function LessonItem({
           // marginLeft: theme.layouts.large,
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
-          // The preview art carries a play button; dim an item that cannot play.
-          opacity: disabled ? 0.55 : 1,
         }}>
-        <Row>
+        <Row style={disabled ? ARTWORK_DISABLED_STYLE : undefined}>
           <Image
             source={Images.LessonPreview}
             resizeMethod="resize"
@@ -71,7 +74,12 @@ export default function LessonItem({
           <H6 fontWeight="bold" color={theme.colors.onSurface}>
             {title}
           </H6>
-          <SH3 color={theme.colors.onSurfaceVariant}>{description}</SH3>
+          <SH3
+            color={
+              disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
+            }>
+            {description}
+          </SH3>
         </Expanded>
         {/* <SizedBox.Large height /> */}
       </BaseButton>
@@ -92,10 +100,8 @@ export default function LessonItem({
           flexDirection: 'column',
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
-          // The preview art carries a play button; dim an item that cannot play.
-          opacity: disabled ? 0.55 : 1,
         }}>
-        <Row>
+        <Row style={disabled ? ARTWORK_DISABLED_STYLE : undefined}>
           <Image
             source={Images.LessonPreview}
             resizeMethod="resize"
@@ -111,7 +117,12 @@ export default function LessonItem({
           style={{ width: 195 }}>
           {title}
         </H6>
-        <SH3 color={theme.colors.onSurfaceVariant}>{description}</SH3>
+        <SH3
+            color={
+              disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
+            }>
+            {description}
+          </SH3>
         <SizedBox.Large height />
       </BaseButton>
     );
