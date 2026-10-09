@@ -56,13 +56,15 @@ export default function UnsupportedItemNotice({ name, onClose }: Props) {
         }}>
         {t('screen.lesson.unsupportedItem')}
       </Text>
-      <AppButton
-        variant="secondary"
-        size="lg"
-        label={t('button.back')}
-        onPress={onClose}
-        testID="unsupported-item-back"
-      />
+      <View style={{ alignSelf: 'center' }}>
+        <AppButton
+          variant="secondary"
+          size="lg"
+          label={t('button.back')}
+          onPress={onClose}
+          testID="unsupported-item-back"
+        />
+      </View>
     </View>
   );
 }
