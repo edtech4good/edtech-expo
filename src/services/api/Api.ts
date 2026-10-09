@@ -36,6 +36,10 @@ import apisauce, {
   AsyncResponseTransform,
 } from 'apisauce';
 import _ from 'lodash';
+import {
+  LEARNING_ITEM_TYPES_HEADER,
+  SUPPORTED_LEARNING_ITEM_TYPES_HEADER_VALUE,
+} from '@/constants/LearningItems';
 
 // Header names are case-insensitive over HTTP, but plain-object keys aren't
 // — apisauce/axios store whatever casing setHeaders() was called with
@@ -205,6 +209,10 @@ export default class Api {
         'Accept-Language': 'en',
         Accept: '*/*',
         'Content-Type': 'application/json',
+        // The learning-item types this build renders (design note
+        // "Learning items" §8). Student API client only: the central client
+        // below must never carry it (central's CORS list does not allow it).
+        [LEARNING_ITEM_TYPES_HEADER]: SUPPORTED_LEARNING_ITEM_TYPES_HEADER_VALUE,
       },
       timeout: this.REQUEST_TIMEOUT_LENGTH,
     });
