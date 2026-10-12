@@ -35,6 +35,8 @@ import { LessonLearning, LessonPractice, LessonQuiz } from '@/models';
 import _ from 'lodash';
 import { useTranslation } from 'react-i18next';
 import { getRemoteResourceUrl } from '@/utils';
+import { isLearningItemSupported } from '@/constants/LearningItems';
+import { pickNextStep } from './nextStep';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ActivityType = 'learning' | 'practice' | 'quiz';
@@ -159,11 +161,15 @@ export default function LessonSelectionScreen() {
   };
 
   const renderLessonLearning = (ll: LessonLearning) => {
+    // A type this build cannot render (learning-item types, design note §4)
+    // shows the notice in place of the duration and cannot be opened.
+    const unsupported = !isLearningItemSupported(ll);
     return (
       <LessonItem
         key={ll.lessonlearningid}
-        description={'3mn'}
+        description={unsupported ? t('screen.lesson.unsupportedItem') : '3mn'}
         title={ll.lessonlearningname}
+        disabled={unsupported}
         onPress={() => handleItemPress(ll, 'learning')}
       />
     );
@@ -295,6 +301,8 @@ export default function LessonSelectionScreen() {
       indexInType: number;
       countInType: number;
       name: string;
+      /** A learning item of a type this build cannot render: shown, never opened, never "next". */
+      unsupported: boolean;
     };
 
     const steps: StepActivity[] = [
@@ -304,6 +312,7 @@ export default function LessonSelectionScreen() {
         indexInType: i + 1,
         countInType: sortedLearnings.length,
         name: ll.lessonlearningname,
+        unsupported: !isLearningItemSupported(ll),
       })),
       ...sortedPractices.map((lp, i) => ({
         id: lp.lessonpracticeid,
@@ -311,6 +320,7 @@ export default function LessonSelectionScreen() {
         indexInType: i + 1,
         countInType: sortedPractices.length,
         name: lp.lessonpracticename,
+        unsupported: false,
       })),
       ...quizzes.map((lq, i) => ({
         id: lq.lessonquizid,
@@ -318,6 +328,7 @@ export default function LessonSelectionScreen() {
         indexInType: i + 1,
         countInType: quizzes.length,
         name: lq.lessonquizname,
+        unsupported: false,
       })),
     ];
 
@@ -325,7 +336,9 @@ export default function LessonSelectionScreen() {
     // order, that isn't done yet. Only that row gets a CTA pill and the 2px
     // border; every other row shows its plain status icon. If everything is
     // done, nextStep is undefined and the footer is hidden.
-    const nextStep = steps.find(step => statusFor(step.id) !== 'done');
+    // An unsupported learning item is neither done nor openable, so it is
+    // skipped here (see nextStep.ts).
+    const nextStep = pickNextStep(steps, statusFor, step => !step.unsupported);
 
     // A step only carries its type + its 1-based index within that type —
     // this looks up the actual learning/practice/quiz object to pass to
@@ -341,14 +354,18 @@ export default function LessonSelectionScreen() {
       `lesson-${lesson.lessonid}.jpg`,
     );
 
+    // Only items this build plays are videos; an unsupported item is listed
+    // below with its notice but is not counted as one.
+    const videoCount = sortedLearnings.filter(isLearningItemSupported).length;
+
     // Header meta: "Grade · Level · N videos · N practices · N quizzes",
     // omitting zero-count parts. Grade/level come from the persisted
     // selection, not the lesson response.
     const metaParts = [
       selectedCourse?.gradename,
       selectedUnit?.levelname,
-      sortedLearnings.length > 0
-        ? t('screen.lesson.metaVideos', { count: sortedLearnings.length })
+      videoCount > 0
+        ? t('screen.lesson.metaVideos', { count: videoCount })
         : undefined,
       sortedPractices.length > 0
         ? t('screen.lesson.metaPractices', { count: sortedPractices.length })
@@ -380,6 +397,7 @@ export default function LessonSelectionScreen() {
     };
 
     const statusTextFor = (step: StepActivity, unsynced: boolean) => {
+      if (step.unsupported) return t('screen.lesson.unsupportedItem');
       const status = statusFor(step.id);
       if (unsynced && status === 'done') return t('screen.lesson.status.unsynced');
       if (status === 'done')
@@ -483,7 +501,10 @@ export default function LessonSelectionScreen() {
                     status: ctaLabel ?? statusText,
                   },
                 );
-                const onPress = () => handleItemPress(moduleForStep(step), step.type);
+                // No onPress for an unsupported item: the row is not openable.
+                const onPress = step.unsupported
+                  ? undefined
+                  : () => handleItemPress(moduleForStep(step), step.type);
                 return (
                   <LessonStepRow
                     key={step.id}
@@ -496,6 +517,7 @@ export default function LessonSelectionScreen() {
                     isNext={isNext}
                     ctaLabel={ctaLabel}
                     unsynced={unsynced}
+                    unsupported={step.unsupported}
                     imageSource={
                       step.type === 'learning' && lessonImageUrl
                         ? { uri: lessonImageUrl }

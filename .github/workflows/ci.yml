@@ -90,6 +90,9 @@ jobs:
       - name: Corporate result bands
         run: yarn test:result
 
+      - name: Learning-item types (capability header, type to renderer)
+        run: yarn test:learningitems
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

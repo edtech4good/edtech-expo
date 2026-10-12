@@ -18,12 +18,20 @@ export interface LessonItemProps {
   title: string;
   description: string;
   onPress?: () => void;
+  /** Not openable (an item type this build cannot render): no press, announced as disabled. */
+  disabled?: boolean;
 }
+
+// The preview art carries a play button, so the art of an item that cannot
+// play is dimmed. The title and the notice stay at full contrast: dimming the
+// whole card put the notice at about 2:1.
+const ARTWORK_DISABLED_STYLE = { opacity: 0.4 } as const;
 
 export default function LessonItem({
   title,
   description,
   onPress = () => undefined,
+  disabled = false,
 }: LessonItemProps) {
   const theme = useTheme();
 
@@ -39,7 +47,9 @@ export default function LessonItem({
     console.log('rending mobile');
     return (
       <BaseButton
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+        accessibilityState={disabled ? { disabled: true } : undefined}
         backgroundColor={theme.colors.cards[0].primary}
         borderRadius={16}
         paddingHorizontal={theme.layouts.large}
@@ -51,7 +61,7 @@ export default function LessonItem({
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
         }}>
-        <Row>
+        <Row style={disabled ? ARTWORK_DISABLED_STYLE : undefined}>
           <Image
             source={Images.LessonPreview}
             resizeMethod="resize"
@@ -64,7 +74,12 @@ export default function LessonItem({
           <H6 fontWeight="bold" color={theme.colors.onSurface}>
             {title}
           </H6>
-          <SH3 color={theme.colors.onSurfaceVariant}>{description}</SH3>
+          <SH3
+            color={
+              disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
+            }>
+            {description}
+          </SH3>
         </Expanded>
         {/* <SizedBox.Large height /> */}
       </BaseButton>
@@ -74,7 +89,9 @@ export default function LessonItem({
   const renderDefaultItem = () => {
     return (
       <BaseButton
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+        accessibilityState={disabled ? { disabled: true } : undefined}
         backgroundColor={theme.colors.cards[0].primary}
         borderRadius={16}
         paddingHorizontal={theme.layouts.large}
@@ -84,7 +101,7 @@ export default function LessonItem({
           marginRight: theme.layouts.large,
           marginBottom: theme.layouts.large,
         }}>
-        <Row>
+        <Row style={disabled ? ARTWORK_DISABLED_STYLE : undefined}>
           <Image
             source={Images.LessonPreview}
             resizeMethod="resize"
@@ -100,7 +117,12 @@ export default function LessonItem({
           style={{ width: 195 }}>
           {title}
         </H6>
-        <SH3 color={theme.colors.onSurfaceVariant}>{description}</SH3>
+        <SH3
+          color={
+            disabled ? theme.colors.onSurface : theme.colors.onSurfaceVariant
+          }>
+          {description}
+        </SH3>
         <SizedBox.Large height />
       </BaseButton>
     );

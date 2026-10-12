@@ -6,10 +6,30 @@ export interface File {
   filetype: number;
 }
 
+/** A document an item references besides its primary one (design note "Learning items" §5). Unused for video. */
+export interface LessonLearningDocument {
+  documentid: string;
+  role?: string;
+  order?: number;
+  documentname?: string;
+  documenttypeid?: number;
+  [key: string]: unknown;
+}
+
 export interface LessonLearning {
   lessonlearningid: string;
   lessonlearningname: string;
   lessonlearningorder: number;
+  /**
+   * The item's type ('video', and later 'document', 'audio', 'gallery', ...).
+   * Missing means 'video': an older server, or a lesson cached by an older
+   * build, sends none. Read it through resolveLearningItemType().
+   */
+  lessonlearningtype?: string;
+  /** The type's own body, versioned by its `v`. Null for video. Typed, not read yet. */
+  lessonlearningbody?: Record<string, unknown> | null;
+  /** Extra documents the item references. Unused for video. */
+  documents?: LessonLearningDocument[];
 }
 
 export interface StudentLearningProgress {

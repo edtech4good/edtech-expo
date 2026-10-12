@@ -9,7 +9,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from 'styled-components/native';
 
 import CtaPill from './CtaPill';
@@ -36,6 +36,14 @@ export interface LessonStepRowProps {
   unsynced?: boolean;
   /** Learning only: 72x54 thumbnail with a play-disc overlay. */
   imageSource?: ImageProps['source'];
+  /**
+   * An item of a type this build cannot render (learning-item types, design
+   * note §4): an info well instead of the video thumbnail (the play glyph is
+   * media only), no status disc or CTA, a tinted surface, and `statusText`
+   * carries the "needs a newer version" message. The caller leaves `onPress`
+   * unset so the row is not openable.
+   */
+  unsupported?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
   /** "<Type> <i> of <n>, <title>, <status text>" — composed by the caller so it can add the "up next" hint. */
   accessibilityLabel?: string;
@@ -117,6 +125,27 @@ function ClipboardCheckIcon({ color }: { color: string }) {
   );
 }
 
+function InfoIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Circle
+        cx={12}
+        cy={12}
+        r={9}
+        stroke={color}
+        strokeWidth={1.8}
+      />
+      <Path
+        d="M12 11v5.5"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <Circle cx={12} cy={7.9} r={1.1} fill={color} />
+    </Svg>
+  );
+}
+
 function CloudUploadIcon({ color, size = 14 }: { color: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -189,6 +218,7 @@ export default function LessonStepRow({
   ctaLabel,
   unsynced,
   imageSource,
+  unsupported,
   onPress,
   accessibilityLabel,
   accessibilityHint,
@@ -211,7 +241,9 @@ export default function LessonStepRow({
   const showCta = isNext && !!ctaLabel;
   const statusIconStatus: StatusIconStatus = status;
 
-  const statusColor = unsynced && status === 'done'
+  const statusColor = unsupported
+    ? theme.colors.onSurfaceVariant
+    : unsynced && status === 'done'
     ? theme.colors.warningText
     : status === 'done'
     ? theme.colors.successText
@@ -246,6 +278,7 @@ export default function LessonStepRow({
       disabled={!onPress}
       accessible
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityState={unsupported ? { disabled: true } : undefined}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       style={[
@@ -254,7 +287,9 @@ export default function LessonStepRow({
           alignItems: 'center',
           gap: 12,
           borderRadius: theme.radii.card,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: unsupported
+            ? theme.colors.surfaceVariant
+            : theme.colors.surface,
           paddingHorizontal: 12,
           paddingVertical: 10,
           borderWidth: isNext ? 2 : 1,
@@ -264,7 +299,21 @@ export default function LessonStepRow({
         },
         animatedStyle,
       ]}>
-      {type === 'learning' ? (
+      {unsupported ? (
+        <View
+          testID="unsupported-well"
+          style={{
+            width: WELL_SIZE,
+            height: WELL_SIZE,
+            borderRadius: theme.radii.media,
+            backgroundColor: theme.colors.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+          <InfoIcon color={theme.colors.onSurfaceVariant} />
+        </View>
+      ) : type === 'learning' ? (
         <View
           style={{
             width: THUMB_WIDTH,
@@ -329,7 +378,7 @@ export default function LessonStepRow({
           </Text>
         </View>
       </View>
-      {showCta && ctaLabel ? (
+      {unsupported ? null : showCta && ctaLabel ? (
         <CtaPill label={ctaLabel} variant="tint" />
       ) : (
         <View
