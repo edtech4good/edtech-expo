@@ -20,6 +20,8 @@ export interface LessonRowProps {
   /** Localized "Lesson N" label for the small chip. */
   chipLabel: string;
   title: string;
+  /** The language `title` is in, when it is not the interface's (bilingual content). */
+  titleLanguage?: string;
   status: LessonRowStatus;
   steps: LessonStepDotsProps['steps'];
   /** Whether this is the up-next lesson: drives the primary border, the filled
@@ -52,6 +54,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export default function LessonRow({
   chipLabel,
   title,
+  titleLanguage,
   status,
   steps,
   isNext,
@@ -60,14 +63,14 @@ export default function LessonRow({
   testID,
 }: LessonRowProps) {
   const theme = useTheme();
-  const titleFontFamily = useFont('semi', 'body');
+  const titleFontFamily = useFont('semi', 'body', titleLanguage);
   const chipFontFamily = useFont('normal', 'body');
   const statusWordFontFamily = useFont('semi', 'body');
   const ctaFontFamily = useFont('bold', 'body');
   // The row title keeps its own 14px/semi weight (the handoff's "title 600
   // 14", not the larger 'cardTitle' role) but borrows 'body' for a
   // locale-correct line height so Khmer gets the spec's 26px leading.
-  const titleLineHeight = useTypeRole('body').lineHeight;
+  const titleLineHeight = useTypeRole('body', titleLanguage).lineHeight;
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   // Chip/CTA/status micro-labels: Khmer floor — never below 13px.
   const microFontSize = isKhmer ? 13 : 12;

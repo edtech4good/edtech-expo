@@ -108,8 +108,6 @@ export default function LevelSelectionScreen() {
   const bodyFont = useFont('normal', 'body');
   const bodyFontSemi = useFont('semi', 'body');
   // design v2.1 Khmer type scale roles.
-  const screenTitleType = useTypeRole('screenTitle');
-  const bodyType = useTypeRole('body');
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   // Chip/progress micro-labels: Khmer floor — never below 13px.
   const microFontSize = isKhmer ? 13 : 12;
@@ -128,6 +126,15 @@ export default function LevelSelectionScreen() {
     levelId,
     isCorporate,
   );
+  // The header's level name and description are content text: their language
+  // may differ from the interface's (bilingual content).
+  const screenTitleType = useTypeRole(
+    'screenTitle',
+    headerUnit?.textLanguage?.levelname,
+  );
+  const bodyType = useTypeRole('body', headerUnit?.textLanguage?.leveldescription);
+  const levelNameFont = useFont('normal', 'body', headerUnit?.textLanguage?.levelname);
+  const levelDescriptionFont = useFont('normal', 'body', headerUnit?.textLanguage?.leveldescription);
   // Real per-step dots (§ new lesson/level/:levelid/steps endpoint), with a
   // per-lesson fallback to the coarse `approximateSteps` guess below when
   // that lesson's structure hasn't been cached yet (first load offline,
@@ -317,7 +324,7 @@ export default function LevelSelectionScreen() {
               }}>
               <Text
                 style={{
-                  fontFamily: bodyFont,
+                  fontFamily: levelNameFont,
                   fontSize: microFontSize,
                   lineHeight: microLineHeight,
                   color: theme.colors.onPrimary,
@@ -345,7 +352,7 @@ export default function LevelSelectionScreen() {
           <View style={{ marginTop: 14 }}>
             <Text
               style={{
-                fontFamily: bodyFont,
+                fontFamily: levelDescriptionFont,
                 fontSize: bodyType.fontSize,
                 lineHeight: bodyType.lineHeight,
                 color: theme.colors.onSurface,
@@ -429,6 +436,7 @@ export default function LevelSelectionScreen() {
                     n: item.lessonorder ?? '·',
                   })}
                   title={item.lessonname}
+                  titleLanguage={item.textLanguage?.lessonname}
                   status={status}
                   isNext={isNext}
                   ctaLabel={isNext ? upNextCtaLabel : undefined}

@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoList, overlayRows, overlayUnit } from '@/transforms/Content';
 import { Unit } from '@/models';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
@@ -27,6 +29,8 @@ export const unitSlice = createSlice({
   },
 });
 
-export const getUnits = (state: RootState) => state.unit.units;
+const overlayUnits = memoList<Unit>(overlayUnit);
+export const getUnits = (state: RootState) =>
+  overlayRows(overlayUnits, state.unit.units, getSelectedLanguage(state));
 
 export const UnitActions = unitSlice.actions;

@@ -1,6 +1,7 @@
+import { ContentText } from './Content';
 import { Lesson } from './Lesson';
 
-export interface LevelDescription {
+export interface LevelDescription extends ContentText {
   leveldescription: string;
   levelid: string;
   levelname: string;

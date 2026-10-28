@@ -15,7 +15,7 @@ export {
 } from './hooks/useDeviceClass';
 export { default as useOrientationPolicy } from './hooks/useOrientationPolicy';
 export { default as useNavShell } from './hooks/useNavShell';
-export { default as useFont } from './hooks/useFont';
+export { default as useFont, useFontForText } from './hooks/useFont';
 export { default as useTypeRole } from './hooks/useTypeRole';
 export { default as useActivityProgress } from './hooks/useActivityProgress';
 export { default as useLesson } from './hooks/useLesson';

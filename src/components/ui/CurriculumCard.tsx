@@ -19,8 +19,12 @@ export interface CurriculumCardProps {
   /** Omit to skip the category chip — curricula have no category data yet. */
   category?: string;
   title: string;
+  /** The language `title` is in, when it is not the interface's (bilingual content). */
+  titleLanguage?: string;
   /** e.g. "3 GRADES · 12 LEVELS · 38 HOURS"; omit to skip the meta row. */
   meta?: string;
+  /** The language `meta` is in, when it is not the interface's (bilingual content). */
+  metaLanguage?: string;
   /** 0–1. When present, shows a progress bar under the meta plus an overlaid "NN%" pill. */
   progress?: number;
   /** Optional line under the progress bar, e.g. "3 of 8 lessons" (Library). Omit to skip. */
@@ -42,7 +46,9 @@ export default function CurriculumCard({
   imageSource,
   category,
   title,
+  titleLanguage,
   meta,
+  metaLanguage,
   progress,
   footer,
   metaNumberOfLines,
@@ -53,7 +59,7 @@ export default function CurriculumCard({
   const theme = useTheme();
   // 'cardTitle' role (design v2.1 Khmer type scale): 700 weight; en 20/26
   // (tablet 24/30), km 19/32 (tablet 22/36).
-  const titleType = useTypeRole('cardTitle');
+  const titleType = useTypeRole('cardTitle', titleLanguage);
   const scale = useSharedValue(1);
 
   const hasProgress = typeof progress === 'number';
@@ -157,6 +163,7 @@ export default function CurriculumCard({
             <EyebrowText
               size={theme.fontSizes.caption}
               color={theme.colors.onSurfaceVariant}
+              textLanguage={metaLanguage}
               numberOfLines={metaNumberOfLines}>
               {meta}
             </EyebrowText>

@@ -1,4 +1,5 @@
 import { TemplateTypeById } from '../constants/QuestionTemplate';
+import { ContentText } from './Content';
 
 export interface File {
   fileext: string;
@@ -16,7 +17,7 @@ export interface LessonLearningDocument {
   [key: string]: unknown;
 }
 
-export interface LessonLearning {
+export interface LessonLearning extends ContentText {
   lessonlearningid: string;
   lessonlearningname: string;
   lessonlearningorder: number;
@@ -55,17 +56,17 @@ export interface LessonLearningResource extends LessonLearning {
   studentlearningprogress: StudentLearningProgress;
 }
 
-export interface QuestionDistractor {
+export interface QuestionDistractor extends ContentText {
   questiondistractorid: string;
   questiondistractortext: string;
 }
 
-export interface QuestionAssociate {
+export interface QuestionAssociate extends ContentText {
   questionassociatefile: File;
   questionassociatetext: string;
   questionoptionid: string;
 }
-export interface QuestionOption {
+export interface QuestionOption extends ContentText {
   questionassociate: QuestionAssociate;
   questionoptiondenominatorisstatic: boolean;
   questionoptiondenominatorvalue: string;
@@ -82,12 +83,17 @@ export interface QuestionOption {
   questionoptionvalue: string;
 }
 
-export interface QuestionHeading {
+export interface QuestionHeading extends ContentText {
   headingfile: File;
   headingtext: string;
 }
 
-export interface Question {
+export interface QuestionFeedback extends ContentText {
+  correctmessage: string | null;
+  incorrectmessage: string | null;
+}
+
+export interface Question extends ContentText {
   isdeleted: boolean;
   lastupdated: string;
   questiondistractors: QuestionDistractor[];
@@ -102,24 +108,18 @@ export interface Question {
     questionoptions: QuestionOption[];
     questiontext: string;
     questioncorrectvalue: string;
-    questionfeedback?: {
-      correctmessage: string | null;
-      incorrectmessage: string | null;
-    } | null;
+    questionfeedback?: QuestionFeedback | null;
   };
   questionoptions: QuestionOption[];
   questionstatus: boolean;
   questiontags: string[];
   questiontext: string;
   questioncorrectvalue: string;
-  questionfeedback?: {
-    correctmessage: string | null;
-    incorrectmessage: string | null;
-  } | null;
+  questionfeedback?: QuestionFeedback | null;
   templatetypeid: keyof typeof TemplateTypeById;
 }
 
-export interface LessonPractice {
+export interface LessonPractice extends ContentText {
   lessonpracticeid: string;
   lessonpracticename: string;
   lessonpracticeorder: number;
@@ -143,7 +143,7 @@ export interface LessonQuizResource {
   questionid: string;
 }
 
-export interface LessonQuiz {
+export interface LessonQuiz extends ContentText {
   lessonquizid: string;
   lessonquizname: string;
   lessonquizorder: number;
@@ -203,7 +203,7 @@ export interface LevelSteps {
   lessons: LevelStepsLesson[];
 }
 
-export interface Lesson {
+export interface Lesson extends ContentText {
   brick_points: number;
   // Server-computed completion, based on the lesson's pass mark (e.g. 80/100
   // points), not on `progress` reaching 100. Optional because cached/older

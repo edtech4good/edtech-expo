@@ -168,6 +168,7 @@ export default function TextOrderingBody({
                 inList
                 reserveAudio={hasAudio(item.option)}
                 label={item.label}
+                labelLanguage={item.option.textLanguage?.questionoptiontext}
                 state={wordState(item.id, {
                   picked: state.picked,
                   marks,

@@ -40,6 +40,11 @@ import {
   LEARNING_ITEM_TYPES_HEADER,
   SUPPORTED_LEARNING_ITEM_TYPES_HEADER_VALUE,
 } from '@/constants/LearningItems';
+import {
+  CONTENT_TRANSLATIONS_HEADER,
+  CONTENT_TRANSLATIONS_HEADER_VALUE,
+} from '@/constants/ContentTranslations';
+import { stampContentLanguage } from '@/transforms/ContentLanguage';
 
 // Header names are case-insensitive over HTTP, but plain-object keys aren't
 // — apisauce/axios store whatever casing setHeaders() was called with
@@ -188,6 +193,12 @@ const responseTransform: AsyncResponseTransform = async response => {
     }
     throw err;
   }
+
+  // Bilingual content: a response that carries translations also names the
+  // organisation's base language at its root. Stamp it onto the rows so the
+  // base text of each row knows its own language wherever the row travels
+  // (the persisted caches, a selection) -- see transforms/ContentLanguage.
+  stampContentLanguage(response.data);
 };
 
 export default class Api {
@@ -213,6 +224,9 @@ export default class Api {
         // "Learning items" §8). Student API client only: the central client
         // below must never carry it (central's CORS list does not allow it).
         [LEARNING_ITEM_TYPES_HEADER]: SUPPORTED_LEARNING_ITEM_TYPES_HEADER_VALUE,
+        // Ask for each content row's translations and the organisation's
+        // content language (bilingual content). Student API client only.
+        [CONTENT_TRANSLATIONS_HEADER]: CONTENT_TRANSLATIONS_HEADER_VALUE,
       },
       timeout: this.REQUEST_TIMEOUT_LENGTH,
     });

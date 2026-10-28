@@ -70,8 +70,11 @@ export default function LessonSelectionScreen() {
   const chipFontFamily = useFont('normal', 'body');
   const bodyFontFamily = useFont('normal', 'body');
   // design v2.1 Khmer type scale roles.
-  const screenTitleType = useTypeRole('screenTitle');
-  const cardTitleType = useTypeRole('cardTitle');
+  // The lesson's own title is content text: its language may differ from the
+  // interface's (bilingual content).
+  const lessonNameLanguage = lesson?.textLanguage?.lessonname;
+  const screenTitleType = useTypeRole('screenTitle', lessonNameLanguage);
+  const cardTitleType = useTypeRole('cardTitle', lessonNameLanguage);
   const bodyType = useTypeRole('body');
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   // Lesson chip: Khmer floor — never below 13px.
@@ -301,6 +304,8 @@ export default function LessonSelectionScreen() {
       indexInType: number;
       countInType: number;
       name: string;
+      /** The language `name` is in (bilingual content); only learnings show it as their title. */
+      nameLanguage?: string;
       /** A learning item of a type this build cannot render: shown, never opened, never "next". */
       unsupported: boolean;
     };
@@ -312,6 +317,7 @@ export default function LessonSelectionScreen() {
         indexInType: i + 1,
         countInType: sortedLearnings.length,
         name: ll.lessonlearningname,
+        nameLanguage: ll.textLanguage?.lessonlearningname,
         unsupported: !isLearningItemSupported(ll),
       })),
       ...sortedPractices.map((lp, i) => ({
@@ -512,6 +518,9 @@ export default function LessonSelectionScreen() {
                     type={step.type}
                     eyebrow={eyebrowFor(step)}
                     title={titleFor(step)}
+                    titleLanguage={
+                      step.type === 'learning' ? step.nameLanguage : undefined
+                    }
                     statusText={statusText}
                     status={status}
                     isNext={isNext}

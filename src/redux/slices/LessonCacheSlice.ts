@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoByRef, overlayLesson, overlayOne } from '@/transforms/Content';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import { Lesson } from '@/models';
@@ -55,9 +57,14 @@ export const lessonCacheSlice = createSlice({
   },
 });
 
+// The cache keeps the raw rows (translations included); the overlay is read-time.
+const overlayLessonOnce = memoByRef<Lesson, Lesson>(overlayLesson);
+
 export const getCachedLesson =
   (lessonId: string | undefined) =>
   (state: RootState): Lesson | undefined =>
-    lessonId ? state.lessonCache.byId[lessonId] : undefined;
+    lessonId
+      ? overlayOne(overlayLessonOnce, state.lessonCache.byId[lessonId], getSelectedLanguage(state))
+      : undefined;
 
 export const LessonCacheActions = lessonCacheSlice.actions;

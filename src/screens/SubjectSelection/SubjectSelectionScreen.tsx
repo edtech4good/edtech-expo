@@ -23,6 +23,7 @@ import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
 import { useSubject } from '@/services';
 import { CurriculumProgressRow, Subject } from '@/models';
 import { useTranslation } from 'react-i18next';
+import { matchesContentText } from '@/i18n/contentText';
 
 // Corporate curricula grid. Each card's % pill and bar come from the same
 // progress summary as My progress (lessons completed / all lessons in the
@@ -53,7 +54,9 @@ function CorporateSubjectGrid({
         return {
           key: subject.curriculumid,
           title: subject.curriculumname,
+          titleLanguage: subject.textLanguage?.curriculumname,
           meta: subject.curriculumdescription,
+          metaLanguage: subject.textLanguage?.curriculumdescription,
           progress: percent === undefined ? undefined : percent / 100,
           imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
           onPress: () => onPress(subject),
@@ -110,9 +113,11 @@ export default function CourseSelectionScreen() {
     // and no endpoint exposes "resume where you left off" yet (the JWT's
     // studentcurrentlessonid/levelid claims are typed but unpopulated).
     const trimmedQuery = query.trim().toLowerCase();
+    // Filters on the text shown (the translation, in the interface language)
+    // and on the base text it replaced (bilingual content).
     const visibleSubjects = trimmedQuery
       ? subjects.filter(s =>
-          (s.curriculumname ?? '').toLowerCase().includes(trimmedQuery),
+          matchesContentText(s, 'curriculumname', trimmedQuery),
         )
       : subjects;
 

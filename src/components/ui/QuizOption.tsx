@@ -13,6 +13,8 @@ export type QuizOptionState = 'default' | 'selected' | 'correct' | 'incorrect';
 
 export interface QuizOptionProps {
   label: string;
+  /** The language `label` is in, when it is not the interface's (bilingual content). */
+  labelLanguage?: string;
   state: QuizOptionState;
   onPress?: () => void;
   disabled?: boolean;
@@ -68,6 +70,7 @@ function XIcon({ color }: { color: string }) {
 
 export default function QuizOption({
   label,
+  labelLanguage,
   state,
   onPress,
   disabled,
@@ -77,7 +80,7 @@ export default function QuizOption({
   accessibilityLabel,
 }: QuizOptionProps) {
   const theme = useTheme();
-  const fontFamily = useFont('semi', 'body');
+  const fontFamily = useFont('semi', 'body', labelLanguage);
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({

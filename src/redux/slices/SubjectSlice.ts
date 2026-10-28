@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoList, overlayRows, overlaySubject } from '@/transforms/Content';
 import { Subject } from '@/models';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
@@ -25,6 +27,9 @@ export const subjectSlice = createSlice({
   },
 });
 
-export const getSubjects = (state: RootState) => state.subject.subjects;
+const overlaySubjects = memoList<Subject>(overlaySubject);
+// The overlay of the interface language over the raw rows (bilingual content).
+export const getSubjects = (state: RootState) =>
+  overlayRows(overlaySubjects, state.subject.subjects, getSelectedLanguage(state));
 
 export const SubjectActions = subjectSlice.actions;

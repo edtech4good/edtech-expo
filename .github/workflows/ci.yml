@@ -94,6 +94,9 @@ jobs:
       - name: Learning-item types (capability header, type to renderer)
         run: yarn test:learningitems
 
+      - name: Bilingual content (overlay, store selectors, header, corporate MCQ render)
+        run: yarn test:content
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

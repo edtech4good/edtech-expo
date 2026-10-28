@@ -47,7 +47,9 @@ function CorporateUnitGrid({
         return {
           key: unit.levelid,
           title: unit.levelname,
+          titleLanguage: unit.textLanguage?.levelname,
           meta: unit.leveldescription,
+          metaLanguage: unit.textLanguage?.leveldescription,
           progress: level === undefined ? undefined : level.percent / 100,
           imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
           onPress: () => onPress(unit),

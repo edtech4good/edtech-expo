@@ -422,6 +422,7 @@ function BankTile({
             <MovableTile
               testID={`fill-tile-${tile.questionoptionid}`}
               label={tile.questionoptiontext}
+              labelLanguage={tile.textLanguage?.questionoptiontext}
               state={locked ? 'disabled' : 'default'}
               onPress={locked ? undefined : onPress}
             />

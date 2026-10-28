@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '../api/ApiContext';
 import { useAppSelector } from '@/redux';
-import { getSelectedCourse, getSelectedUnit } from '@/redux/slices';
+import {
+  getSelectedCourse,
+  getSelectedLanguage,
+  getSelectedUnit,
+} from '@/redux/slices';
+import { overlayUnit } from '@/transforms/Content';
 import { Unit } from '@/models';
 
 // Resolves the Level Detail header (grade name, unit) when the persisted
@@ -75,7 +80,12 @@ export default function useLevelHeader(levelId: string, enabled: boolean) {
   // are cleared at the start of every resolution run, but that clear lands
   // after the render triggered by a levelId change, so without this check
   // a just-changed levelId could briefly render the previous level's data.
-  const resolved = resolvedUnit?.levelid === levelId ? resolvedUnit : undefined;
+  const language = useAppSelector(getSelectedLanguage);
+  const resolved = useMemo(() => {
+    const unit = resolvedUnit?.levelid === levelId ? resolvedUnit : undefined;
+    // Raw row from level/grade/:id (translations included): overlay it here.
+    return unit ? overlayUnit(unit, language) : undefined;
+  }, [resolvedUnit, levelId, language]);
 
   return {
     unit: selectionValid ? selectedUnit : resolved,

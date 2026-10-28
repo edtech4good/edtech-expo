@@ -6,6 +6,7 @@ import { getSelectedLanguage } from '@/redux/slices';
 import { FontRole } from '@/constants';
 import { ThemeTypeScale, TypeScaleRole } from '@/themes/tokens/types';
 
+import { typographyLanguage } from '@/i18n/typographyLanguage';
 import useFont from './useFont';
 import useNavShell from './useNavShell';
 
@@ -41,7 +42,10 @@ export interface TypeRoleResult {
  * uses to distinguish phone vs. tablet layout elsewhere. Everything else
  * (kids, or corporate below that width) resolves the phone scale.
  */
-export default function useTypeRole(role: TypeScaleRole): TypeRoleResult {
+export default function useTypeRole(
+  role: TypeScaleRole,
+  textLanguage?: string | null,
+): TypeRoleResult {
   const theme = useTheme();
   const selectedLanguage = useAppSelector(getSelectedLanguage);
   const { hasPermanentNav } = useNavShell();
@@ -54,11 +58,13 @@ export default function useTypeRole(role: TypeScaleRole): TypeRoleResult {
   // Narrowing to the known locales keeps the index type-safe *and* gives any
   // locale that isn't 'km' (including a future one redux knows about before
   // theme.typeScale does) an English fallback.
-  const lang: keyof ThemeTypeScale = selectedLanguage === 'km' ? 'km' : 'en';
+  // `textLanguage` is the language of a content text that is not the
+  // interface's own (bilingual content); it picks the scale and the font.
+  const lang: keyof ThemeTypeScale = typographyLanguage(textLanguage, selectedLanguage);
   const languageScale = theme.typeScale[lang];
   const spec = languageScale[formFactor][role];
 
-  const fontFamily = useFont(spec.weight, FAMILY_ROLE_BY_TYPE_ROLE[role]);
+  const fontFamily = useFont(spec.weight, FAMILY_ROLE_BY_TYPE_ROLE[role], textLanguage);
 
   return useMemo(
     () => ({

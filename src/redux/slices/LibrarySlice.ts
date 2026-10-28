@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoByRef, memoList, overlayLibraryCurriculum, overlayOne } from '@/transforms/Content';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import { LibraryCurriculum } from '@/models';
@@ -71,9 +73,18 @@ export const librarySlice = createSlice({
   },
 });
 
+// The slice and its persisted copy keep the raw rows (translations included).
+const overlayCurricula = memoList<LibraryCurriculum>(overlayLibraryCurriculum);
+const overlayEntry = memoByRef((entry: LibraryUserEntry, language: string): LibraryUserEntry => ({
+  ...entry,
+  curricula: overlayCurricula(entry.curricula ?? [], language),
+}));
+
 export const getLibraryEntry =
   (ownerId: string | null | undefined) =>
   (state: RootState): LibraryUserEntry | undefined =>
-    ownerId ? state.library.byUser[ownerId] : undefined;
+    ownerId
+      ? overlayOne(overlayEntry, state.library.byUser[ownerId], getSelectedLanguage(state))
+      : undefined;
 
 export const LibraryActions = librarySlice.actions;

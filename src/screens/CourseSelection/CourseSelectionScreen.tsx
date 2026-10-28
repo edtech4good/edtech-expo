@@ -47,7 +47,9 @@ function CorporateCourseGrid({
         return {
           key: course.gradeid,
           title: course.gradename,
+          titleLanguage: course.textLanguage?.gradename,
           meta: course.gradedescription,
+          metaLanguage: course.textLanguage?.gradedescription,
           progress: grade === undefined ? undefined : grade.percent / 100,
           imageSource: remoteUrl ? { uri: remoteUrl } : undefined,
           onPress: () => onPress(course),

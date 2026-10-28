@@ -34,6 +34,8 @@ export interface ResultStripProps {
    * summary line, as it replaced the popup's message.
    */
   message?: string;
+  /** The language the `message` text is in, when it is not the interface's (bilingual content). */
+  messageLanguage?: string;
   /**
    * Footer actions. Give the handlers you want shown; the strip lays out
    * "Next" (correct) or "Show answer" + "Try again" (incorrect). Leave them
@@ -80,6 +82,7 @@ function ResultStripBody({
   total,
   readBack,
   message,
+  messageLanguage,
   onNext,
   onShowAnswer,
   onTryAgain,
@@ -92,6 +95,8 @@ function ResultStripBody({
   const t = i18nT as unknown as Translate;
   const tile = useTileText();
   const small = useSmallText();
+  // The author's own message may be in another language than the interface.
+  const messageText = useSmallText(messageLanguage);
   const correct = kind === 'correct';
   const announcer = useAnnouncer();
 
@@ -143,9 +148,9 @@ function ResultStripBody({
           </Text>
           <Text
             style={{
-              fontFamily: small.fontFamily,
+              fontFamily: message ? messageText.fontFamily : small.fontFamily,
               fontSize: 13,
-              lineHeight: small.km ? 22 : 18,
+              lineHeight: (message ? messageText.km : small.km) ? 22 : 18,
               color: theme.colors.onSurface,
             }}>
             {summary}

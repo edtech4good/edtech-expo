@@ -45,6 +45,11 @@ export const fromQuestionDistractorToQuestionOption = (
         questionoptionid: q.questiondistractorid,
         questionoptiontext: q.questiondistractortext,
         questionoptioniscorrect: false,
+        // The distractor's text may be a translation (bilingual content):
+        // its language travels with it as an option's would.
+        ...(q.textLanguage?.questiondistractortext
+          ? { textLanguage: { questionoptiontext: q.textLanguage.questiondistractortext } }
+          : {}),
       } as QuestionOption),
   ) as QuestionOption[];
 

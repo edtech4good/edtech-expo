@@ -207,6 +207,7 @@ function McqTextOption({
         <QuizOption
           testID={`answer-option-${index}`}
           label={option.questionoptiontext}
+          labelLanguage={option.textLanguage?.questionoptiontext}
           state={state}
           disabled={disabled}
           onPress={onPress}
