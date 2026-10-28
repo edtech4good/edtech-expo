@@ -27,7 +27,7 @@ import { useAppSelector } from '@/redux';
 import { getSelectedLanguage, getSelectedUnit } from '@/redux/slices';
 import { Lesson } from '@/models';
 import { useTranslation } from 'react-i18next';
-import { toStepInfo } from '@/components/ui';
+import { TierChip, toStepInfo } from '@/components/ui';
 import type { LessonRowStatus, LessonStepDotsProps } from '@/components/ui';
 
 // The server flags a lesson `completed` once it clears the lesson's pass
@@ -105,7 +105,6 @@ export default function LevelSelectionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
-  const bodyFont = useFont('normal', 'body');
   const bodyFontSemi = useFont('semi', 'body');
   // design v2.1 Khmer type scale roles.
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
@@ -122,7 +121,11 @@ export default function LevelSelectionScreen() {
     selectedUnit?.levelid ||
     '';
   const { fetch, clear, selectLesson, lessons } = useLevel(levelId);
-  const { unit: headerUnit, gradeName: headerGradeName } = useLevelHeader(
+  const {
+    unit: headerUnit,
+    gradeName: headerGradeName,
+    gradeNameLanguage: headerGradeNameLanguage,
+  } = useLevelHeader(
     levelId,
     isCorporate,
   );
@@ -133,7 +136,6 @@ export default function LevelSelectionScreen() {
     headerUnit?.textLanguage?.levelname,
   );
   const bodyType = useTypeRole('body', headerUnit?.textLanguage?.leveldescription);
-  const levelNameFont = useFont('normal', 'body', headerUnit?.textLanguage?.levelname);
   const levelDescriptionFont = useFont('normal', 'body', headerUnit?.textLanguage?.leveldescription);
   // Real per-step dots (§ new lesson/level/:levelid/steps endpoint), with a
   // per-lesson fallback to the coarse `approximateSteps` guess below when
@@ -290,48 +292,20 @@ export default function LevelSelectionScreen() {
       <View style={{ paddingBottom: theme.layouts.pageVerticalPadding }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {headerGradeName != null && (
-            <View
-              style={{
-                minHeight: 24,
-                borderRadius: theme.radii.pill,
-                backgroundColor: theme.colors.surfaceVariant,
-                paddingHorizontal: 10,
-                paddingVertical: 2,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text
-                style={{
-                  fontFamily: bodyFont,
-                  fontSize: microFontSize,
-                  lineHeight: microLineHeight,
-                  color: theme.colors.onSurface,
-                }}>
-                {headerGradeName}
-              </Text>
-            </View>
+            <TierChip
+              label={headerGradeName}
+              backgroundColor={theme.colors.surfaceVariant}
+              color={theme.colors.onSurface}
+              textLanguage={headerGradeNameLanguage}
+            />
           )}
           {headerUnit?.levelname != null && (
-            <View
-              style={{
-                minHeight: 24,
-                borderRadius: theme.radii.pill,
-                backgroundColor: theme.colors.lessonChip,
-                paddingHorizontal: 10,
-                paddingVertical: 2,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text
-                style={{
-                  fontFamily: levelNameFont,
-                  fontSize: microFontSize,
-                  lineHeight: microLineHeight,
-                  color: theme.colors.onPrimary,
-                }}>
-                {headerUnit.levelname}
-              </Text>
-            </View>
+            <TierChip
+              label={headerUnit.levelname}
+              backgroundColor={theme.colors.lessonChip}
+              color={theme.colors.onPrimary}
+              textLanguage={headerUnit.textLanguage?.levelname}
+            />
           )}
         </View>
         {/* Header-section spacing per the review pass: 14 between sections

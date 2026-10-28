@@ -94,5 +94,10 @@ export default function useLevelHeader(levelId: string, enabled: boolean) {
       : resolved
       ? resolvedGradeName
       : undefined,
+    // The language the grade name is in when it is not the interface's
+    // (bilingual content). The fallback fetch above reads raw rows, so it has none.
+    gradeNameLanguage: selectionValid
+      ? selectedCourse?.textLanguage?.gradename
+      : undefined,
   };
 }
