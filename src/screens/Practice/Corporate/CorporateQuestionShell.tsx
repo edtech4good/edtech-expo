@@ -93,9 +93,15 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
   ) {
     const theme = useTheme();
     const { t } = useTranslation();
-    const headingFont = useFont('bold', 'display');
-    const small = useSmallText();
-    const tile = useTileText();
+    // The heading's text may be in another language than the interface
+    // (bilingual content): its typography follows the text.
+    const headingLanguage: string | undefined = _.get(
+      question,
+      'questionobject.questionheading.textLanguage.headingtext',
+    );
+    const headingFont = useFont('bold', 'display', headingLanguage);
+    const small = useSmallText(headingLanguage);
+    const tile = useTileText(headingLanguage);
     const insets = useSafeAreaInsets();
     const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
@@ -416,6 +422,11 @@ const QuestionShell = forwardRef<PracticeHandler, CorporateQuestionShellProps>(
                   total={summary?.total}
                   readBack={summary?.readBack}
                   message={message}
+                  messageLanguage={
+                    kind === 'correct'
+                      ? feedback?.textLanguage?.correctmessage
+                      : feedback?.textLanguage?.incorrectmessage
+                  }
                 />
               </View>
             ) : null}

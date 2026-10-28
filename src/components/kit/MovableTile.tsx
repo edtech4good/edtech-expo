@@ -28,6 +28,8 @@ export interface MovableTileProps {
   variant?: 'text' | 'image';
   /** The word, or the caption under a picture. Also the screen-reader name. */
   label: string;
+  /** The language `label` is in, when it is not the interface's (bilingual content). */
+  labelLanguage?: string;
   /** Image variant: the resolved URI from `useResource` ('' when missing). */
   imageSource?: string;
   imageHeight?: number;
@@ -66,6 +68,7 @@ export default function MovableTile({
   state = 'default',
   variant = 'text',
   label,
+  labelLanguage,
   imageSource = '',
   imageHeight = 104,
   badge,
@@ -77,8 +80,8 @@ export default function MovableTile({
 }: MovableTileProps) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const text = useTileText();
-  const small = useSmallText();
+  const text = useTileText(labelLanguage);
+  const small = useSmallText(labelLanguage);
   const frame = tileFrame(theme.colors, state);
   const isImage = variant === 'image';
   const imageSlot = useOptionImageSlot(imageSource, label);

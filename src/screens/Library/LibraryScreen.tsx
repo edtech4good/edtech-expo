@@ -14,6 +14,7 @@ import {
   useBreakpoint,
   useDesign,
   useFont,
+  useFontForText,
   useLibrary,
   useProgressSummary,
 } from '@/services';
@@ -30,6 +31,7 @@ import {
   Unit,
 } from '@/models';
 import { useTranslation } from 'react-i18next';
+import { carryContent } from '@/transforms/Content';
 
 const GRID_GAP = 20;
 
@@ -49,6 +51,7 @@ function toSubjectSelection(curriculum: LibraryCurriculum): Subject {
     isdeleted: false,
     progress: curriculum.progress,
     subjectid: curriculum.curriculumid,
+    ...carryContent(curriculum),
   };
 }
 
@@ -75,6 +78,7 @@ function toCourseSelection(
     points: 0,
     progress: grade.progress,
     progress_points: 0,
+    ...carryContent(grade),
   };
 }
 
@@ -93,6 +97,7 @@ function toUnitSelection(grade: LibraryGrade, level: LibraryLevel): Unit {
     points: 0,
     progress: level.progress,
     quiz_points: 0,
+    ...carryContent(level),
   };
 }
 
@@ -101,7 +106,8 @@ export default function LibraryScreen() {
   const { t } = useTranslation();
   const { isCorporate } = useDesign();
   const displayFont = useFont('bold', 'display');
-  const curriculumNameFont = useFont('semi', 'display');
+  const displayFontForText = useFontForText('bold', 'display');
+  const curriculumNameFont = useFontForText('semi', 'display');
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { curricula, isLoading, isEmpty, isUnavailable, hasEntry } =
@@ -179,7 +185,9 @@ export default function LibraryScreen() {
         <CurriculumCard
           testID={`library-level-${level.levelid}`}
           title={level.levelname}
+          titleLanguage={level.textLanguage?.levelname}
           meta={level.leveldescription ?? undefined}
+          metaLanguage={level.textLanguage?.leveldescription}
           progress={progress}
           footer={lessonsProgress}
           metaNumberOfLines={2}
@@ -263,7 +271,9 @@ export default function LibraryScreen() {
                   <Text
                     accessibilityRole="header"
                     style={{
-                      fontFamily: curriculumNameFont,
+                      fontFamily: curriculumNameFont(
+                        curriculum.textLanguage?.curriculumname,
+                      ),
                       fontSize: theme.fontSizes.subtitle,
                       color: theme.colors.primary,
                     }}>
@@ -283,7 +293,7 @@ export default function LibraryScreen() {
                       <Text
                         accessibilityRole="header"
                         style={{
-                          fontFamily: displayFont,
+                          fontFamily: displayFontForText(grade.textLanguage?.gradename),
                           fontSize: theme.fontSizes.h5,
                           color: theme.colors.onBackground,
                         }}>

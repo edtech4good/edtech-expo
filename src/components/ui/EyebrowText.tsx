@@ -2,6 +2,7 @@ import { FontWeight } from '@/constants';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { useFont } from '@/services';
+import { typographyLanguage } from '@/i18n/typographyLanguage';
 import { Text, TextProps } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
@@ -12,6 +13,8 @@ export interface EyebrowTextProps extends TextProps {
   weight?: FontWeight;
   /** Skip the 12px English floor — only for labels the handoff sets below it (step dots at 8px). Khmer keeps its own floor. */
   floor?: boolean;
+  /** The language of the text when it is not the interface's (bilingual content): picks the Khmer or the Latin rule. */
+  textLanguage?: string;
 }
 
 /**
@@ -36,13 +39,14 @@ export default function EyebrowText({
   color,
   weight = 'normal',
   floor = true,
+  textLanguage,
   style,
   ...rest
 }: EyebrowTextProps) {
   const theme = useTheme();
   const selectedLanguage = useAppSelector(getSelectedLanguage);
-  const isKhmer = selectedLanguage === 'km';
-  const fontFamily = useFont(isKhmer ? 'semi' : weight, 'mono');
+  const isKhmer = typographyLanguage(textLanguage, selectedLanguage) === 'km';
+  const fontFamily = useFont(isKhmer ? 'semi' : weight, 'mono', textLanguage);
 
   const resolvedColor = color ?? theme.colors.onSurfaceVariant;
   const resolvedSize = size ?? theme.fontSizes.eyebrow;

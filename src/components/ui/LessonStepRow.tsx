@@ -25,6 +25,8 @@ export interface LessonStepRowProps {
   eyebrow: string;
   /** Pre-composed title, e.g. "Fixture basics" or "8 questions · unscored". */
   title: string;
+  /** The language `title` is in, when it is not the interface's (bilingual content). Omit for composed interface titles. */
+  titleLanguage?: string;
   /** Pre-composed status line, e.g. "Done", "In progress", "Not started", "Done · saved on device, not synced". */
   statusText: string;
   status: LessonStepRowStatus;
@@ -212,6 +214,7 @@ export default function LessonStepRow({
   type,
   eyebrow,
   title,
+  titleLanguage,
   statusText,
   status,
   isNext,
@@ -225,12 +228,12 @@ export default function LessonStepRow({
   testID,
 }: LessonStepRowProps) {
   const theme = useTheme();
-  const titleFontFamily = useFont('semi', 'body');
+  const titleFontFamily = useFont('semi', 'body', titleLanguage);
   const statusFontFamily = useFont('semi', 'body');
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   // Title keeps its own 14px/semi weight (matches LessonRow's "title 600
   // 14") but borrows 'body' role for locale-correct leading.
-  const titleLineHeight = useTypeRole('body').lineHeight;
+  const titleLineHeight = useTypeRole('body', titleLanguage).lineHeight;
   // Status line: Khmer floor — never below 13px, line height per the v2.1
   // caption role (13/20) — aligned with EyebrowText/AppTextField's label,
   // not the 22px used elsewhere for 13px Khmer body copy.
