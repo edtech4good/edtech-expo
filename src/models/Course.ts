@@ -1,4 +1,6 @@
-export interface Course {
+import { ContentText } from './Content';
+
+export interface Course extends ContentText {
   curriculumid: string;
   gradedescription: string;
   gradeid: string;

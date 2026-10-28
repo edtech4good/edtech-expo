@@ -1,4 +1,6 @@
-export interface Unit {
+import { ContentText } from './Content';
+
+export interface Unit extends ContentText {
   gradeid: string;
   isdeleted: boolean;
   leveldescription: string;

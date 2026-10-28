@@ -4,3 +4,4 @@ export * from './QuestionTemplate';
 export * from './NavItems';
 export * from './progress';
 export * from './LearningItems';
+export * from './ContentTranslations';

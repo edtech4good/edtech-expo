@@ -4,7 +4,9 @@
 // library payload nests differently (curriculum contains grades contains
 // levels, in one response) and some fields are nullable here where the
 // drill-down equivalents are not (e.g. leveldescription).
-export interface LibraryLevel {
+import { ContentText } from './Content';
+
+export interface LibraryLevel extends ContentText {
   levelid: string;
   levelname: string;
   leveldescription: string | null;
@@ -14,7 +16,7 @@ export interface LibraryLevel {
   number_completed_lessons: number;
 }
 
-export interface LibraryGrade {
+export interface LibraryGrade extends ContentText {
   gradeid: string;
   gradename: string;
   gradeorder: number;
@@ -22,7 +24,7 @@ export interface LibraryGrade {
   levels: LibraryLevel[];
 }
 
-export interface LibraryCurriculum {
+export interface LibraryCurriculum extends ContentText {
   curriculumid: string;
   curriculumname: string;
   curriculumdescription: string | null;
