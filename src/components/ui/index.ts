@@ -12,6 +12,7 @@ export { default as AppRadio, type AppRadioProps } from './AppRadio';
 export { default as AppSwitch, type AppSwitchProps } from './AppSwitch';
 export { default as EyebrowText, type EyebrowTextProps } from './EyebrowText';
 export { default as Chip, type ChipProps } from './Chip';
+export { default as TierChip, type TierChipProps } from './TierChip';
 export { default as ProgressBar, type ProgressBarProps } from './ProgressBar';
 export {
   default as CircularProgress,
