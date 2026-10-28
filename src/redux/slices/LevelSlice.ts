@@ -1,3 +1,12 @@
+import { getSelectedLanguage } from './SettingSlice';
+import {
+  memoByRef,
+  memoList,
+  overlayLesson,
+  overlayOne,
+  overlayRows,
+  overlayUnit,
+} from '@/transforms/Content';
 import { Lesson, Level, LevelDescription } from '@/models';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
@@ -33,6 +42,14 @@ export const levelSlice = createSlice({
   },
 });
 
-export const getLevel = (state: RootState) => state.level;
+const overlayLessons = memoList<Lesson>(overlayLesson);
+const overlayLevelState = memoByRef((level: RootState['level'], language: string) => ({
+  ...level,
+  lessons: overlayRows(overlayLessons, level.lessons, language),
+  level: overlayOne(overlayUnit, level.level, language),
+  selectedLesson: overlayOne(overlayLesson, level.selectedLesson, language),
+}));
+export const getLevel = (state: RootState) =>
+  overlayLevelState(state.level, getSelectedLanguage(state));
 
 export const LevelActions = levelSlice.actions;

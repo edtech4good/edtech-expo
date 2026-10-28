@@ -1,3 +1,14 @@
+import { getSelectedLanguage } from './SettingSlice';
+import {
+  memoByRef,
+  overlayCourse,
+  overlayLearning,
+  overlayLesson,
+  overlayModule,
+  overlayOne,
+  overlaySubject,
+  overlayUnit,
+} from '@/transforms/Content';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import {
@@ -77,19 +88,29 @@ export const selectionSlice = createSlice({
   },
 });
 
+// A selection holds the row exactly as the screen dispatched it; the text a
+// screen reads is the overlay of the interface language over it (bilingual
+// content), so a stored selection follows a language switch.
+const overlaySubjectOnce = memoByRef<Subject, Subject>(overlaySubject);
+const overlayCourseOnce = memoByRef<Course, Course>(overlayCourse);
+const overlayUnitOnce = memoByRef<Unit, Unit>(overlayUnit);
+const overlayLessonOnce = memoByRef<Lesson, Lesson>(overlayLesson);
+const overlayModuleOnce = memoByRef<LessonLearning | LessonPractice | LessonQuiz, LessonLearning | LessonPractice | LessonQuiz>(overlayModule);
+const overlayLearningOnce = memoByRef<LessonLearningResource, LessonLearningResource>(overlayLearning);
+
 export const getSelectedSubject = (state: RootState) =>
-  state.selection.selectedSubject;
+  overlayOne(overlaySubjectOnce, state.selection.selectedSubject, getSelectedLanguage(state));
 export const getSelectedCourse = (state: RootState) =>
-  state.selection.selectedCourse;
+  overlayOne(overlayCourseOnce, state.selection.selectedCourse, getSelectedLanguage(state));
 export const getSelectedUnit = (state: RootState) =>
-  state.selection.selectedUnit;
+  overlayOne(overlayUnitOnce, state.selection.selectedUnit, getSelectedLanguage(state));
 export const getSelectedLevel = (state: RootState) =>
   state.selection.selectedLevel;
 export const getSelectedLesson = (state: RootState) =>
-  state.selection.selectedLesson;
+  overlayOne(overlayLessonOnce, state.selection.selectedLesson, getSelectedLanguage(state));
 export const getSelectedModule = (state: RootState) =>
-  state.selection.selectedModule;
+  overlayOne(overlayModuleOnce, state.selection.selectedModule, getSelectedLanguage(state));
 export const getModuleResource = (state: RootState) =>
-  state.selection.moduleResource;
+  overlayOne(overlayLearningOnce, state.selection.moduleResource, getSelectedLanguage(state));
 
 export const SelectionActions = selectionSlice.actions;

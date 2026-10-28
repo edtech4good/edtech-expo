@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoList, overlayCourse, overlayRows } from '@/transforms/Content';
 import { Course } from '@/models';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
@@ -26,6 +28,8 @@ export const courseSlice = createSlice({
   },
 });
 
-export const getCourses = (state: RootState) => state.course.courses;
+const overlayCourses = memoList<Course>(overlayCourse);
+export const getCourses = (state: RootState) =>
+  overlayRows(overlayCourses, state.course.courses, getSelectedLanguage(state));
 
 export const CourseActions = courseSlice.actions;

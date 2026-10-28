@@ -1,3 +1,5 @@
+import { getSelectedLanguage } from './SettingSlice';
+import { memoByRef, overlayLesson, overlayOne } from '@/transforms/Content';
 import { Lesson, LessonLearning, LessonPractice, LessonQuiz } from '@/models';
 import { createSlice } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
@@ -30,6 +32,8 @@ export const lessonSlice = createSlice({
   },
 });
 
-export const getLesson = (state: RootState) => state.lesson.lesson;
+const overlayLessonOnce = memoByRef<Lesson, Lesson>(overlayLesson);
+export const getLesson = (state: RootState) =>
+  overlayOne(overlayLessonOnce, state.lesson.lesson, getSelectedLanguage(state));
 
 export const LessonActions = lessonSlice.actions;
