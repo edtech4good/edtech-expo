@@ -96,6 +96,10 @@ export default function LessonScreen() {
   // True from a toggle until the remounted player reports a loaded status; an
   // unloaded status in between must not blank the elapsed label.
   const handoffPendingRef = React.useRef(false);
+  // Where the remounted player must resume. Native applies the initial status'
+  // positionMillis itself; expo-av on the web ignores it, so the effect below
+  // seeks the new player once it is mounted.
+  const handoffSeekRef = React.useRef<number | null>(null);
 
   const selectedModule = useAppSelector(getSelectedModule);
   const lessonLearningId = (selectedModule as LessonLearning)?.lessonlearningid;
@@ -240,11 +244,35 @@ export default function LessonScreen() {
   const browserFullScreenElement = () =>
     typeof document !== 'undefined' ? document.fullscreenElement : null;
 
-  const setFullScreenOpen = (next: boolean) => {
+  const setFullScreenOpen = async (next: boolean) => {
     if (fullScreenRef.current === next) return;
-    const stat = methods.getValues('stat') as Partial<AVPlaybackStatusSuccess>;
+    // Claim the state synchronously so a second toggle (Escape fires both
+    // keydown and fullscreenchange) is a no-op.
+    fullScreenRef.current = next;
+    // The orientation policy lets a phone turn to landscape while this is
+    // set, and locks it back to portrait when it clears.
+    setVideoFullScreen(next);
+    // Must run inside the press that started it, before any await.
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (next) {
+        document.documentElement.requestFullscreen?.().catch(() => undefined);
+      } else if (browserFullScreenElement()) {
+        document.exitFullscreen?.().catch(() => undefined);
+      }
+    }
+    // The form's status only updates once a second; ask the player for its
+    // exact position so the remounted one resumes where this one is.
+    let stat = methods.getValues('stat') as Partial<AVPlaybackStatusSuccess>;
+    try {
+      const live = await video.current?.getStatusAsync();
+      if (live) stat = live as Partial<AVPlaybackStatusSuccess>;
+    } catch {
+      // keep the last reported status
+    }
+    if (fullScreenRef.current !== next) return; // toggled again meanwhile
     if (stat.isLoaded) {
       handoffPendingRef.current = true;
+      handoffSeekRef.current = stat.positionMillis ?? 0;
       setHandoff({
         source,
         status: {
@@ -253,21 +281,20 @@ export default function LessonScreen() {
         },
       });
     }
-    fullScreenRef.current = next;
     setFullScreen(next);
-    // The orientation policy lets a phone turn to landscape while this is
-    // set, and locks it back to portrait when it clears.
-    setVideoFullScreen(next);
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      if (next) {
-        document.documentElement.requestFullscreen?.().catch(() => undefined);
-      } else if (browserFullScreenElement()) {
-        document.exitFullscreen?.().catch(() => undefined);
-      }
-    }
   };
 
-  const handleToggleFullScreen = () => setFullScreenOpen(!fullScreenRef.current);
+  React.useEffect(() => {
+    const target = handoffSeekRef.current;
+    handoffSeekRef.current = null;
+    if (target === null || Platform.OS !== 'web') return;
+    // A <video> keeps a currentTime set before its data has loaded.
+    video.current?.setPositionAsync(target).catch(() => undefined);
+  }, [fullScreen]);
+
+  const handleToggleFullScreen = () => {
+    void setFullScreenOpen(!fullScreenRef.current);
+  };
   // The web listeners below are registered once; they call the latest closure.
   const setFullScreenOpenRef = React.useRef(setFullScreenOpen);
   React.useEffect(() => {
@@ -290,11 +317,11 @@ export default function LessonScreen() {
     // our modal when the browser would not go full screen at all (keydown).
     const onFullScreenChange = () => {
       if (!document.fullscreenElement && fullScreenRef.current)
-        setFullScreenOpenRef.current(false);
+        void setFullScreenOpenRef.current(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && fullScreenRef.current)
-        setFullScreenOpenRef.current(false);
+        void setFullScreenOpenRef.current(false);
     };
     document.addEventListener('fullscreenchange', onFullScreenChange);
     document.addEventListener('keydown', onKeyDown);
