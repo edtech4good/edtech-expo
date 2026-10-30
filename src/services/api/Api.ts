@@ -265,10 +265,11 @@ export default class Api {
     });
 
     this.apiSauceInstance.addAsyncRequestTransform(requestTransform);
-    this.apiSauceInstance.addAsyncResponseTransform(async response => {
+    const studentResponseTransform: AsyncResponseTransform = async response => {
       if (response.status === 401) this.notifyUnauthorized(response);
-      return responseTransform(response);
-    });
+      await responseTransform(response);
+    };
+    this.apiSauceInstance.addAsyncResponseTransform(studentResponseTransform);
     this.lmsApiInstance.addAsyncRequestTransform(requestTransform);
     this.lmsApiInstance.addAsyncResponseTransform(responseTransform);
     this.sampleInstance.addAsyncRequestTransform(requestTransform);
