@@ -11,7 +11,7 @@ import {
   isEntryPath,
   LOGIN_ROUTE,
   needsLogin,
-  profileFromToken,
+  restoreProfile,
   startRoute,
 } from '@/services/session';
 import useEndSession from '@/services/hooks/useEndSession';
@@ -200,10 +200,11 @@ export default function InitialStack() {
   const handleCheckAuth = async () => {
     try {
       const accessToken = await getAccessToken();
-      // The remembered profile, or (web: its storage is shared by every tab,
-      // so another tab may have cleared it) the one in the token itself.
+      // The token says who is signed in. The remembered profile (web: its
+      // storage is shared by every tab, so it may be another tab's account,
+      // or gone) is kept only when it is the token's own account.
       const restoredProfile = accessToken
-        ? profile ?? profileFromToken(accessToken)
+        ? restoreProfile(accessToken, profile)
         : undefined;
       const target = startRoute({ accessToken, profile: restoredProfile });
       if (accessToken && target !== LOGIN_ROUTE) {

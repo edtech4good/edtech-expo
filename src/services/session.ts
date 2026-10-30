@@ -81,6 +81,24 @@ export function profileFromToken(token: string): Profile | undefined {
   }
 }
 
+/**
+ * Who this start-up belongs to: the token's own profile is the truth. The
+ * remembered profile (web keeps it in storage shared by every tab, so another
+ * tab's sign-in may have replaced it) is used only when it is the token's own
+ * account, because it can carry richer fields than the token; otherwise the
+ * token's profile wins and replaces it. A token that cannot be read gives no
+ * way to compare, so the remembered profile stays as it was.
+ */
+export function restoreProfile(
+  accessToken: string,
+  stored: Profile | undefined,
+): Profile | undefined {
+  const fromToken = profileFromToken(accessToken);
+  if (!fromToken) return stored;
+  if (stored && stored.schooluserid === fromToken.schooluserid) return stored;
+  return fromToken;
+}
+
 export interface EndSessionDeps {
   /** Removes the token from the API client's headers. Runs first, synchronously. */
   clearAuthHeader: () => void;

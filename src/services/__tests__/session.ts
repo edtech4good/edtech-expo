@@ -21,6 +21,7 @@ import {
   LOGIN_ROUTE,
   needsLogin,
   profileFromToken,
+  restoreProfile,
   routeForProfile,
   startRoute,
   TEACHER_HOME_ROUTE,
@@ -137,6 +138,34 @@ async function main() {
     assert.equal(profileFromToken('not-a-token'), undefined);
     assert.equal(profileFromToken(''), undefined);
     assert.equal(profileFromToken('h.%%%.s'), undefined);
+  });
+
+  // --- the token decides who is signed in ----------------------------------
+  const tokenFor = (o: unknown) => `h.${Buffer.from(JSON.stringify(o)).toString('base64url')}.s`;
+  const learnerA: any = { schooluserid: 'u-learner', schooluserrole: 4, schoolusername: 'learner.a' };
+  const teacherB: any = { schooluserid: 'u-teacher', schooluserrole: 3, schoolusername: 'teacher.b' };
+
+  await check('a stored profile of another account loses to the token (another tab signed in as someone else)', () => {
+    const profile = restoreProfile(tokenFor(learnerA), teacherB);
+    assert.equal(profile?.schooluserid, 'u-learner');
+    assert.equal(profile?.schooluserrole, 4);
+    // and the route follows the token's account, not the stored one
+    assert.equal(startRoute({ accessToken: 't', profile }), LEARNER_HOME_ROUTE);
+    assert.equal(startRoute({ accessToken: 't', profile: restoreProfile(tokenFor(teacherB), learnerA) }), TEACHER_HOME_ROUTE);
+  });
+
+  await check('the stored profile of the same account is kept (it may carry richer fields)', () => {
+    const rich = { ...learnerA, studentfirstname: 'Richer', city: 'x' };
+    assert.equal(restoreProfile(tokenFor(learnerA), rich), rich);
+  });
+
+  await check('no stored profile: the token\'s own', () => {
+    assert.equal(restoreProfile(tokenFor(teacherB), undefined)?.schooluserid, 'u-teacher');
+  });
+
+  await check('a token that cannot be read leaves the stored profile as it was', () => {
+    assert.equal(restoreProfile('not-a-token', learnerA), learnerA);
+    assert.equal(restoreProfile('not-a-token', undefined), undefined);
   });
 
   // --- how a session ends ------------------------------------------------
