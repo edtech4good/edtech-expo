@@ -13,7 +13,9 @@
     "forward": "Forward 10 seconds",
     "volume": "Volume",
     "seek": "Video position",
-    "elapsedOfTotal": "{{elapsed}} of {{total}}"
+    "elapsedOfTotal": "{{elapsed}} of {{total}}",
+    "fullScreenOpen": "Full screen",
+    "fullScreenClose": "Exit full screen"
   },
   "image": {
     "unavailable": "Image unavailable"

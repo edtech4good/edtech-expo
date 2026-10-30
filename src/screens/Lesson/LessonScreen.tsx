@@ -5,8 +5,14 @@ import {
   Animated,
   Modal,
   Platform,
+  View,
 } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import {
+  Video,
+  ResizeMode,
+  AVPlaybackStatus,
+  AVPlaybackStatusSuccess,
+} from 'expo-av';
 import { audioManager } from '@/components/kit/audio/audioManager';
 import { BlackVeil, Expanded, LayoutScrollView } from '@/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +29,7 @@ import {
   useLearning,
   useSetting,
   useDesign,
+  setVideoFullScreen,
 } from '@/services';
 import { LessonLearning } from '@/models';
 import ResumeVideoPopUp from './components/ResumeVideoPopUp';
@@ -52,6 +59,9 @@ export default function LessonScreen() {
     ? Math.round((width * 9) / 16)
     : height - offlineBannerHeight;
   const isNativeDevice = React.useMemo(() => Platform.OS !== 'web', []);
+  // The custom bar (VideoControl) is rendered on Android and web; iOS keeps
+  // its native controls, so it gets neither the inline bar nor our button.
+  const hasCustomBar = Platform.OS === 'android' || Platform.OS === 'web';
   let blurTimeOut: NodeJS.Timeout;
   // const [videoSource, ]
 
@@ -65,6 +75,27 @@ export default function LessonScreen() {
       },
     },
   });
+
+  // Full screen (edtech-expo#143). expo-av's presentFullscreenPlayer() was
+  // rejected for Android: it moves the native view into a Dialog and forces
+  // expo-av's own MediaController there (FullscreenVideoPlayer.java
+  // setOverridingUseNativeControls(true)), the controls the TalkBack audit
+  // (F-01) found invisible to the accessibility tree, and our React bar
+  // would sit behind that dialog. So full screen is our own Modal hosting
+  // the same <Video> and VideoControl.
+  // The <Video> is rendered in exactly one place at a time (inline, or in
+  // the Modal), so there is one native player and one `video` ref. Moving it
+  // remounts it, so the position and play state are carried over as the new
+  // player's initial status.
+  const [fullScreen, setFullScreen] = React.useState(false);
+  const fullScreenRef = React.useRef(false);
+  const [handoff, setHandoff] = React.useState<{
+    source: string;
+    status: { positionMillis: number; shouldPlay: boolean };
+  } | null>(null);
+  // True from a toggle until the remounted player reports a loaded status; an
+  // unloaded status in between must not blank the elapsed label.
+  const handoffPendingRef = React.useRef(false);
 
   const selectedModule = useAppSelector(getSelectedModule);
   const lessonLearningId = (selectedModule as LessonLearning)?.lessonlearningid;
@@ -206,6 +237,73 @@ export default function LessonScreen() {
     router.back();
   };
 
+  const browserFullScreenElement = () =>
+    typeof document !== 'undefined' ? document.fullscreenElement : null;
+
+  const setFullScreenOpen = (next: boolean) => {
+    if (fullScreenRef.current === next) return;
+    const stat = methods.getValues('stat') as Partial<AVPlaybackStatusSuccess>;
+    if (stat.isLoaded) {
+      handoffPendingRef.current = true;
+      setHandoff({
+        source,
+        status: {
+          positionMillis: stat.positionMillis ?? 0,
+          shouldPlay: !!stat.isPlaying,
+        },
+      });
+    }
+    fullScreenRef.current = next;
+    setFullScreen(next);
+    // The orientation policy lets a phone turn to landscape while this is
+    // set, and locks it back to portrait when it clears.
+    setVideoFullScreen(next);
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (next) {
+        document.documentElement.requestFullscreen?.().catch(() => undefined);
+      } else if (browserFullScreenElement()) {
+        document.exitFullscreen?.().catch(() => undefined);
+      }
+    }
+  };
+
+  const handleToggleFullScreen = () => setFullScreenOpen(!fullScreenRef.current);
+  // The web listeners below are registered once; they call the latest closure.
+  const setFullScreenOpenRef = React.useRef(setFullScreenOpen);
+  React.useEffect(() => {
+    setFullScreenOpenRef.current = setFullScreenOpen;
+  });
+
+  React.useEffect(() => {
+    return () => {
+      // Leaving the lesson while full screen: give the portrait lock back.
+      fullScreenRef.current = false;
+      setVideoFullScreen(false);
+      if (Platform.OS === 'web' && browserFullScreenElement())
+        document.exitFullscreen?.().catch(() => undefined);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    // Escape leaves the browser's full screen (fullscreenchange), and leaves
+    // our modal when the browser would not go full screen at all (keydown).
+    const onFullScreenChange = () => {
+      if (!document.fullscreenElement && fullScreenRef.current)
+        setFullScreenOpenRef.current(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && fullScreenRef.current)
+        setFullScreenOpenRef.current(false);
+    };
+    document.addEventListener('fullscreenchange', onFullScreenChange);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullScreenChange);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   const handlePlay = async () => {
     if (_.isEmpty(video.current)) return;
     const isPlaying = methods.getValues('stat.isPlaying');
@@ -240,6 +338,10 @@ export default function LessonScreen() {
     // One sound at a time: when the video starts playing (our controls, the
     // native iOS ones, or autoplay), stop any question or option audio still
     // playing on the shared player.
+    // A remounted player (full screen in or out) reports "not loaded" first;
+    // keep the last real status so the label and scrubber do not jump to 0.
+    if (!status.isLoaded && handoffPendingRef.current) return;
+    if (status.isLoaded) handoffPendingRef.current = false;
     const wasPlaying = methods.getValues('stat.isPlaying');
     if (status.isLoaded && status.isPlaying && !wasPlaying)
       void audioManager.stop();
@@ -342,79 +444,139 @@ export default function LessonScreen() {
     );
   }
 
+  // key={source}: one native player per source. useLearning's source
+  // is '' on mount and the real URL once fetch() lands, and expo-av
+  // 13.10 on Android loses the progress interval when a mounted
+  // <Video> changes source: VideoView.setSource (VideoView.java:338)
+  // carries the old player's getStatus() into the new one, and
+  // getStatus() stores progressUpdateIntervalMillis with putInt
+  // (PlayerData.java:443) while setStatusWithListener reads it back
+  // with getDouble (PlayerData.java:318-319). Bundle.getDouble on an
+  // Integer returns 0.0, so the interval becomes 0 and ProgressLooper
+  // never schedules a tick: no periodic status while playing, and the
+  // elapsed label and scrubber sat at 0:00 until pause or end. The
+  // `status` prop cannot repair it because React only re-sends it when
+  // its contents change. A fresh native view per source starts from
+  // the prop's own interval instead.
+  const renderVideo = (box: {
+    width: number;
+    height: number;
+    marginTop: number;
+  }) => (
+    <Video
+      key={source}
+      ref={video}
+      style={{
+        width: box.width,
+        height: box.height,
+        marginTop: box.marginTop,
+      }}
+      videoStyle={{ width: box.width, height: box.height }}
+      status={handoff && handoff.source === source ? handoff.status : undefined}
+      source={{
+        uri: source,
+      }}
+      // F-01: expo-av's native Android controls expose nothing to the
+      // accessibility tree, so Android uses VideoControl's own bar
+      // instead. iOS keeps the native controls (unaudited, untouched).
+      useNativeControls={isNativeDevice && Platform.OS !== 'android'}
+      isLooping={false}
+      resizeMode={ResizeMode.CONTAIN}
+      onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+      // Position drives the elapsed label and the scrubber's
+      // accessibilityValue; at 5000 ms they moved in 5 s jumps. 1000 ms
+      // matches the label's whole-second resolution. (The 0:00-for-the-
+      // whole-clip bug on Android was the lost interval fixed by `key`
+      // above, not this value.) Progress is saved on unmount, not per
+      // update, so a faster interval does not save more often.
+      progressUpdateIntervalMillis={1000}
+      onError={e => {
+        console.log('Video Error: ', e);
+        // Load failure is the other "no playable media" signal (a
+        // non-empty source that 404s/fails to decode) — same one-shot
+        // completion as the empty-source effect above.
+        if (!completionPostedRef.current) {
+          completionPostedRef.current = true;
+          saveProgress(0, true, 0);
+        }
+      }}
+      onLoadStart={() => {
+        console.log('Loading Video Start');
+      }}
+      onLoad={(status: AVPlaybackStatus) => {
+        console.log('Loading: ', status.isLoaded);
+      }}
+    />
+  );
+
+  // Portrait on a phone: the bar stacks directly under the video instead of
+  // floating at the foot of the screen. Landscape (tablets) keeps the overlay.
+  const barInline = hasCustomBar && isPortrait;
+  // In the full-screen modal there is no offline banner and no status-bar
+  // inset to clear: the video is 16:9 across the width in portrait, and the
+  // whole window in landscape.
+  const fullScreenBox = {
+    width,
+    height: isPortrait ? Math.round((width * 9) / 16) : height,
+    marginTop: 0,
+  };
+
   return (
     <LayoutScrollView
       backgroundColor={canvasColor}
       justifyContent={canvasJustify}>
-      <FormProvider {...methods}>
-        {/*
-          key={source}: one native player per source. useLearning's source
-          is '' on mount and the real URL once fetch() lands, and expo-av
-          13.10 on Android loses the progress interval when a mounted
-          <Video> changes source: VideoView.setSource (VideoView.java:338)
-          carries the old player's getStatus() into the new one, and
-          getStatus() stores progressUpdateIntervalMillis with putInt
-          (PlayerData.java:443) while setStatusWithListener reads it back
-          with getDouble (PlayerData.java:318-319). Bundle.getDouble on an
-          Integer returns 0.0, so the interval becomes 0 and ProgressLooper
-          never schedules a tick: no periodic status while playing, and the
-          elapsed label and scrubber sat at 0:00 until pause or end. The
-          `status` prop cannot repair it because React only re-sends it when
-          its contents change. A fresh native view per source starts from
-          the prop's own interval instead.
-        */}
-        <Video
-          key={source}
-          ref={video}
-          style={{
+      {!fullScreen && (
+        <FormProvider {...methods}>
+          {renderVideo({
             width: playerWidth,
             height: playerHeight,
             marginTop: playerTopInset,
-          }}
-          videoStyle={{ width: playerWidth, height: playerHeight }}
-          source={{
-            uri: source,
-          }}
-          // F-01: expo-av's native Android controls expose nothing to the
-          // accessibility tree, so Android uses VideoControl's own bar
-          // instead. iOS keeps the native controls (unaudited, untouched).
-          useNativeControls={isNativeDevice && Platform.OS !== 'android'}
-          isLooping={false}
-          resizeMode={ResizeMode.CONTAIN}
-          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          // Position drives the elapsed label and the scrubber's
-          // accessibilityValue; at 5000 ms they moved in 5 s jumps. 1000 ms
-          // matches the label's whole-second resolution. (The 0:00-for-the-
-          // whole-clip bug on Android was the lost interval fixed by `key`
-          // above, not this value.) Progress is saved on unmount, not per
-          // update, so a faster interval does not save more often.
-          progressUpdateIntervalMillis={1000}
-          onError={e => {
-            console.log('Video Error: ', e);
-            // Load failure is the other "no playable media" signal (a
-            // non-empty source that 404s/fails to decode) — same one-shot
-            // completion as the empty-source effect above.
-            if (!completionPostedRef.current) {
-              completionPostedRef.current = true;
-              saveProgress(0, true, 0);
-            }
-          }}
-          onLoadStart={() => {
-            console.log('Loading Video Start');
-          }}
-          onLoad={(status: AVPlaybackStatus) => {
-            console.log('Loading: ', status.isLoaded);
-          }}
-        />
-        <VideoControl
-          onPlayPausePress={handlePlay}
-          onVolumeChanged={handleSetVolume}
-          onForwardPress={handleSeekForward}
-          onRewindPress={handleSeekRewind}
-          onSeekChanged={handleSeekChange}
-          onClosePress={handleClose}
-        />
-      </FormProvider>
+          })}
+          <VideoControl
+            placement={barInline ? 'inline' : 'overlay'}
+            onPlayPausePress={handlePlay}
+            onVolumeChanged={handleSetVolume}
+            onForwardPress={handleSeekForward}
+            onRewindPress={handleSeekRewind}
+            onSeekChanged={handleSeekChange}
+            onClosePress={handleClose}
+            onFullScreenPress={hasCustomBar ? handleToggleFullScreen : undefined}
+          />
+        </FormProvider>
+      )}
+      {fullScreen && (
+        <Modal
+          animationType="fade"
+          presentationStyle="fullScreen"
+          statusBarTranslucent
+          supportedOrientations={['portrait', 'landscape']}
+          onRequestClose={handleToggleFullScreen}
+          visible>
+          <StatusBar hidden />
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'black',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <FormProvider {...methods}>
+              {renderVideo(fullScreenBox)}
+              <VideoControl
+                placement="overlay"
+                isFullScreen
+                onPlayPausePress={handlePlay}
+                onVolumeChanged={handleSetVolume}
+                onForwardPress={handleSeekForward}
+                onRewindPress={handleSeekRewind}
+                onSeekChanged={handleSeekChange}
+                onClosePress={handleClose}
+                onFullScreenPress={handleToggleFullScreen}
+              />
+            </FormProvider>
+          </View>
+        </Modal>
+      )}
       {renderResumeModal()}
     </LayoutScrollView>
   );

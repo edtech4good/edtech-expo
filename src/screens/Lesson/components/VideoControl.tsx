@@ -23,6 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { Image } from 'expo-image';
+import FullScreenButton from './FullScreenButton';
 
 // Shared by the compact-layout threshold math and the button/slider JSX below,
 // so resizing a control can't silently desync from the breakpoint that was
@@ -42,6 +43,16 @@ interface VideoControllerProps {
   onFocus?: () => void;
   onBlur?: () => void;
   onClosePress?: () => void;
+  /**
+   * 'overlay' (default): the bar floats over the bottom of the screen, as in
+   * landscape and in full screen. 'inline': portrait on a phone, where the
+   * bar is an ordinary block the lesson screen lays out directly under the
+   * video, so it never sits at the foot of the screen with a gap between.
+   */
+  placement?: 'overlay' | 'inline';
+  /** Shows the full-screen toggle (Android and web, where this bar is used). */
+  isFullScreen?: boolean;
+  onFullScreenPress?: () => void;
 }
 
 export default function VideoControl({
@@ -51,6 +62,9 @@ export default function VideoControl({
   onRewindPress = () => undefined,
   onSeekChanged = () => undefined,
   onVolumeChanged = () => undefined,
+  placement = 'overlay',
+  isFullScreen = false,
+  onFullScreenPress,
 }: VideoControllerProps) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -58,6 +72,7 @@ export default function VideoControl({
   // F-01: Android now renders this bar instead of expo-av's native controls,
   // which exposed nothing to the accessibility tree.
   const isAndroid = Platform.OS === 'android';
+  const isInline = placement === 'inline';
   const opacityValue = useMemo(() => new Animated.Value(1), []);
   const methods = useForm<{ disabled: boolean }>({
     defaultValues: { disabled: false },
@@ -185,7 +200,7 @@ export default function VideoControl({
     // On Android the bar is permanently visible, so hiding it would only set
     // disabled=true and silently kill every control. Also the accessible
     // behaviour: controls a screen reader can find do not vanish on a timer.
-    if (isAndroid) return;
+    if (isAndroid || isInline) return;
     const currentOpacity = await stopOpacityAnimation();
     if (currentOpacity === 0) return;
     Animated.timing(opacityValue, {
@@ -306,19 +321,37 @@ export default function VideoControl({
     </Row>
   );
 
+  const renderFullScreenButton = () =>
+    onFullScreenPress ? (
+      <FullScreenButton
+        isFullScreen={isFullScreen}
+        onPress={onFullScreenPress}
+      />
+    ) : null;
+
   const renderController = () => {
     return (
       <Animated.View
-        style={{
-          position: 'absolute',
-          alignSelf: 'center',
-          backgroundColor: theme.colors.surface,
-          borderRadius: theme.layouts.defaultRadius,
-          bottom: controllerBottomLocation,
-          padding: theme.layouts.large,
-          width: controllerWidth,
-          opacity: Platform.OS === 'android' ? 1 : opacityValue,
-        }}>
+        style={
+          isInline
+            ? {
+                alignSelf: 'center',
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.layouts.defaultRadius,
+                padding: theme.layouts.large,
+                width: controllerWidth,
+              }
+            : {
+                position: 'absolute',
+                alignSelf: 'center',
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.layouts.defaultRadius,
+                bottom: controllerBottomLocation,
+                padding: theme.layouts.large,
+                width: controllerWidth,
+                opacity: Platform.OS === 'android' ? 1 : opacityValue,
+              }
+        }>
         {isCompact ? (
           <Row justifyContent="center">{renderTransport()}</Row>
         ) : (
@@ -327,7 +360,9 @@ export default function VideoControl({
               {renderVolume(volumeSliderWidth)}
             </Expanded>
             {renderTransport()}
-            <Expanded />
+            <Expanded flexDirection="row" justifyContent="flex-end">
+              {renderFullScreenButton()}
+            </Expanded>
           </Row>
         )}
         <Row justifyContent="center">
@@ -356,14 +391,58 @@ export default function VideoControl({
         {isCompact && (
           <>
             <SizedBox.Medium height />
-            <Row justifyContent="center">
-              {renderVolume(Math.min(240, controllerWidth * 0.5))}
+            <Row justifyContent="space-between">
+              <Row alignSelf="auto">
+                {renderVolume(Math.min(240, controllerWidth * 0.5 - 24))}
+              </Row>
+              {renderFullScreenButton()}
             </Row>
           </>
         )}
       </Animated.View>
     );
   };
+
+  // The close button is screen-level in both placements: absolutely placed in
+  // the lesson screen's canvas, at the same spot. The overlay wrapper below
+  // already starts theme.layouts.large from the top, so `lift` is 0 inside it
+  // and theme.layouts.large when the button stands alone (inline).
+  const renderCloseButton = (lift: number) => (
+    <IconButton
+      onPress={onClosePress}
+      icon="close"
+      accessibilityLabel={t('button.close')}
+      buttonColor={`rgba(255,255,255, 0.8)`}
+      iconSize={theme.fontSizes.h3}
+      paddingHorizontal={theme.layouts.small}
+      paddingVertical={theme.layouts.small}
+      style={{
+        position: 'absolute',
+        // Android draws under the status bar, so the close button has to
+        // clear it (see #80); elsewhere the safe area is already applied.
+        top:
+          lift +
+          (isAndroid
+            ? insets.top + theme.layouts.large * 2
+            : theme.layouts.large),
+        right: theme.layouts.large,
+        borderRadius: 150,
+        opacity: isAndroid || isInline ? 1 : opacityValue,
+      }}
+    />
+  );
+
+  if (isInline) {
+    // Portrait on a phone: the bar is an in-flow block the lesson screen
+    // stacks directly under the video. No full-screen touch layer (nothing
+    // to tap-to-hide: the bar does not cover the video).
+    return (
+      <>
+        {renderCloseButton(theme.layouts.large)}
+        {(Platform.OS === 'web' || isAndroid) && renderController()}
+      </>
+    );
+  }
 
   return (
     <Pressable
@@ -380,26 +459,7 @@ export default function VideoControl({
         right: 0,
         opacity: isAndroid ? 1 : opacityValue,
       }}>
-      <IconButton
-        onPress={onClosePress}
-        icon="close"
-        accessibilityLabel={t('button.close')}
-        buttonColor={`rgba(255,255,255, 0.8)`}
-        iconSize={theme.fontSizes.h3}
-        paddingHorizontal={theme.layouts.small}
-        paddingVertical={theme.layouts.small}
-        style={{
-          position: 'absolute',
-          // Android draws under the status bar, so the close button has to
-          // clear it (see #80); elsewhere the safe area is already applied.
-          top: isAndroid
-            ? insets.top + theme.layouts.large * 2
-            : theme.layouts.large,
-          right: theme.layouts.large,
-          borderRadius: 150,
-          opacity: isAndroid ? 1 : opacityValue,
-        }}
-      />
+      {renderCloseButton(0)}
       {(Platform.OS === 'web' || isAndroid) && renderController()}
     </Pressable>
   );
