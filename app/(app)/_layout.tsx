@@ -1,23 +1,36 @@
 import { useAppDispatch, useAppSelector } from '@/redux';
 import {
   AuthenticationActions,
+  getAccessToken as selectAccessToken,
   getPendingResults,
   getProfile,
   getSelectedLanguage,
 } from '@/redux/slices';
-import { getAccessToken } from '@/services/secureToken';
+import { clearAccessToken, getAccessToken } from '@/services/secureToken';
+import {
+  isEntryPath,
+  LOGIN_ROUTE,
+  needsLogin,
+  restoreProfile,
+  startRoute,
+} from '@/services/session';
+import useEndSession from '@/services/hooks/useEndSession';
 import { StartScreen } from '@/screens';
 import { useApi, flushPendingResults } from '@/services';
 import { reconnectFlushAction } from '@/services/pendingResultsQueue';
 import NetInfo from '@react-native-community/netinfo';
-import { Stack } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 // Wait for a reconnect to settle before flushing: links flap (captive
 // portals, a Wi-Fi hand-off); going offline again cancels the wait.
 const RECONNECT_FLUSH_DELAY_MS = 2000;
+
+// Last resort: if the redirect for a signed-in user never takes effect, drop
+// the cover rather than hold the user behind the start screen for good.
+const START_ROUTE_COVER_MAX_MS = 4000;
 
 export default function InitialStack() {
   const api = useApi();
@@ -27,6 +40,27 @@ export default function InitialStack() {
   const profile = useAppSelector(getProfile);
   const selectedLanguage = useAppSelector(getSelectedLanguage);
   const [isReady, setIsReady] = useState(false);
+  // Where a signed-in user belongs, set once by start-up and cleared once
+  // they are there. While it is set and the app still sits on an entry route
+  // the start screen covers the stack, so the sign-in form never shows.
+  const [pendingStart, setPendingStart] = useState<string | null>(null);
+  const pathname = usePathname();
+  const accessToken = useAppSelector(selectAccessToken);
+  // No token on a protected path: see needsLogin. Only after start-up, which
+  // is what puts the restored token in the slice.
+  // The path the app was opened on. The router reports '/' for a moment
+  // while the stack mounts, before it settles on the real path, so the guard
+  // also judges the opening path until login has been reached once.
+  const [openedOn, setOpenedOn] = useState<string | undefined>(pathname);
+  const guardBlocked =
+    isReady &&
+    (needsLogin({ accessToken, pathname }) ||
+      needsLogin({ accessToken, pathname: openedOn }));
+  const [guardCoverExpired, setGuardCoverExpired] = useState(false);
+  const startRoutedRef = useRef(false);
+  const endSession = useEndSession();
+  const endSessionRef = useRef(endSession);
+  endSessionRef.current = endSession;
   // Read inside the long-lived connectivity listener below, so it sees the
   // current login state rather than the one it closed over at mount.
   const profileRef = useRef(profile);
@@ -38,6 +72,57 @@ export default function InitialStack() {
     i18next.changeLanguage(selectedLanguage);
     handleCheckAuth();
   }, []);
+
+  // A token the server refuses (another sign-in evicted it, or it carries
+  // none of the claims the API now needs) ends the session the same way
+  // sign-out does. The API client calls this once per session.
+  useEffect(() => {
+    api.setUnauthorizedHandler(() => endSessionRef.current());
+    return () => api.setUnauthorizedHandler(undefined);
+  }, [api]);
+
+  // Start-up restored a session: move a cold start (or a web reload that is
+  // still on the login screen) on to where that user belongs.
+  useEffect(() => {
+    // Not before the stack has mounted: there is nothing to navigate yet.
+    if (!isReady || !pendingStart) return;
+    if (isEntryPath(pathname)) {
+      if (!startRoutedRef.current) {
+        startRoutedRef.current = true;
+        router.replace(pendingStart);
+      }
+      const failsafe = setTimeout(
+        () => setPendingStart(null),
+        START_ROUTE_COVER_MAX_MS,
+      );
+      return () => clearTimeout(failsafe);
+    }
+    // Already somewhere else (a web reload deep in the app): leave it be.
+    setPendingStart(null);
+  }, [isReady, pendingStart, pathname]);
+
+  // The guard: whenever nobody is signed in and the app sits on a protected
+  // path (a tab opened onto /home, or a session that ended mid-lesson and a
+  // screen then navigated on), go to login. Reacts to the token itself, so
+  // it covers start-up and everything after. Cannot loop with the start-up
+  // replace above: that one only runs for a signed-in user (token present),
+  // this one only for a user with none, and /login is an entry path.
+  useEffect(() => {
+    if (pathname === LOGIN_ROUTE && openedOn) setOpenedOn(undefined);
+  }, [pathname, openedOn]);
+
+  useEffect(() => {
+    if (!guardBlocked) {
+      setGuardCoverExpired(false);
+      return;
+    }
+    router.replace(LOGIN_ROUTE);
+    const failsafe = setTimeout(
+      () => setGuardCoverExpired(true),
+      START_ROUTE_COVER_MAX_MS,
+    );
+    return () => clearTimeout(failsafe);
+  }, [guardBlocked, pathname]);
 
   // Flush the offline queue (practice/quiz results, video progress) when the
   // device comes back online — otherwise it waits for the next app start or
@@ -115,12 +200,39 @@ export default function InitialStack() {
   const handleCheckAuth = async () => {
     try {
       const accessToken = await getAccessToken();
-      if (accessToken) {
+      // The token says who is signed in. The remembered profile (web: its
+      // storage is shared by every tab, so it may be another tab's account,
+      // or gone) is kept only when it is the token's own account.
+      const restoredProfile = accessToken
+        ? restoreProfile(accessToken, profile)
+        : undefined;
+      const target = startRoute({ accessToken, profile: restoredProfile });
+      if (accessToken && target !== LOGIN_ROUTE) {
         dispatch(
-          AuthenticationActions.updateAccessToken({ accessToken, profile }),
+          AuthenticationActions.updateAccessToken({
+            accessToken,
+            profile: restoredProfile,
+          }),
         );
         await api.setHeaders({ authorization: `Bearer ${accessToken}` });
         flushPendingResults(api);
+        setPendingStart(target);
+      } else {
+        // Nobody is signed in. A token that cannot be placed is dropped, and
+        // a profile left over from a session whose token is gone (web keeps
+        // the profile across tabs, the token only in its own tab) is
+        // forgotten, so it is never shown. The offline queue is a different
+        // slice and stays: its items are flushed only for the account that
+        // queued them (isFlushableBy), and sign-out leaves it the same way.
+        if (accessToken) await clearAccessToken();
+        if (profile) {
+          dispatch(
+            AuthenticationActions.updateAccessToken({
+              accessToken: '',
+              profile: undefined,
+            }),
+          );
+        }
       }
     } finally {
       setIsReady(true);
@@ -128,13 +240,24 @@ export default function InitialStack() {
   };
 
   if (isReady === false) return <StartScreen />;
-  // if (isReady && !accessToken)
-  //   return <Redirect href="/login?isLoggedOut=true" />;
+  // Nobody is signed in on a protected path: show nothing of that screen (no
+  // remembered name, no half-loaded page) while the guard sends them to login.
+  if (guardBlocked && !guardCoverExpired) return <StartScreen />;
+  const coverStack = pendingStart !== null && isEntryPath(pathname);
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" />
-      <Stack.Screen name="(home)" />
-      <Stack.Screen name="teacher" />
-    </Stack>
+    <View style={styles.fill}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(home)" />
+        <Stack.Screen name="teacher" />
+      </Stack>
+      {coverStack ? (
+        <View style={StyleSheet.absoluteFill}>
+          <StartScreen />
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

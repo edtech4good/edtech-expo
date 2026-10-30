@@ -1,4 +1,4 @@
-import { clearAllData, useAppDispatch, useAppSelector } from '@/redux';
+import { useAppDispatch, useAppSelector } from '@/redux';
 import { useApi } from '../api/ApiContext';
 import { useState } from 'react';
 import {
@@ -23,7 +23,9 @@ import { isDevPillTouched } from '@/services/devThemeOverride';
 // Metro's CJS interop today, but one hoisted usage away from breaking).
 // Sibling hooks (usePractice, useQuiz) import the same module the same way.
 import { flushPendingResults } from '../pendingResults';
-import { setAccessToken, clearAccessToken } from '../secureToken';
+import { setAccessToken } from '../secureToken';
+import { routeForProfile } from '../session';
+import useEndSession from './useEndSession';
 
 // The four pieces of a login failure, held together so they can only ever
 // change in one render. See the `loginError` state below for why: React
@@ -150,8 +152,7 @@ export default function useAuth() {
       // await uploadContentToRpi();
       // return;
       // router.replace('/home');
-      if (profile.schooluserrole === 4) router.replace('/home');
-      else router.replace('/teacher/dashboard');
+      router.replace(routeForProfile(profile));
     } catch (e) {
       // Set as one object, in one setState call — see LoginError above.
       // Splitting this into `setError`/`setErrorStatus`/`setErrorCode`/
@@ -184,25 +185,10 @@ export default function useAuth() {
     setLoginError(EMPTY_LOGIN_ERROR);
   };
 
-  const logout = async () => {
-    // Clear the apisauce authorization header before the redux dispatch —
-    // clearAllData() resets AuthenticationSlice's accessToken, but the Api
-    // instance's headers are independent state that setHeaders() never
-    // unsets, so the token otherwise keeps authenticating requests made
-    // after logout.
-    api.clearAuthHeader();
-    await dispatch(clearAllData());
-    // clearAccessToken() itself never rejects (secureToken.ts catches and
-    // logs internally), but the finally is kept as a hard guarantee: the
-    // user must land back on /login even if SecureStore misbehaves —
-    // leaving them on an authenticated-looking screen after logout would
-    // be worse than a clear that silently failed.
-    try {
-      await clearAccessToken();
-    } finally {
-      router.replace('/login');
-    }
-  };
+  // The one path that ends a session; a refused token (app/(app)/_layout.tsx)
+  // takes it too. See endSession for the order and why it always lands on
+  // /login.
+  const logout = useEndSession();
 
   // Kept for API compatibility with existing callers of `setError` (none
   // currently call it with a non-empty message; resetError above already
