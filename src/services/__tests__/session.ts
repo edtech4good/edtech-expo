@@ -19,6 +19,8 @@ import {
   isEntryPath,
   LEARNER_HOME_ROUTE,
   LOGIN_ROUTE,
+  needsLogin,
+  profileFromToken,
   routeForProfile,
   startRoute,
   TEACHER_HOME_ROUTE,
@@ -98,6 +100,43 @@ async function main() {
     for (const p of ['/home', '/home/subjects', '/teacher/dashboard', '/library']) {
       assert.equal(isEntryPath(p), false, p);
     }
+  });
+
+  // --- the guard: nobody signed in, on a protected path -------------------
+  await check('no token on a protected path needs login (a tab opened on /home, a late navigation after eviction)', () => {
+    for (const p of ['/home', '/home/subjects', '/home/result', '/library', '/profile', '/progress', '/teacher/dashboard']) {
+      assert.equal(needsLogin({ accessToken: '', pathname: p }), true, p);
+      assert.equal(needsLogin({ accessToken: null, pathname: p }), true, p);
+      assert.equal(needsLogin({ accessToken: undefined, pathname: p }), true, p);
+    }
+  });
+
+  await check('a signed-in user never needs login, wherever they are', () => {
+    for (const p of ['/home', '/home/result', '/teacher/dashboard', '/login', '/']) {
+      assert.equal(needsLogin({ accessToken: 't', pathname: p }), false, p);
+    }
+  });
+
+  await check('no token on an entry route, or before the path is known, does not need login (no loop with the redirect to login)', () => {
+    for (const p of ['/login', '/', '', undefined, null]) {
+      assert.equal(needsLogin({ accessToken: '', pathname: p }), false, String(p));
+    }
+  });
+
+  await check('the developer tools stay reachable signed out', () => {
+    for (const p of ['/gallery', '/kit-gallery', '/drag-lab']) {
+      assert.equal(needsLogin({ accessToken: '', pathname: p }), false, p);
+    }
+  });
+
+  await check('the profile in a token is read like sign-in reads it; anything else is undefined', () => {
+    const payload = (o: unknown) => `h.${Buffer.from(JSON.stringify(o)).toString('base64url')}.s`;
+    assert.equal(profileFromToken(payload({ schooluserrole: 4, schooluserid: 'x' }))?.schooluserrole, 4);
+    assert.equal(profileFromToken(payload({ schooluserrole: 3 }))?.schooluserrole, 3);
+    assert.equal(profileFromToken(payload({ name: 'no role' })), undefined);
+    assert.equal(profileFromToken('not-a-token'), undefined);
+    assert.equal(profileFromToken(''), undefined);
+    assert.equal(profileFromToken('h.%%%.s'), undefined);
   });
 
   // --- how a session ends ------------------------------------------------
@@ -217,6 +256,43 @@ async function main() {
     gate.release!();
     await inFlight;
     assert.deepEqual(log, []);
+  });
+
+  await check('offline is not a 401: the session survives and the handler is not called', async () => {
+    const api = new Api();
+    const log = wired(api);
+    api.setHeaders({ authorization: 'Bearer restored' });
+    // An adapter that throws with no `response`: what axios does with no network.
+    // (axios still attaches the request config to that error.)
+    api.apiSauceInstance.axiosInstance.defaults.adapter = async config => {
+      throw Object.assign(new Error('Network Error'), { isAxiosError: true, code: 'ERR_NETWORK', config });
+    };
+    const outcome = await ask(api, 'lesson/x');
+    assert.ok(outcome.startsWith('rejected'), outcome);
+    assert.deepEqual(log, []);
+    // The session is still there: a real 401 afterwards ends it.
+    answerWith(api, 401);
+    await ask(api, 'lesson/x');
+    assert.deepEqual(log, ['header', 'store', 'token', 'login']);
+  });
+
+  await check('the session is forgotten before the handler runs, so a re-entrant refusal is ignored', async () => {
+    const api = new Api();
+    let calls = 0;
+    let sawSessionInsideHandler: unknown = 'not called';
+    api.setUnauthorizedHandler(() => {
+      calls += 1;
+      sawSessionInsideHandler = (api as any).sessionAuthorization;
+      // Another refused answer arriving while the handler runs (same token).
+      if (calls === 1) {
+        (api as any).notifyUnauthorized({ config: { url: 'again', headers: { authorization: 'Bearer restored' } } });
+      }
+    });
+    answerWith(api, 401);
+    api.setHeaders({ authorization: 'Bearer restored' });
+    await ask(api, 'a');
+    assert.equal(sawSessionInsideHandler, undefined);
+    assert.equal(calls, 1);
   });
 
   await check('a 401 with no session (nobody signed in) does nothing', async () => {

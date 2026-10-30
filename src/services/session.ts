@@ -8,6 +8,7 @@
  * - how a session ends (sign-out and a refused token both run `endSession`).
  */
 import type { Profile } from '@/models';
+import Decoder from '@/utils/decoder/Decoder';
 
 export const LOGIN_ROUTE = '/login';
 export const LEARNER_HOME_ROUTE = '/home';
@@ -43,6 +44,41 @@ export function startRoute(session: {
  */
 export function isEntryPath(pathname: string | null | undefined): boolean {
   return !pathname || pathname === '/' || pathname === LOGIN_ROUTE;
+}
+
+// Developer tools that are reachable on purpose without signing in (the
+// long-press on the dev theme pill opens the gallery on the login screen).
+const DEV_TOOL_PATHS = ['/gallery', '/kit-gallery', '/drag-lab'];
+
+/**
+ * The guard behind every protected screen: with no token, any path other
+ * than an entry route (or a developer tool) belongs to login. It covers a
+ * web tab opened straight onto /home, and the moment after a session ends
+ * mid-lesson, when a screen's own `router.replace('/home/result')` or
+ * `router.back()` lands on a protected path with nobody signed in.
+ */
+export function needsLogin(state: {
+  accessToken?: string | null;
+  pathname?: string | null;
+}): boolean {
+  if (state.accessToken) return false;
+  if (isEntryPath(state.pathname)) return false;
+  return !DEV_TOOL_PATHS.includes(state.pathname as string);
+}
+
+/**
+ * The profile the API put in the token's payload: the same read sign-in does.
+ * Used when a restored token has no remembered profile (web keeps the profile
+ * in storage shared by every tab, so another tab may have cleared it).
+ * Undefined for anything that is not a token with a role in it.
+ */
+export function profileFromToken(token: string): Profile | undefined {
+  try {
+    const profile = JSON.parse(Decoder(token)) as Profile;
+    return typeof profile?.schooluserrole === 'number' ? profile : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface EndSessionDeps {
