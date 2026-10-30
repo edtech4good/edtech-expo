@@ -30,7 +30,7 @@ check('landscape phone 862x359: video gets the height the bar leaves, at least 7
 
 check('the video and the bar never overlap, in either orientation, for many sizes', () => {
   for (const [w, h] of [[862, 359], [800, 360], [411, 838], [390, 844], [360, 640], [1280, 800], [300, 200]])
-    for (const bar of [0, 60, 72, 80, 130, 400]) {
+    for (const bar of [0, 60, 72, 80, 130, 400, 700]) {
       const box = fullScreenVideoBox({ width: w, height: h }, bar);
       assert.ok(box.height >= 0);
       assert.ok(box.height + bar <= Math.max(h, bar), `${w}x${h} bar ${bar}: ${box.height}`);
@@ -43,7 +43,7 @@ check('portrait phone: full width at 16:9, above the bar', () => {
 });
 
 check('portrait with a bar taller than the 16:9 leftover shrinks the video, not the bar', () => {
-  assert.equal(fullScreenVideoBox({ width: 411, height: 300 }, 130).height, 170);
+  assert.equal(fullScreenVideoBox({ width: 360, height: 500 }, 400).height, 100);
 });
 
 check('single-row bar from 640 wide, two rows below', () => {
