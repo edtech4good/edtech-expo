@@ -36,6 +36,10 @@ import ResumeVideoPopUp from './components/ResumeVideoPopUp';
 import UnsupportedItemNotice from './components/UnsupportedItemNotice';
 import { isLearningItemSupported } from '@/constants/LearningItems';
 import { StatusBar } from 'expo-status-bar';
+import {
+  BAR_HEIGHT_ESTIMATE,
+  fullScreenVideoBox,
+} from './fullScreenLayout';
 
 export default function LessonScreen() {
   const navigation = useNavigation();
@@ -89,6 +93,13 @@ export default function LessonScreen() {
   // player's initial status.
   const [fullScreen, setFullScreen] = React.useState(false);
   const fullScreenRef = React.useRef(false);
+  // Full-screen layout: the modal's measured size, and the bar's measured
+  // height. The video takes what the bar leaves (see fullScreenLayout.ts).
+  const [fsSize, setFsSize] = React.useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [fsBarHeight, setFsBarHeight] = React.useState(BAR_HEIGHT_ESTIMATE);
   const [handoff, setHandoff] = React.useState<{
     source: string;
     status: { positionMillis: number; shouldPlay: boolean };
@@ -540,11 +551,10 @@ export default function LessonScreen() {
   // floating at the foot of the screen. Landscape (tablets) keeps the overlay.
   const barInline = hasCustomBar && isPortrait;
   // In the full-screen modal there is no offline banner and no status-bar
-  // inset to clear: the video is 16:9 across the width in portrait, and the
-  // whole window in landscape.
+  // inset to clear. The video takes the room the compact bar leaves under it:
+  // full width at 16:9 in portrait, the whole remaining height in landscape.
   const fullScreenBox = {
-    width,
-    height: isPortrait ? Math.round((width * 9) / 16) : height,
+    ...fullScreenVideoBox(fsSize ?? { width, height }, fsBarHeight),
     marginTop: 0,
   };
 
@@ -581,6 +591,12 @@ export default function LessonScreen() {
           visible>
           <StatusBar hidden />
           <View
+            onLayout={e =>
+              setFsSize({
+                width: Math.round(e.nativeEvent.layout.width),
+                height: Math.round(e.nativeEvent.layout.height),
+              })
+            }
             style={{
               flex: 1,
               backgroundColor: 'black',
@@ -590,7 +606,8 @@ export default function LessonScreen() {
             <FormProvider {...methods}>
               {renderVideo(fullScreenBox)}
               <VideoControl
-                placement="overlay"
+                placement="fullscreen"
+                onBarLayout={setFsBarHeight}
                 isFullScreen
                 onPlayPausePress={handlePlay}
                 onVolumeChanged={handleSetVolume}
