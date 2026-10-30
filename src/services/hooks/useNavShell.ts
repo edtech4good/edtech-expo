@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import { navShellFor, resolveShell, NavShell } from '../navShell';
+import { useLessonMounted } from '../lessonMounted';
 import { useVideoFullScreen } from '../videoFullScreen';
 import useDeviceClass from './useDeviceClass';
 import useDesign from './useDesign';
@@ -58,11 +59,17 @@ export default function useNavShell(): {
     sidebarMinWidth: theme.breakpoints.SIDEBAR_MIN_WIDTH,
     defaultMinWidth: theme.breakpoints.DEFAULT_MIN_WIDTH,
   });
-  // Frozen while the lesson video is full screen, on every platform (see
-  // resolveShell): a width change must not remount the lesson under it.
+  // Frozen while a lesson's video screen is mounted, on every platform (see
+  // resolveShell): a width change must not remount the lesson under it, in
+  // full screen or just after leaving it.
   const videoFullScreen = useVideoFullScreen();
+  const lessonMounted = useLessonMounted();
   const frozenRef = useRef<NavShell | null>(null);
-  const resolved = resolveShell(live, videoFullScreen, frozenRef.current);
+  const resolved = resolveShell(
+    live,
+    videoFullScreen || lessonMounted,
+    frozenRef.current,
+  );
   frozenRef.current = resolved.frozen;
   const shell = resolved.shell;
   const isSidebar = shell === 'sidebar';

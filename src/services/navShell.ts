@@ -29,18 +29,21 @@ export function navShellFor(input: {
 }
 
 /**
- * While the lesson video is full screen the shell is frozen at the value it had
- * when full screen opened: turning a phone (or resizing a browser) across the
- * rail threshold would otherwise swap Tabs for Drawer in the home layout and
- * remount the lesson under the video. Returns the shell to render and the
- * frozen value to keep for the next render (null when not full screen).
+ * While a lesson's video screen is mounted (full screen or not) the shell is
+ * frozen at the value it had when the lesson opened: turning a phone (or
+ * resizing a browser) across the rail threshold would otherwise swap Tabs for
+ * Drawer in the home layout and remount the lesson under the video, and
+ * leaving full screen in the other orientation would drop the learner on Home.
+ * Leaving the lesson unfreezes it; a swap after that only remounts Home.
+ * Returns the shell to render and the frozen value to keep for the next render
+ * (null when not holding).
  */
 export function resolveShell(
   live: NavShell,
-  fullScreen: boolean,
+  hold: boolean,
   frozen: NavShell | null,
 ): { shell: NavShell; frozen: NavShell | null } {
-  if (!fullScreen) return { shell: live, frozen: null };
+  if (!hold) return { shell: live, frozen: null };
   const kept = frozen ?? live;
   return { shell: kept, frozen: kept };
 }

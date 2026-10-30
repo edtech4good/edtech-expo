@@ -44,6 +44,7 @@ import {
   mayPostNoMediaCompletion,
 } from './noMediaCompletion';
 import useFullScreenCleanup from './useFullScreenCleanup';
+import { planUnmountSave } from './unmountSave';
 
 export default function LessonScreen() {
   const navigation = useNavigation();
@@ -149,6 +150,9 @@ export default function LessonScreen() {
   // that never loaded: a reload that fails after a load (the full-screen
   // switch remounts the player; a network drop then) must not mark it watched.
   const everLoadedRef = React.useRef<boolean>(false);
+  // The last real duration this item's player reported. The unmount save falls
+  // back to it when the stored status has none (a failed reload on the web).
+  const lastGoodDurationRef = React.useRef<number | null>(null);
   const localSource = `content://com.android.externalstorage.documents/tree/primary%3Ayour-resource-path/document/primary%3Ayour-resource-path%2Fsample.mp4`;
 
   React.useEffect(() => {
@@ -157,12 +161,14 @@ export default function LessonScreen() {
 
   const handleSaveProgressAndClear = async () => {
     try {
-      const currentProgress = methods.getValues('stat.positionMillis');
-      const videoDuration = methods.getValues('stat.durationMillis');
-      if (currentProgress < 5000 || videoDuration === undefined) return;
-      const hasEnded = currentProgress > videoDuration - 5000;
+      const plan = planUnmountSave({
+        positionMillis: methods.getValues('stat.positionMillis'),
+        durationMillis: methods.getValues('stat.durationMillis'),
+        lastGoodDuration: lastGoodDurationRef.current,
+      });
+      if (!plan) return;
       console.log('WHY');
-      await saveProgress(currentProgress, hasEnded, videoDuration);
+      await saveProgress(plan.progress, plan.hasEnded, plan.duration);
     } catch (e) {
       console.log('umm: ', e);
     } finally {
@@ -203,6 +209,7 @@ export default function LessonScreen() {
     // still transitioning) could be silently skipped.
     completionPostedRef.current = false;
     everLoadedRef.current = false;
+    lastGoodDurationRef.current = null;
     fetch();
 
     return () => {
@@ -380,14 +387,19 @@ export default function LessonScreen() {
   };
 
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    // A remounted player (full screen in or out) reports "not loaded" first,
+    // and on the web "loaded" with no duration before any data. Until real
+    // media has loaded, keep the last good status so the label, the scrubber
+    // and the unmount save do not see a NaN duration or a zero position.
+    if (handoffPendingRef.current && !hasLoadedMedia(status)) return;
+    if (hasLoadedMedia(status)) {
+      handoffPendingRef.current = false;
+      everLoadedRef.current = true;
+      lastGoodDurationRef.current = status.durationMillis as number;
+    }
     // One sound at a time: when the video starts playing (our controls, the
     // native iOS ones, or autoplay), stop any question or option audio still
     // playing on the shared player.
-    // A remounted player (full screen in or out) reports "not loaded" first;
-    // keep the last real status so the label and scrubber do not jump to 0.
-    if (!status.isLoaded && handoffPendingRef.current) return;
-    if (status.isLoaded) handoffPendingRef.current = false;
-    if (hasLoadedMedia(status)) everLoadedRef.current = true;
     const wasPlaying = methods.getValues('stat.isPlaying');
     if (status.isLoaded && status.isPlaying && !wasPlaying)
       void audioManager.stop();

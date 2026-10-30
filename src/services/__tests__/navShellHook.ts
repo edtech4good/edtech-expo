@@ -31,6 +31,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 
 const useNavShell = require('../hooks/useNavShell').default;
 const { setVideoFullScreen } = require('../videoFullScreen');
+const { setLessonMounted } = require('../lessonMounted');
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -55,6 +56,7 @@ const mount = (setup: { os: string; width: number; isPhone: boolean; isCorporate
   isPhone = setup.isPhone;
   isCorporate = setup.isCorporate ?? true;
   setVideoFullScreen(false);
+  setLessonMounted(false);
   let r!: TestRenderer.ReactTestRenderer;
   act(() => { r = TestRenderer.create(React.createElement(Probe)); });
   return r;
@@ -76,14 +78,25 @@ check('web ignores the device class: a phone-sized "screen" at 862 wide is the r
   assert.equal(seen, 'rail');
   r.unmount();
 });
-check('web, full screen opened at 390: crossing 768 does not swap the shell; after exit it does', () => {
+check('web, lesson opened at 390: crossing 768 does not swap the shell, in full screen or after leaving it; after leaving the lesson it does', () => {
   const r = mount({ os: 'web', width: 390, isPhone: false });
   assert.equal(seen, 'tabs');
-  act(() => { setVideoFullScreen(true); });
+  act(() => { setLessonMounted(true); setVideoFullScreen(true); });
   width = 844; rerender(r);
   assert.equal(seen, 'tabs', 'frozen while full screen');
   act(() => { setVideoFullScreen(false); });
-  assert.equal(seen, 'rail', 'live again after exit');
+  assert.equal(seen, 'tabs', 'still frozen after Exit full screen: the lesson is still mounted');
+  act(() => { setLessonMounted(false); });
+  assert.equal(seen, 'rail', 'live again after leaving the lesson');
+  r.unmount();
+});
+check('web: full screen alone (no lesson flag) still freezes, and exit unfreezes', () => {
+  const r = mount({ os: 'web', width: 390, isPhone: false });
+  act(() => { setVideoFullScreen(true); });
+  width = 844; rerender(r);
+  assert.equal(seen, 'tabs');
+  act(() => { setVideoFullScreen(false); });
+  assert.equal(seen, 'rail');
   r.unmount();
 });
 check('native tablet: full screen opened in the rail stays the rail when narrowed', () => {

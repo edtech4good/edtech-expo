@@ -38,7 +38,7 @@
     "test:learningitems": "tsx src/constants/__tests__/learningItems.ts && tsx src/services/api/__tests__/learningItemTypesHeader.ts",
     "test:content": "tsx src/i18n/__tests__/contentText.ts && tsx src/transforms/__tests__/content.ts && tsx src/redux/__tests__/contentSelectors.ts && tsx src/screens/Practice/Corporate/__tests__/mcqTextRender.tsx && tsx src/services/api/__tests__/contentTranslationsHeader.ts",
     "test:orientation": "tsx src/services/__tests__/orientationPolicy.ts && tsx src/services/__tests__/navShell.ts && tsx src/services/__tests__/navShellHook.ts",
-    "test:fullscreen": "tsx src/screens/Lesson/__tests__/fullScreenButton.tsx && tsx src/screens/Lesson/__tests__/fullScreenLayout.ts && tsx src/screens/Lesson/__tests__/noMediaCompletion.ts && tsx src/screens/Lesson/__tests__/fullScreenCleanup.ts && tsx src/screens/Lesson/__tests__/videoControl.tsx",
+    "test:fullscreen": "tsx src/screens/Lesson/__tests__/fullScreenButton.tsx && tsx src/screens/Lesson/__tests__/fullScreenLayout.ts && tsx src/screens/Lesson/__tests__/noMediaCompletion.ts && tsx src/screens/Lesson/__tests__/unmountSave.ts && tsx src/screens/Lesson/__tests__/fullScreenCleanup.ts && tsx src/screens/Lesson/__tests__/videoControl.tsx && tsx src/screens/Lesson/__tests__/lessonScreen.tsx",
     "test:session": "tsx src/services/__tests__/session.ts",
     "test:tierchip": "tsx src/components/ui/__tests__/tierChip.tsx",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"

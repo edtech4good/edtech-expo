@@ -20,6 +20,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 
 const useFullScreenCleanup = require('../useFullScreenCleanup').default;
 const { setVideoFullScreen, isVideoFullScreen } = require('../../../services/videoFullScreen');
+const { isLessonMounted } = require('../../../services/lessonMounted');
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -53,6 +54,14 @@ check('unmounting the lesson while full screen is open clears the flag and tells
   act(() => { r.unmount(); });
   assert.equal(isVideoFullScreen(), false);
   assert.equal(left, 1);
+});
+
+check('the lesson is flagged mounted while it is open and unflagged when it unmounts (the nav shell is frozen between)', () => {
+  assert.equal(isLessonMounted(), false);
+  const r = mount();
+  assert.equal(isLessonMounted(), true);
+  act(() => { r.unmount(); });
+  assert.equal(isLessonMounted(), false);
 });
 
 check('while mounted the hook leaves the flag alone', () => {
