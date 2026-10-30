@@ -395,7 +395,8 @@ export default function LessonScreen() {
     if (hasLoadedMedia(status)) {
       handoffPendingRef.current = false;
       everLoadedRef.current = true;
-      lastGoodDurationRef.current = status.durationMillis as number;
+      lastGoodDurationRef.current = (status as AVPlaybackStatusSuccess)
+        .durationMillis as number;
     }
     // One sound at a time: when the video starts playing (our controls, the
     // native iOS ones, or autoplay), stop any question or option audio still
