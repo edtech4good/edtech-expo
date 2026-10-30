@@ -97,6 +97,12 @@ jobs:
       - name: Bilingual content (overlay, store selectors, header, corporate MCQ render)
         run: yarn test:content
 
+      - name: Orientation policy (lesson video full-screen exception)
+        run: yarn test:orientation
+
+      - name: Lesson video full-screen button (label, state, touch target)
+        run: yarn test:fullscreen
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

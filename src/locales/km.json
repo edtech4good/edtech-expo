@@ -13,7 +13,9 @@
     "forward": "ទៅមុខ ១០ វិនាទី",
     "volume": "កម្រិតសំឡេង",
     "seek": "ទីតាំងវីដេអូ",
-    "elapsedOfTotal": "{{elapsed}} ក្នុងចំណោម {{total}}"
+    "elapsedOfTotal": "{{elapsed}} ក្នុងចំណោម {{total}}",
+    "fullScreenOpen": "Full screen",
+    "fullScreenClose": "Exit full screen"
   },
   "image": {
     "unavailable": "មិនមានរូបភាព"

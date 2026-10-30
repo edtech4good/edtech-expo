@@ -14,6 +14,11 @@ export {
   getDeviceClass,
 } from './hooks/useDeviceClass';
 export { default as useOrientationPolicy } from './hooks/useOrientationPolicy';
+export {
+  isVideoFullScreen,
+  setVideoFullScreen,
+  useVideoFullScreen,
+} from './videoFullScreen';
 export { default as useNavShell } from './hooks/useNavShell';
 export { default as useFont, useFontForText } from './hooks/useFont';
 export { default as useTypeRole } from './hooks/useTypeRole';

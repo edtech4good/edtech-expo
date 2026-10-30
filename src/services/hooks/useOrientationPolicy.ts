@@ -2,12 +2,45 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
+import {
+  contradictsPolicy,
+  orientationPolicyFor,
+  OrientationKind,
+  OrientationPolicy,
+} from '../orientationPolicy';
+import { useVideoFullScreen } from '../videoFullScreen';
 import { getDeviceClass } from './useDeviceClass';
+
+const LOCKS: Record<OrientationPolicy, ScreenOrientation.OrientationLock> = {
+  portrait: ScreenOrientation.OrientationLock.PORTRAIT_UP,
+  landscape: ScreenOrientation.OrientationLock.LANDSCAPE,
+  any: ScreenOrientation.OrientationLock.ALL,
+};
+
+function kindOf(orientation: ScreenOrientation.Orientation): OrientationKind {
+  if (
+    orientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+    orientation === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
+  )
+    return 'landscape';
+  if (
+    orientation === ScreenOrientation.Orientation.PORTRAIT_UP ||
+    orientation === ScreenOrientation.Orientation.PORTRAIT_DOWN
+  )
+    return 'portrait';
+  return 'unknown';
+}
 
 /**
  * Per-device orientation policy (ROADMAP Track B): phones locked
- * PORTRAIT_UP, tablets locked LANDSCAPE. Lesson-video rotation exception
- * deferred.
+ * PORTRAIT_UP, tablets locked LANDSCAPE. The one exception is the lesson
+ * video's full screen (edtech-expo#143): while it is open a phone may turn to
+ * landscape (lock ALL), and the portrait lock is re-applied the moment it
+ * closes. The exception lives here, in the policy the listener below
+ * enforces, because a listener that re-locks portrait whenever the phone
+ * turns would undo any rotation the lesson screen allowed. The flag is
+ * videoFullScreen.ts; a JS reload resets it to false, so a reload always
+ * lands back on the portrait lock.
  *
  * Why this needs a listener, not just a one-shot lock on mount: app.json's
  * "orientation": "landscape" is applied to the Activity by Expo Go / the
@@ -40,15 +73,15 @@ import { getDeviceClass } from './useDeviceClass';
  * not misclassify a phone as a tablet — classification is not the bug here.
  */
 export default function useOrientationPolicy(): void {
+  const videoFullScreen = useVideoFullScreen();
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
     let cancelled = false;
     const deviceClass = getDeviceClass();
-    const desiredLock =
-      deviceClass === 'phone'
-        ? ScreenOrientation.OrientationLock.PORTRAIT_UP
-        : ScreenOrientation.OrientationLock.LANDSCAPE;
+    const policy = orientationPolicyFor(deviceClass, videoFullScreen);
+    const desiredLock = LOCKS[policy];
 
     const apply = () => {
       ScreenOrientation.lockAsync(desiredLock).catch(() => {
@@ -84,22 +117,8 @@ export default function useOrientationPolicy(): void {
           return;
         }
 
-        const isLandscape =
-          orientationInfo.orientation ===
-            ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
-          orientationInfo.orientation ===
-            ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
-        const isPortrait =
-          orientationInfo.orientation ===
-            ScreenOrientation.Orientation.PORTRAIT_UP ||
-          orientationInfo.orientation ===
-            ScreenOrientation.Orientation.PORTRAIT_DOWN;
-
-        if (deviceClass === 'phone' && isLandscape) {
+        if (contradictsPolicy(policy, kindOf(orientationInfo.orientation)))
           apply();
-        } else if (deviceClass === 'tablet' && isPortrait) {
-          apply();
-        }
         // UNKNOWN only appears when Android has no window/display to read; treat it as compliant.
       },
     );
@@ -109,5 +128,5 @@ export default function useOrientationPolicy(): void {
       settleTimeouts.forEach(clearTimeout);
       ScreenOrientation.removeOrientationChangeListener(subscription);
     };
-  }, []);
+  }, [videoFullScreen]);
 }
