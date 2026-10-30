@@ -1,8 +1,10 @@
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
+import { navShellFor, NavShell } from '../navShell';
+import useDeviceClass from './useDeviceClass';
 import useDesign from './useDesign';
 
-export type NavShell = 'sidebar' | 'rail' | 'tabs' | 'drawer';
+export type { NavShell };
 
 /**
  * Picks which nav shell the app's outer layout (and anything nested inside
@@ -15,7 +17,8 @@ export type NavShell = 'sidebar' | 'rail' | 'tabs' | 'drawer';
  * - 'rail'    corporate theme at tablet width (DEFAULT_MIN_WIDTH, 768, up
  *             to SIDEBAR_MIN_WIDTH) — a permanent 88pt icon NavRail
  *             (docs/design/corporate-mobile/README.md).
- * - 'tabs'    corporate theme below tablet width — a bottom tab bar
+ * - 'tabs'    corporate theme below tablet width, and on every phone
+ *             whatever its window width (see navShell.ts) — a bottom tab bar
  *             (Home, Profile) replacing the phone drawer.
  * - 'drawer'  the kids theme, at any width — the existing right-side
  *             CustomDrawer, unchanged.
@@ -41,22 +44,23 @@ export default function useNavShell(): {
   const { width } = useWindowDimensions();
   const theme = useTheme();
 
-  const isSidebar = isCorporate && width >= theme.breakpoints.SIDEBAR_MIN_WIDTH;
-  const isRail =
-    isCorporate &&
-    width >= theme.breakpoints.DEFAULT_MIN_WIDTH &&
-    width < theme.breakpoints.SIDEBAR_MIN_WIDTH;
-  const isTabs = isCorporate && width < theme.breakpoints.DEFAULT_MIN_WIDTH;
+  // Native only: on the web `screen` is whatever the browser reports (a test
+  // viewport is its own screen), so width alone keeps deciding there.
+  const { isPhone: isPhoneDevice } = useDeviceClass();
+  const isPhone = Platform.OS !== 'web' && isPhoneDevice;
+
+  const shell = navShellFor({
+    isCorporate,
+    width,
+    isPhone,
+    sidebarMinWidth: theme.breakpoints.SIDEBAR_MIN_WIDTH,
+    defaultMinWidth: theme.breakpoints.DEFAULT_MIN_WIDTH,
+  });
+  const isSidebar = shell === 'sidebar';
+  const isRail = shell === 'rail';
+  const isTabs = shell === 'tabs';
   const isDrawer = !isSidebar && !isRail && !isTabs;
   const hasPermanentNav = isSidebar || isRail;
-
-  const shell: NavShell = isSidebar
-    ? 'sidebar'
-    : isRail
-    ? 'rail'
-    : isTabs
-    ? 'tabs'
-    : 'drawer';
 
   return {
     shell,
