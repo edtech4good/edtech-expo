@@ -6,7 +6,7 @@
  * src/components/practices/__tests__/nativeStubs.ts); the interface language
  * is the real src/locales/en.json, so a key missing from it fails here too.
  *
- * Plain script run by `tsx` (package.json `test:fullscreenbutton`). Exits
+ * Plain script run by `tsx` (package.json `test:fullscreen`). Exits
  * non-zero on the first failure.
  */
 import '../../../components/practices/__tests__/nativeStubs';

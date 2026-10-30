@@ -15,7 +15,6 @@ import {
 } from 'expo-av';
 import { audioManager } from '@/components/kit/audio/audioManager';
 import { BlackVeil, Expanded, LayoutScrollView } from '@/components';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from 'styled-components/native';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -40,12 +39,16 @@ import {
   BAR_HEIGHT_ESTIMATE,
   fullScreenVideoBox,
 } from './fullScreenLayout';
+import {
+  hasLoadedMedia,
+  mayPostNoMediaCompletion,
+} from './noMediaCompletion';
+import useFullScreenCleanup from './useFullScreenCleanup';
 
 export default function LessonScreen() {
   const navigation = useNavigation();
   const video = React.useRef<Video>(null);
   const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   // The visible corporate OfflineBanner (OfflineBannerFrame, safeAreaTop on
   // this route) adds its own height above the screen; subtract it in
@@ -141,6 +144,11 @@ export default function LessonScreen() {
   // trigger (empty source, or the <Video> failing to load) could otherwise
   // fire more than once. See rpi-api#42.
   const completionPostedRef = React.useRef<boolean>(false);
+  // True once this learning item's player has really loaded media (a duration
+  // arrived). The "no playable media" completion in onError is for an item
+  // that never loaded: a reload that fails after a load (the full-screen
+  // switch remounts the player; a network drop then) must not mark it watched.
+  const everLoadedRef = React.useRef<boolean>(false);
   const localSource = `content://com.android.externalstorage.documents/tree/primary%3Ayour-resource-path/document/primary%3Ayour-resource-path%2Fsample.mp4`;
 
   React.useEffect(() => {
@@ -194,6 +202,7 @@ export default function LessonScreen() {
     // media-less completion (or the old item's onError, if the <Video> is
     // still transitioning) could be silently skipped.
     completionPostedRef.current = false;
+    everLoadedRef.current = false;
     fetch();
 
     return () => {
@@ -281,6 +290,9 @@ export default function LessonScreen() {
       // keep the last reported status
     }
     if (fullScreenRef.current !== next) return; // toggled again meanwhile
+    // Re-entering in the other orientation must not lay out one frame at the
+    // size measured last time.
+    if (!next) setFsSize(null);
     if (stat.isLoaded) {
       handoffPendingRef.current = true;
       handoffSeekRef.current = stat.positionMillis ?? 0;
@@ -312,15 +324,10 @@ export default function LessonScreen() {
     setFullScreenOpenRef.current = setFullScreenOpen;
   });
 
-  React.useEffect(() => {
-    return () => {
-      // Leaving the lesson while full screen: give the portrait lock back.
-      fullScreenRef.current = false;
-      setVideoFullScreen(false);
-      if (Platform.OS === 'web' && browserFullScreenElement())
-        document.exitFullscreen?.().catch(() => undefined);
-    };
-  }, []);
+  // Leaving the lesson while full screen gives the portrait lock back.
+  useFullScreenCleanup(() => {
+    fullScreenRef.current = false;
+  });
 
   React.useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -380,6 +387,7 @@ export default function LessonScreen() {
     // keep the last real status so the label and scrubber do not jump to 0.
     if (!status.isLoaded && handoffPendingRef.current) return;
     if (status.isLoaded) handoffPendingRef.current = false;
+    if (hasLoadedMedia(status)) everLoadedRef.current = true;
     const wasPlaying = methods.getValues('stat.isPlaying');
     if (status.isLoaded && status.isPlaying && !wasPlaying)
       void audioManager.stop();
@@ -452,24 +460,15 @@ export default function LessonScreen() {
     );
   };
 
-  // U-11: in corporate portrait the 16:9 box sits at the top on the page
-  // background, so the tab bar reads as normal chrome rather than peeking
-  // out from under a full-screen black canvas. Landscape and kids unchanged.
+  // Corporate portrait keeps the page background (U-11: the tab bar reads as
+  // normal chrome, not as something peeking out from under a black canvas).
+  // The video and its bar are one block, centred vertically on the screen like
+  // the kids layout, not top-aligned (Jesse, 30 Oct 2026, edtech-expo#143).
+  // Centred, the block never reaches the status bar, so the old Android top
+  // inset on the player is gone. Landscape keeps its full-window player.
   const isCorporatePortrait = isCorporate && isPortrait;
-  // LayoutScrollView still wraps screens in React Native's SafeAreaView,
-  // which is a no-op on Android, so this top-aligned box renders under the
-  // status bar and the close button lands behind it. Pad the player down by
-  // the real inset. On iOS, SafeAreaView already pads, so this is excluded
-  // to avoid double inset. Landscape keeps its full-window player, where the
-  // inset is 0 anyway.
-  const playerTopInset =
-    isCorporatePortrait && Platform.OS === 'android' ? insets.top : 0;
   const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
-  const canvasJustify = isCorporatePortrait
-    ? 'flex-start'
-    : isPortrait
-    ? 'center'
-    : 'flex-start';
+  const canvasJustify = isPortrait ? 'center' : 'flex-start';
 
   if (unsupportedItem) {
     return (
@@ -533,7 +532,12 @@ export default function LessonScreen() {
         // Load failure is the other "no playable media" signal (a
         // non-empty source that 404s/fails to decode) — same one-shot
         // completion as the empty-source effect above.
-        if (!completionPostedRef.current) {
+        if (
+          mayPostNoMediaCompletion({
+            everLoaded: everLoadedRef.current,
+            alreadyPosted: completionPostedRef.current,
+          })
+        ) {
           completionPostedRef.current = true;
           saveProgress(0, true, 0);
         }
@@ -567,7 +571,7 @@ export default function LessonScreen() {
           {renderVideo({
             width: playerWidth,
             height: playerHeight,
-            marginTop: playerTopInset,
+            marginTop: 0,
           })}
           <VideoControl
             placement={barInline ? 'inline' : 'overlay'}

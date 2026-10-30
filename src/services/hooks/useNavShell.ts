@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
-import { navShellFor, NavShell } from '../navShell';
+import { navShellFor, resolveShell, NavShell } from '../navShell';
+import { useVideoFullScreen } from '../videoFullScreen';
 import useDeviceClass from './useDeviceClass';
 import useDesign from './useDesign';
 
@@ -49,13 +51,20 @@ export default function useNavShell(): {
   const { isPhone: isPhoneDevice } = useDeviceClass();
   const isPhone = Platform.OS !== 'web' && isPhoneDevice;
 
-  const shell = navShellFor({
+  const live = navShellFor({
     isCorporate,
     width,
     isPhone,
     sidebarMinWidth: theme.breakpoints.SIDEBAR_MIN_WIDTH,
     defaultMinWidth: theme.breakpoints.DEFAULT_MIN_WIDTH,
   });
+  // Frozen while the lesson video is full screen, on every platform (see
+  // resolveShell): a width change must not remount the lesson under it.
+  const videoFullScreen = useVideoFullScreen();
+  const frozenRef = useRef<NavShell | null>(null);
+  const resolved = resolveShell(live, videoFullScreen, frozenRef.current);
+  frozenRef.current = resolved.frozen;
+  const shell = resolved.shell;
   const isSidebar = shell === 'sidebar';
   const isRail = shell === 'rail';
   const isTabs = shell === 'tabs';

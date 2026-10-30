@@ -8,7 +8,7 @@
  * Plain script run by `tsx` (package.json `test:orientation`).
  */
 import assert from 'node:assert/strict';
-import { navShellFor } from '../navShell';
+import { navShellFor, resolveShell } from '../navShell';
 
 const BP = { sidebarMinWidth: 1280, defaultMinWidth: 768 };
 let passed = 0;
@@ -37,5 +37,15 @@ check('corporate tablet: rail at 768..1279, sidebar from 1280, tabs below 768', 
 });
 check('kids theme is the drawer at any width, phone or not', () => {
   for (const w of [411, 862, 1280]) for (const p of [true, false]) assert.equal(shell(false, w, p), 'drawer');
+});
+
+check('resolveShell: not full screen follows the live shell and keeps nothing', () => {
+  assert.deepEqual(resolveShell('rail', false, 'tabs'), { shell: 'rail', frozen: null });
+});
+check('resolveShell: full screen freezes the shell it opened with, whatever the width does after', () => {
+  const opened = resolveShell('tabs', true, null);
+  assert.deepEqual(opened, { shell: 'tabs', frozen: 'tabs' });
+  assert.deepEqual(resolveShell('rail', true, opened.frozen), { shell: 'tabs', frozen: 'tabs' });
+  assert.deepEqual(resolveShell('sidebar', true, 'tabs'), { shell: 'tabs', frozen: 'tabs' });
 });
 console.log(`${passed} checks passed`);

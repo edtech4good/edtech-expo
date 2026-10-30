@@ -537,12 +537,10 @@ export default function VideoControl({
   );
 
   if (isFullScreenBar) {
-    return (
-      <>
-        {renderCloseButton(theme.layouts.large)}
-        {renderFullScreenBar()}
-      </>
-    );
+    // No Close (X) while full screen is open: Exit full screen (the button, or
+    // Back) is the one way out, then Close is back. A screen-reader user then
+    // hears one way out, and a tap cannot leave the lesson by accident.
+    return <>{renderFullScreenBar()}</>;
   }
 
   if (isInline) {
