@@ -55,6 +55,14 @@ function answerWith(api: Api, status: number) {
   return asked;
 }
 
+/** One GET; the transform rejects a non-ok answer, so report the outcome instead of throwing. */
+async function ask(api: Api, path: string): Promise<string> {
+  return api.apiSauceInstance.get(path).then(
+    () => 'resolved',
+    (e: any) => `rejected:${e?.status}`,
+  );
+}
+
 async function main() {
   // --- where a restored session belongs ---------------------------------
   await check('a token with a learner profile goes to the learner home', () => {
@@ -142,7 +150,7 @@ async function main() {
     const log = wired(api);
     answerWith(api, 401);
     api.setHeaders({ authorization: 'Bearer restored' });
-    await api.apiSauceInstance.get('lesson/x');
+    await ask(api, 'lesson/x');
     assert.deepEqual(log, ['header', 'store', 'token', 'login']);
   });
 
@@ -152,12 +160,22 @@ async function main() {
     answerWith(api, 401);
     api.setHeaders({ authorization: 'Bearer restored' });
     await Promise.all([
-      api.apiSauceInstance.get('a'),
-      api.apiSauceInstance.get('b'),
-      api.apiSauceInstance.get('c'),
+      ask(api, 'a'),
+      ask(api, 'b'),
+      ask(api, 'c'),
     ]);
-    await api.apiSauceInstance.get('d'); // a call from the login screen's side, after the clear
+    await ask(api, 'd'); // a call from the login screen's side, after the clear
     assert.equal(log.filter(x => x === 'login').length, 1, JSON.stringify(log));
+  });
+
+  await check('the client itself calls the handler once, even if the handler does not clear anything', async () => {
+    const api = new Api();
+    let calls = 0;
+    api.setUnauthorizedHandler(() => void (calls += 1));
+    answerWith(api, 401);
+    api.setHeaders({ authorization: 'Bearer restored' });
+    await Promise.all([ask(api, 'a'), ask(api, 'b'), ask(api, 'c')]);
+    assert.equal(calls, 1);
   });
 
   await check('the refused request still fails for its caller, with status 401', async () => {
@@ -165,11 +183,7 @@ async function main() {
     wired(api);
     answerWith(api, 401);
     api.setHeaders({ authorization: 'Bearer restored' });
-    // responseTransform throws on a non-ok answer; apisauce hands that back as the rejection.
-    const outcome = await api.apiSauceInstance.get('lesson/x').then(
-      () => 'resolved',
-      (e: any) => `rejected:${e?.status}`,
-    );
+    const outcome = await ask(api, 'lesson/x');
     assert.equal(outcome, 'rejected:401');
   });
 
@@ -197,7 +211,7 @@ async function main() {
       error.response = response;
       throw error;
     };
-    const inFlight = api.apiSauceInstance.get('slow');
+    const inFlight = ask(api, 'slow');
     await new Promise(r => setTimeout(r, 10));
     api.setHeaders({ authorization: 'Bearer new' }); // signed in again meanwhile
     gate.release!();
@@ -209,7 +223,7 @@ async function main() {
     const api = new Api();
     const log = wired(api);
     answerWith(api, 401);
-    await api.apiSauceInstance.get('org/branding').catch(() => {});
+    await ask(api, 'org/branding');
     assert.deepEqual(log, []);
   });
 
@@ -219,7 +233,7 @@ async function main() {
       const log = wired(api);
       answerWith(api, status);
       api.setHeaders({ authorization: 'Bearer restored' });
-      await api.apiSauceInstance.get('x');
+      await ask(api, 'x');
       assert.deepEqual(log, [], String(status));
     }
   });
@@ -229,9 +243,9 @@ async function main() {
     const log = wired(api);
     answerWith(api, 401);
     api.setHeaders({ authorization: 'Bearer one' });
-    await api.apiSauceInstance.get('a');
+    await ask(api, 'a');
     api.setHeaders({ authorization: 'Bearer two' });
-    await api.apiSauceInstance.get('a');
+    await ask(api, 'a');
     assert.equal(log.filter(x => x === 'login').length, 2, JSON.stringify(log));
   });
 
