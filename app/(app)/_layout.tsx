@@ -5,19 +5,25 @@ import {
   getProfile,
   getSelectedLanguage,
 } from '@/redux/slices';
-import { getAccessToken } from '@/services/secureToken';
+import { clearAccessToken, getAccessToken } from '@/services/secureToken';
+import { isEntryPath, LOGIN_ROUTE, startRoute } from '@/services/session';
+import useEndSession from '@/services/hooks/useEndSession';
 import { StartScreen } from '@/screens';
 import { useApi, flushPendingResults } from '@/services';
 import { reconnectFlushAction } from '@/services/pendingResultsQueue';
 import NetInfo from '@react-native-community/netinfo';
-import { Stack } from 'expo-router';
+import { router, Stack, usePathname } from 'expo-router';
 import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 // Wait for a reconnect to settle before flushing: links flap (captive
 // portals, a Wi-Fi hand-off); going offline again cancels the wait.
 const RECONNECT_FLUSH_DELAY_MS = 2000;
+
+// Last resort: if the redirect for a signed-in user never takes effect, drop
+// the cover rather than hold the user behind the start screen for good.
+const START_ROUTE_COVER_MAX_MS = 4000;
 
 export default function InitialStack() {
   const api = useApi();
@@ -27,6 +33,15 @@ export default function InitialStack() {
   const profile = useAppSelector(getProfile);
   const selectedLanguage = useAppSelector(getSelectedLanguage);
   const [isReady, setIsReady] = useState(false);
+  // Where a signed-in user belongs, set once by start-up and cleared once
+  // they are there. While it is set and the app still sits on an entry route
+  // the start screen covers the stack, so the sign-in form never shows.
+  const [pendingStart, setPendingStart] = useState<string | null>(null);
+  const pathname = usePathname();
+  const startRoutedRef = useRef(false);
+  const endSession = useEndSession();
+  const endSessionRef = useRef(endSession);
+  endSessionRef.current = endSession;
   // Read inside the long-lived connectivity listener below, so it sees the
   // current login state rather than the one it closed over at mount.
   const profileRef = useRef(profile);
@@ -38,6 +53,34 @@ export default function InitialStack() {
     i18next.changeLanguage(selectedLanguage);
     handleCheckAuth();
   }, []);
+
+  // A token the server refuses (another sign-in evicted it, or it carries
+  // none of the claims the API now needs) ends the session the same way
+  // sign-out does. The API client calls this once per session.
+  useEffect(() => {
+    api.setUnauthorizedHandler(() => endSessionRef.current());
+    return () => api.setUnauthorizedHandler(undefined);
+  }, [api]);
+
+  // Start-up restored a session: move a cold start (or a web reload that is
+  // still on the login screen) on to where that user belongs.
+  useEffect(() => {
+    // Not before the stack has mounted: there is nothing to navigate yet.
+    if (!isReady || !pendingStart) return;
+    if (isEntryPath(pathname)) {
+      if (!startRoutedRef.current) {
+        startRoutedRef.current = true;
+        router.replace(pendingStart);
+      }
+      const failsafe = setTimeout(
+        () => setPendingStart(null),
+        START_ROUTE_COVER_MAX_MS,
+      );
+      return () => clearTimeout(failsafe);
+    }
+    // Already somewhere else (a web reload deep in the app): leave it be.
+    setPendingStart(null);
+  }, [isReady, pendingStart, pathname]);
 
   // Flush the offline queue (practice/quiz results, video progress) when the
   // device comes back online — otherwise it waits for the next app start or
@@ -115,12 +158,17 @@ export default function InitialStack() {
   const handleCheckAuth = async () => {
     try {
       const accessToken = await getAccessToken();
-      if (accessToken) {
+      const target = startRoute({ accessToken, profile });
+      if (accessToken && target === LOGIN_ROUTE) {
+        // A token with no profile cannot be placed: treat it as signed out.
+        await clearAccessToken();
+      } else if (accessToken) {
         dispatch(
           AuthenticationActions.updateAccessToken({ accessToken, profile }),
         );
         await api.setHeaders({ authorization: `Bearer ${accessToken}` });
         flushPendingResults(api);
+        setPendingStart(target);
       }
     } finally {
       setIsReady(true);
@@ -128,13 +176,21 @@ export default function InitialStack() {
   };
 
   if (isReady === false) return <StartScreen />;
-  // if (isReady && !accessToken)
-  //   return <Redirect href="/login?isLoggedOut=true" />;
+  const coverStack = pendingStart !== null && isEntryPath(pathname);
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" />
-      <Stack.Screen name="(home)" />
-      <Stack.Screen name="teacher" />
-    </Stack>
+    <View style={styles.fill}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(home)" />
+        <Stack.Screen name="teacher" />
+      </Stack>
+      {coverStack ? (
+        <View style={StyleSheet.absoluteFill}>
+          <StartScreen />
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

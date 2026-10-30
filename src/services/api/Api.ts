@@ -142,8 +142,8 @@ const responseTransform: AsyncResponseTransform = async response => {
     console.log('Response: ', loggedResponse);
   }
 
-  // if (response.status === 404 || response.status === 401)
-  //   return router.replace('/login?isLoggedOut=true');
+  // A refused token (401) is handled one level up, in Api's own response
+  // transform (Api.notifyUnauthorized), which knows the session.
   if (!response.ok) {
     const base = response.config?.baseURL ?? '';
     const path = response.config?.url ?? '';
@@ -201,6 +201,20 @@ const responseTransform: AsyncResponseTransform = async response => {
   stampContentLanguage(response.data);
 };
 
+// Reads one header out of whatever shape axios hands back (a plain object or
+// AxiosHeaders), ignoring the casing it was set with.
+function readHeader(
+  headers: Record<string, any> | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined;
+  const flat: Record<string, any> =
+    typeof headers.toJSON === 'function' ? headers.toJSON() : headers;
+  const key = Object.keys(flat).find(k => k.toLowerCase() === name);
+  const value = key ? flat[key] : undefined;
+  return typeof value === 'string' && value ? value : undefined;
+}
+
 export default class Api {
   readonly apiSauceInstance: ApisauceInstance;
   readonly lmsApiInstance: ApisauceInstance;
@@ -251,16 +265,53 @@ export default class Api {
     });
 
     this.apiSauceInstance.addAsyncRequestTransform(requestTransform);
-    this.apiSauceInstance.addAsyncResponseTransform(responseTransform);
+    this.apiSauceInstance.addAsyncResponseTransform(async response => {
+      if (response.status === 401) this.notifyUnauthorized(response);
+      return responseTransform(response);
+    });
     this.lmsApiInstance.addAsyncRequestTransform(requestTransform);
     this.lmsApiInstance.addAsyncResponseTransform(responseTransform);
     this.sampleInstance.addAsyncRequestTransform(requestTransform);
     this.sampleInstance.addAsyncResponseTransform(responseTransform);
   }
 
+  // The bearer header the session is currently using, so a 401 can tell
+  // "the server refused this session" from "an unauthenticated call was
+  // refused" and from a late answer to a request sent under an older token.
+  private sessionAuthorization?: string;
+  private unauthorizedHandler?: () => unknown;
+
   setHeaders(headers: HEADERS): void {
     this.apiSauceInstance.setHeaders(headers);
     this.lmsApiInstance.setHeaders(headers);
+    const authorization = readHeader(headers as Record<string, any>, 'authorization');
+    if (authorization) this.sessionAuthorization = authorization;
+  }
+
+  // Registered by the app shell: called once when the server refuses (401)
+  // the token the session is using. The handler ends the session.
+  setUnauthorizedHandler(handler: (() => unknown) | undefined): void {
+    this.unauthorizedHandler = handler;
+  }
+
+  private notifyUnauthorized(response: {
+    config?: { url?: string; headers?: Record<string, any> };
+  }): void {
+    const handler = this.unauthorizedHandler;
+    const session = this.sessionAuthorization;
+    if (!handler || !session) return;
+    // Sign-in answers for itself (wrong credentials is not a dead session).
+    if (response.config?.url?.includes('auth/login')) return;
+    // Only the answer to a request that carried the current token counts.
+    if (readHeader(response.config?.headers, 'authorization') !== session) return;
+    // Forget the session before calling out, so a second refused request
+    // arriving behind this one finds nothing to end: no loop.
+    this.sessionAuthorization = undefined;
+    try {
+      Promise.resolve(handler()).catch(() => {});
+    } catch {
+      // The handler must never turn a refused request into a different error.
+    }
   }
 
   // Logout must remove the token from both apisauce instances, not just the
@@ -270,6 +321,7 @@ export default class Api {
   clearAuthHeader(): void {
     this.apiSauceInstance.deleteHeader('authorization');
     this.lmsApiInstance.deleteHeader('authorization');
+    this.sessionAuthorization = undefined;
   }
 
   /**
