@@ -36,10 +36,15 @@ const Video = React.forwardRef((props: any, ref: any) => {
   return null;
 });
 
+// The window and the nav shell the screen sits in; the checks at the end set them.
+let win = { width: 0, height: 0 };
+let nav = { isSidebar: false, isRail: false, hasPermanentNav: false };
 const selected = { lessonlearningid: 'L1', lessonlearningname: 'A video' };
 const extra: Record<string, unknown> = {
   'expo-av': { __esModule: true, Video, ResizeMode: { CONTAIN: 'contain' } },
   '@/components/kit/audio/audioManager': { audioManager: { stop: async () => undefined } },
+  '@/components/ui/NavRail': { __esModule: true, NAV_RAIL_WIDTH: 88 },
+  '@/components/ui/NavSidebar': { __esModule: true, NAV_SIDEBAR_WIDTH: 248 },
   '@/components': { __esModule: true, BlackVeil: Pass, Expanded: Pass, LayoutScrollView: Pass },
   '@react-navigation/elements': { __esModule: true, useHeaderHeight: () => 0 },
   'styled-components/native': {
@@ -69,6 +74,7 @@ const extra: Record<string, unknown> = {
     }),
     useSetting: () => ({}),
     useDesign: () => ({ isCorporate: false }),
+    useNavShell: () => nav,
     setVideoFullScreen: (v: boolean) => require('../../../services/videoFullScreen').setVideoFullScreen(v),
   },
 };
@@ -79,7 +85,7 @@ anyModule._load = function (request: string, ...rest: unknown[]) {
   if (request === 'react-native') {
     const rn = load.call(this, request, ...rest);
     // RNW's Modal needs a DOM; a pass-through that renders its children is enough here.
-    return new Proxy(rn, { get: (t, k) => (k === 'Modal' ? (p: any) => (p.visible ? h(RN.View, null, p.children) : null) : t[k]) });
+    return new Proxy(rn, { get: (t, k) => (k === 'Modal' ? (p: any) => (p.visible ? h(RN.View, null, p.children) : null) : k === 'useWindowDimensions' ? () => win : t[k]) });
   }
   return load.call(this, request, ...rest);
 };
@@ -153,6 +159,44 @@ const status = (s: any) => act(async () => { videoProps.onPlaybackStatusUpdate(s
     await act(async () => { r.unmount(); });
     await new Promise(res => setTimeout(res, 20));
     assert.deepEqual(saves, [[7000, false, 20000]]);
+  });
+
+  const flat = (st: any) => RN.StyleSheet.flatten(st);
+  const inWindow = async (w: typeof win, n: typeof nav) => {
+    win = w; nav = n;
+    try { const r = await mount(); await act(async () => { r.unmount(); }); } finally { win = { width: 0, height: 0 }; nav = { isSidebar: false, isRail: false, hasPermanentNav: false }; }
+  };
+  const SIDEBAR = { isSidebar: true, isRail: false, hasPermanentNav: true };
+  const RAIL = { isSidebar: false, isRail: true, hasPermanentNav: true };
+  const NONE = { isSidebar: false, isRail: false, hasPermanentNav: false };
+
+  await check('beside the sidebar (1600x900) the player and the bar take the room the sidebar leaves', async () => {
+    await inWindow({ width: 1600, height: 900 }, SIDEBAR);
+    assert.equal(flat(videoProps.style).width, 1352);
+    assert.equal(barProps.availableWidth, 1352);
+    assert.equal(barProps.placement, 'inline');
+    assert.ok(flat(videoProps.style).height + 150 <= 900, 'the bar fits under the video');
+  });
+
+  await check('beside the rail (1024x768) the player and the bar take the room the rail leaves', async () => {
+    await inWindow({ width: 1024, height: 768 }, RAIL);
+    assert.equal(flat(videoProps.style).width, 936);
+    assert.equal(barProps.availableWidth, 936);
+    assert.equal(barProps.placement, 'inline');
+  });
+
+  await check('a phone in portrait (390x844) is unchanged: full width, 16:9, bar stacked', async () => {
+    await inWindow({ width: 390, height: 844 }, NONE);
+    assert.equal(flat(videoProps.style).width, 390);
+    assert.equal(flat(videoProps.style).height, 219);
+    assert.equal(barProps.placement, 'inline');
+  });
+
+  await check('a phone in landscape (844x390) is unchanged: the whole window, bar over the video', async () => {
+    await inWindow({ width: 844, height: 390 }, NONE);
+    assert.equal(flat(videoProps.style).width, 844);
+    assert.equal(flat(videoProps.style).height, 390);
+    assert.equal(barProps.placement, 'overlay');
   });
 
   console.log(`${passed} checks passed`);
