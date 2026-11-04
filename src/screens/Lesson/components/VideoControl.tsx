@@ -26,6 +26,7 @@ import { useTheme } from 'styled-components/native';
 import { Image } from 'expo-image';
 import FullScreenButton from './FullScreenButton';
 import { isSingleRowBar } from '../fullScreenLayout';
+import { controlBarWidth } from '../inlinePlayerLayout';
 
 // Shared by the compact-layout threshold math and the button/slider JSX below,
 // so resizing a control can't silently desync from the breakpoint that was
@@ -54,7 +55,13 @@ interface VideoControllerProps {
    * video (the lesson screen gives the video the room the bar leaves).
    */
   placement?: 'overlay' | 'inline' | 'fullscreen';
-  /** Full-screen placement: the bar's measured height, for the video's box. */
+  /**
+   * Inline and overlay placements: the width the lesson screen really has
+   * (the window minus a permanent nav). Defaults to the window. Full screen
+   * always uses the window.
+   */
+  availableWidth?: number;
+  /** Full-screen and inline placements: the bar's measured height, for the video's box. */
   onBarLayout?: (height: number) => void;
   /** Shows the full-screen toggle (Android and web, where this bar is used). */
   isFullScreen?: boolean;
@@ -69,6 +76,7 @@ export default function VideoControl({
   onSeekChanged = () => undefined,
   onVolumeChanged = () => undefined,
   placement = 'overlay',
+  availableWidth,
   onBarLayout,
   isFullScreen = false,
   onFullScreenPress,
@@ -86,13 +94,21 @@ export default function VideoControl({
     defaultValues: { disabled: false },
   });
 
-  const { width } = useWindowDimensions();
-  const controllerWidth = useBreakpoint({
-    mobile: width,
-    phablet: width,
-    desktop: 720,
-    tablet: 720,
-  });
+  const { width: windowWidth } = useWindowDimensions();
+  // The full-screen bar fills the whole window; the others fit the screen.
+  const width =
+    isFullScreenBar || availableWidth === undefined
+      ? windowWidth
+      : availableWidth;
+  const controllerWidth = controlBarWidth(
+    useBreakpoint({
+      mobile: width,
+      phablet: width,
+      desktop: 720,
+      tablet: 720,
+    }),
+    width,
+  );
 
   const controllerBottomLocation = useMemo(() => theme.layouts.large * 2, []);
   const volumeSliderWidth = useMemo(
@@ -344,6 +360,11 @@ export default function VideoControl({
   const renderController = () => {
     return (
       <Animated.View
+        onLayout={
+          isInline && onBarLayout
+            ? e => onBarLayout(Math.round(e.nativeEvent.layout.height))
+            : undefined
+        }
         style={
           isInline
             ? {
