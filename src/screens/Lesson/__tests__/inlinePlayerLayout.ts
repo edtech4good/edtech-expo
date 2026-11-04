@@ -82,6 +82,16 @@ check('portrait tablet beside the rail: 16:9 of the room left, orientation from 
   assert.deepEqual(l.box, { width: 712, height: 401 });
 });
 
+check('a landscape window stays landscape even when the nav leaves the room narrower than tall', () => {
+  const l = inlinePlayerLayout({
+    window: { width: 1300, height: 1200 },
+    navWidth: SIDEBAR,
+    offlineBannerHeight: 0,
+  });
+  assert.equal(l.isPortrait, false);
+  assert.deepEqual(l.box, { width: 1052, height: 1200 });
+});
+
 check('the box never goes negative when the nav is wider than the window', () => {
   const l = inlinePlayerLayout({
     window: { width: 200, height: 100 },
