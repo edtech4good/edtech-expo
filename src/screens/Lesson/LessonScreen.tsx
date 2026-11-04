@@ -588,8 +588,9 @@ export default function LessonScreen() {
     />
   );
 
-  // Portrait on a phone: the bar stacks directly under the video instead of
-  // floating at the foot of the screen. Landscape (tablets) keeps the overlay.
+  // The bar stacks directly under the video instead of floating at the foot of
+  // the screen in portrait (a phone) and beside a permanent nav (a desktop or a
+  // tablet). Only a landscape phone, with no permanent nav, keeps the overlay.
   const barInline = hasCustomBar && (isPortrait || barBelow);
   // In the full-screen modal there is no offline banner and no status-bar
   // inset to clear. The video takes the room the compact bar leaves under it:

@@ -48,9 +48,10 @@ interface VideoControllerProps {
   onClosePress?: () => void;
   /**
    * 'overlay' (default): the bar floats over the bottom of the screen, as in
-   * landscape. 'inline': portrait on a phone, where the bar is an ordinary
-   * block the lesson screen lays out directly under the video, so it never
-   * sits at the foot of the screen with a gap between. 'fullscreen': the
+   * landscape on a phone. 'inline': portrait, or beside a permanent nav, where
+   * the bar is an ordinary block the lesson screen lays out directly under the
+   * video, so it never sits at the foot of the screen with a gap between.
+   * 'fullscreen': the
    * compact bar under the video in the full-screen modal; it never covers the
    * video (the lesson screen gives the video the room the bar leaves).
    */
@@ -566,8 +567,8 @@ export default function VideoControl({
   }
 
   if (isInline) {
-    // Portrait on a phone: the bar is an in-flow block the lesson screen
-    // stacks directly under the video. No full-screen touch layer (nothing
+    // Portrait, or beside a permanent nav: the bar is an in-flow block the
+    // lesson screen stacks directly under the video. No full-screen touch layer (nothing
     // to tap-to-hide: the bar does not cover the video).
     return (
       <>
