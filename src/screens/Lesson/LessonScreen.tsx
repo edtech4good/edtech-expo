@@ -28,8 +28,11 @@ import {
   useLearning,
   useSetting,
   useDesign,
+  useNavShell,
   setVideoFullScreen,
 } from '@/services';
+import { NAV_RAIL_WIDTH } from '@/components/ui/NavRail';
+import { NAV_SIDEBAR_WIDTH } from '@/components/ui/NavSidebar';
 import { LessonLearning } from '@/models';
 import ResumeVideoPopUp from './components/ResumeVideoPopUp';
 import UnsupportedItemNotice from './components/UnsupportedItemNotice';
@@ -39,6 +42,10 @@ import {
   BAR_HEIGHT_ESTIMATE,
   fullScreenVideoBox,
 } from './fullScreenLayout';
+import {
+  INLINE_BAR_HEIGHT_ESTIMATE,
+  inlinePlayerLayout,
+} from './inlinePlayerLayout';
 import {
   hasLoadedMedia,
   mayPostNoMediaCompletion,
@@ -59,17 +66,34 @@ export default function LessonScreen() {
   const theme = useTheme();
   const { isCorporate } = useDesign();
   const controllerOpacity = React.useMemo(() => new Animated.Value(1), []);
-  // Phone portrait (ROADMAP Track B, phone learner path): a full-width 16:9
-  // box centred vertically. Landscape keeps the full-window player.
-  const isPortrait = height > width;
-  const playerWidth = width;
-  const playerHeight = isPortrait
-    ? Math.round((width * 9) / 16)
-    : height - offlineBannerHeight;
-  const isNativeDevice = React.useMemo(() => Platform.OS !== 'web', []);
   // The custom bar (VideoControl) is rendered on Android and web; iOS keeps
   // its native controls, so it gets neither the inline bar nor our button.
   const hasCustomBar = Platform.OS === 'android' || Platform.OS === 'web';
+  // The screen sits beside the corporate theme's permanent nav (sidebar or
+  // rail), so it has the window minus that nav, not the whole window. The nav
+  // comes from the same hook the outer layout uses, so the two cannot drift.
+  // Phone portrait (ROADMAP Track B, phone learner path): a full-width 16:9
+  // box centred vertically. Landscape keeps the full-height player.
+  const { isSidebar, isRail, hasPermanentNav } = useNavShell();
+  const [inlineBarHeight, setInlineBarHeight] = React.useState(
+    INLINE_BAR_HEIGHT_ESTIMATE,
+  );
+  const navWidth = isSidebar ? NAV_SIDEBAR_WIDTH : isRail ? NAV_RAIL_WIDTH : 0;
+  // Beside a permanent nav (a desktop or a tablet) the bar stacks under the
+  // video rather than floating over its lower part; a phone keeps its layout.
+  const barBelow = hasPermanentNav && hasCustomBar;
+  const {
+    availableWidth,
+    isPortrait,
+    box: { width: playerWidth, height: playerHeight },
+  } = inlinePlayerLayout({
+    window: { width, height },
+    navWidth,
+    offlineBannerHeight,
+    barBelow,
+    barHeight: inlineBarHeight,
+  });
+  const isNativeDevice = React.useMemo(() => Platform.OS !== 'web', []);
   let blurTimeOut: NodeJS.Timeout;
   // const [videoSource, ]
 
@@ -481,7 +505,7 @@ export default function LessonScreen() {
   // inset on the player is gone. Landscape keeps its full-window player.
   const isCorporatePortrait = isCorporate && isPortrait;
   const canvasColor = isCorporatePortrait ? theme.colors.background : 'black';
-  const canvasJustify = isPortrait ? 'center' : 'flex-start';
+  const canvasJustify = isPortrait || barBelow ? 'center' : 'flex-start';
 
   if (unsupportedItem) {
     return (
@@ -564,9 +588,10 @@ export default function LessonScreen() {
     />
   );
 
-  // Portrait on a phone: the bar stacks directly under the video instead of
-  // floating at the foot of the screen. Landscape (tablets) keeps the overlay.
-  const barInline = hasCustomBar && isPortrait;
+  // The bar stacks directly under the video instead of floating at the foot of
+  // the screen in portrait and beside a permanent nav (a desktop or a tablet).
+  // Without a permanent nav, landscape keeps the overlay.
+  const barInline = hasCustomBar && (isPortrait || barBelow);
   // In the full-screen modal there is no offline banner and no status-bar
   // inset to clear. The video takes the room the compact bar leaves under it:
   // full width at 16:9 in portrait, the whole remaining height in landscape.
@@ -588,6 +613,8 @@ export default function LessonScreen() {
           })}
           <VideoControl
             placement={barInline ? 'inline' : 'overlay'}
+            availableWidth={availableWidth}
+            onBarLayout={barInline ? setInlineBarHeight : undefined}
             onPlayPausePress={handlePlay}
             onVolumeChanged={handleSetVolume}
             onForwardPress={handleSeekForward}
