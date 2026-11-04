@@ -112,6 +112,28 @@ for (const os of ['android', 'web'] as const) {
   });
 }
 
+// The bar fits the room the screen has (the window minus a permanent nav). The
+// stub breakpoint says 800; the bar is never wider than the room it is given.
+const barWidths = (r: ReactTestRenderer): number[] => {
+  const out: number[] = [];
+  r.root.findAll(n => {
+    const st = RN.StyleSheet.flatten(n.props?.style);
+    if (st && st.backgroundColor === '#fff' && typeof st.width === 'number') out.push(st.width);
+    return false;
+  });
+  return out;
+};
+for (const os of ['android', 'web'] as const) {
+  check(`${os}: the inline bar is capped at the room beside the nav`, () => {
+    const w = barWidths(render(os, { ...fsProps, placement: 'inline', availableWidth: 680 }));
+    assert.ok(w.length > 0 && w.every(x => x === 680), w.join('|'));
+  });
+  check(`${os}: with no room given the bar keeps the breakpoint width`, () => {
+    const w = barWidths(render(os, { ...fsProps, placement: 'inline' }));
+    assert.ok(w.length > 0 && w.every(x => x === 800), w.join('|'));
+  });
+}
+
 check('ios keeps the native controls: no full-screen button, only Close', () => {
   const l = labels(render('ios', fsProps));
   assert.ok(!l.includes('Full screen'), l.join('|'));

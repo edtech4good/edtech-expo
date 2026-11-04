@@ -100,15 +100,16 @@ export default function VideoControl({
     isFullScreenBar || availableWidth === undefined
       ? windowWidth
       : availableWidth;
-  const controllerWidth = controlBarWidth(
-    useBreakpoint({
-      mobile: width,
-      phablet: width,
-      desktop: 720,
-      tablet: 720,
-    }),
-    width,
-  );
+  const breakpointWidth = useBreakpoint({
+    mobile: width,
+    phablet: width,
+    desktop: 720,
+    tablet: 720,
+  });
+  const controllerWidth =
+    isFullScreenBar || availableWidth === undefined
+      ? breakpointWidth
+      : controlBarWidth(breakpointWidth, availableWidth);
 
   const controllerBottomLocation = useMemo(() => theme.layouts.large * 2, []);
   const volumeSliderWidth = useMemo(
