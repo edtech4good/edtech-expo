@@ -54,6 +54,10 @@ interface LoginError {
   // string.
   code?: string;
   errormessage?: string;
+  // apisauce's `problem` (NETWORK_ERROR, TIMEOUT_ERROR, ...) when the
+  // request got no response at all, so the screen can show its own
+  // localized "can't connect" copy instead of the thrown message.
+  problem?: string;
 }
 
 const EMPTY_LOGIN_ERROR: LoginError = {
@@ -61,6 +65,7 @@ const EMPTY_LOGIN_ERROR: LoginError = {
   status: undefined,
   code: undefined,
   errormessage: undefined,
+  problem: undefined,
 };
 
 export default function useAuth() {
@@ -80,6 +85,7 @@ export default function useAuth() {
     status: errorStatus,
     code: errorCode,
     errormessage: errorMessage,
+    problem: errorProblem,
   } = loginError;
 
   const { uploadContentToCloud, uploadContentToRpi } = useSyncContent();
@@ -162,13 +168,19 @@ export default function useAuth() {
       // misfiring the generic-error modal ahead of the correct inline
       // wrong-credentials field error.
       const err = e as
-        | { status?: number; code?: string; errormessage?: string }
+        | {
+            status?: number;
+            code?: string;
+            errormessage?: string;
+            problem?: string;
+          }
         | undefined;
       setLoginError({
         message: `${e}`,
         status: err?.status,
         code: err?.code,
         errormessage: err?.errormessage,
+        problem: err?.problem,
       });
     } finally {
       setIsLogginIn(false);
@@ -211,5 +223,6 @@ export default function useAuth() {
     errorStatus,
     errorCode,
     errorMessage,
+    errorProblem,
   };
 }

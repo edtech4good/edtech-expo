@@ -25,6 +25,7 @@ import {
 import { useAuth, useDesign, useFont, useSetting } from '@/services';
 import { isOnlineOnly } from '@/utils';
 import { useLocalSearchParams } from 'expo-router';
+import { loginErrorMessageKey } from './loginErrorMessage';
 import _ from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -151,6 +152,7 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     errorStatus,
     errorCode,
     errorMessage,
+    errorProblem,
   } = useAuth();
   const { isLoggedOut } = useLocalSearchParams();
   const { requestStoragePermission, updateResourcePath } = useSetting();
@@ -200,14 +202,16 @@ export default function LoginScreen({ devPassword, devUsername }: Props) {
     // Every other failure — network/unreachable, 5xx, 429, and non-credential
     // 400s — keeps the existing modal here, for both themes.
     if (isCorporate && isWrongCredentialsError) return;
-    // 429 rarely carries a usable body message, and apisauce/axios's own
-    // fallback text ("Request failed with status code 429") isn't fit for
-    // this modal — show the localized friendly copy instead, for both
-    // themes (kids kept the raw message here before this fix).
-    const modalMessage =
-      errorStatus === 429 ? t('screen.login.tooManyAttemptsError') : error;
-    modalRef.current.show(modalMessage);
-  }, [error, errorStatus, isWrongCredentialsError, isCorporate, t]);
+    // A 429 and a request that got no response at all both carry text
+    // that isn't fit for this modal (axios' "Request failed with status
+    // code 429"; Api.ts's English developer hint) — show the localized
+    // friendly copy instead, for both themes.
+    const messageKey = loginErrorMessageKey({
+      status: errorStatus,
+      problem: errorProblem,
+    });
+    modalRef.current.show(messageKey ? t(messageKey) : error);
+  }, [error, errorStatus, errorProblem, isWrongCredentialsError, isCorporate, t]);
 
   // Corporate-only: rpi-api's wrong-credentials failure becomes the
   // handoff's combined field error state instead of the modal above — both
