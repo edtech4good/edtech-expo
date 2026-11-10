@@ -118,6 +118,7 @@
       "passwordRequiredError": "សូមបញ្ចូលពាក្យសម្ងាត់",
       "invalidCredentialsError": "ឈ្មោះអ្នកប្រើ ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ។ សូមព្យាយាមម្តងទៀត។",
       "tooManyAttemptsError": "ការព្យាយាមច្រើនពេក។ សូមរង់ចាំមួយភ្លែត ហើយព្យាយាមម្តងទៀត។",
+      "cannotConnectError": "មិនអាចភ្ជាប់ទៅកាន់ប្រព័ន្ធបានទេ។ សូមពិនិត្យការភ្ជាប់អ៊ីនធឺណិតរបស់អ្នក ហើយព្យាយាមម្តងទៀត។",
       "languageSwitchLabel": "ភាសា",
       "englishOption": "English",
       "khmerOption": "ភាសាខ្មែរ",

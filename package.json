@@ -40,6 +40,7 @@
     "test:orientation": "tsx src/services/__tests__/orientationPolicy.ts && tsx src/services/__tests__/navShell.ts && tsx src/services/__tests__/navShellHook.ts",
     "test:fullscreen": "tsx src/screens/Lesson/__tests__/fullScreenButton.tsx && tsx src/screens/Lesson/__tests__/fullScreenLayout.ts && tsx src/screens/Lesson/__tests__/inlinePlayerLayout.ts && tsx src/screens/Lesson/__tests__/noMediaCompletion.ts && tsx src/screens/Lesson/__tests__/unmountSave.ts && tsx src/screens/Lesson/__tests__/fullScreenCleanup.ts && tsx src/screens/Lesson/__tests__/videoControl.tsx && tsx src/screens/Lesson/__tests__/lessonScreen.tsx",
     "test:session": "tsx src/services/__tests__/session.ts",
+    "test:login": "tsx src/screens/Login/__tests__/loginErrorMessage.ts",
     "test:tierchip": "tsx src/components/ui/__tests__/tierChip.tsx",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },

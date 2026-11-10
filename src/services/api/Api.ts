@@ -1,3 +1,4 @@
+import { isNetworkProblem } from './networkProblem';
 import {
   BaselineCurriculumPayload,
   CourseIndexResponse,
@@ -149,16 +150,17 @@ const responseTransform: AsyncResponseTransform = async response => {
     const path = response.config?.url ?? '';
     const fullUrl = `${base}${path}`;
     const problem = response.problem;
-    if (
-      problem === 'NETWORK_ERROR' ||
-      problem === 'CONNECTION_ERROR' ||
-      problem === 'TIMEOUT_ERROR'
-    ) {
+    if (isNetworkProblem(problem)) {
+      // The setup hints are for developers only. Screens that show this to
+      // a learner should classify on `.problem` and show their own
+      // localized copy (see LoginScreen's loginErrorMessageKey).
       const err = new Error(
-        `Cannot reach API at ${fullUrl || '(missing EXPO_PUBLIC_BASE_URL)'}. ` +
-          'Is edtech-lms-rpi-api running on that host/port (Lane C: http://127.0.0.1:3001)? ' +
-          'After changing .env, restart Metro with npx expo start -c. ' +
-          'On a phone or some emulators, use your computer LAN IP instead of localhost.',
+        __DEV__
+          ? `Cannot reach API at ${fullUrl || '(missing EXPO_PUBLIC_BASE_URL)'}. ` +
+              'Is edtech-lms-rpi-api running on that host/port (Lane C: http://127.0.0.1:3001)? ' +
+              'After changing .env, restart Metro with npx expo start -c. ' +
+              'On a phone or some emulators, use your computer LAN IP instead of localhost.'
+          : 'Cannot reach the server.',
       );
       (err as any).status = response.status;
       (err as any).problem = response.problem;
