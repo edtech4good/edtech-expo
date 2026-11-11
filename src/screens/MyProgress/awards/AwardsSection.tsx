@@ -16,6 +16,7 @@ import {
   AwardGroup,
   AwardListItem,
   buildAwardsView,
+  displayPercent,
   earnedDateWording,
   isNewAward,
   localiseAwardsOverview,
@@ -41,7 +42,7 @@ function useEarnedText() {
 
 function ProgressTrack({ percent, label }: { percent: number; label: string }) {
   const theme = useTheme();
-  const clamped = Math.min(100, Math.max(0, percent));
+  const clamped = displayPercent(percent);
   return (
     <View
       accessible={false}
@@ -86,7 +87,7 @@ function AwardRow({
   if (item.kind === 'earned') {
     sub = earnedText(item.earnedAt, item.approximate);
   } else {
-    const percent = Math.floor(item.progress);
+    const percent = displayPercent(item.progress);
     sub =
       percent > 0
         ? t('awards.progressToEarn', {

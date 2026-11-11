@@ -17,6 +17,20 @@ function num(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * A level's points % for display: clamped to 0-100 (the server passes it
+ * through uncapped, and it can be odd), rounded like the app's other
+ * percentages (progress summary's toPercent): a value short of 100 never
+ * reads 100, and a value above 0 never reads 0.
+ */
+export function displayPercent(progress: unknown): number {
+  const n = Math.min(100, Math.max(0, num(progress)));
+  const r = Math.round(n);
+  if (n < 100 && r === 100) return 99;
+  if (n > 0 && r === 0) return 1;
+  return r;
+}
+
 export function normaliseAwardsOverview(
   studentId: string,
   raw: RawAwardsOverview,

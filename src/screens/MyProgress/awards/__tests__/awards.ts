@@ -14,6 +14,7 @@ import { combinedReducers } from '../../../../redux/CombinedReducers';
 import {
   allAwardIds,
   buildAwardsView,
+  displayPercent,
   decideSeen,
   earnedDateWording,
   findAward,
@@ -168,6 +169,22 @@ check('normalise: string progress, missing fields, clamping', () => {
   assert.equal(o.curricula[0].levels[0].progress, 55.5);
   assert.equal(o.curricula[0].levels[0].awardable, true);
   assert.equal(o.curricula[0].levels[1].progress, 100);
+});
+
+check('displayPercent clamps to 0-100 and rounds like the app', () => {
+  assert.equal(displayPercent(250), 100);
+  assert.equal(displayPercent(-5), 0);
+  assert.equal(displayPercent('abc'), 0);
+  assert.equal(displayPercent(NaN), 0);
+  assert.equal(displayPercent(62.5), 63);
+  assert.equal(displayPercent(99.7), 99); // short of 100 never reads 100
+  assert.equal(displayPercent(0.2), 1); // above 0 never reads 0
+  assert.equal(displayPercent(100), 100);
+  const o = normaliseAwardsOverview('s', { curricula: [{ curid: 'c', curriculumname: 'C', grades: [{ gradeid: 'g', levels: [
+    { levelid: 'x', levelname: 'X', progress: 400 }, { levelid: 'y', levelname: 'Y', progress: -3 },
+  ] }] }] });
+  assert.equal(o.curricula[0].levels[0].progress, 100);
+  assert.equal(o.curricula[0].levels[1].progress, 0);
 });
 
 check('findAward finds live and earned-elsewhere awards', () => {
