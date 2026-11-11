@@ -5,6 +5,7 @@ import {
   CourseResponse,
   CurriculumResponse,
   ProgressSummaryResponse,
+  AwardsOverviewResponse,
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
@@ -385,6 +386,17 @@ export default class Api {
   > {
     return this.apiSauceInstance.get<ProgressSummaryResponse>(
       'student/progress/summary',
+    );
+  }
+
+  // Awards overview: every awardable level of the learner's curricula with its
+  // progress and award (if earned), plus awards kept from levels that are no
+  // longer live. Same envelope as the progress summary.
+  async fetchAwardsOverview(): Promise<
+    ApiResponse<AwardsOverviewResponse, AwardsOverviewResponse>
+  > {
+    return this.apiSauceInstance.get<AwardsOverviewResponse>(
+      'student/awards/overview',
     );
   }
 

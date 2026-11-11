@@ -42,6 +42,7 @@
     "test:session": "tsx src/services/__tests__/session.ts",
     "test:login": "tsx src/screens/Login/__tests__/loginErrorMessage.ts",
     "test:tierchip": "tsx src/components/ui/__tests__/tierChip.tsx",
+    "test:awards": "tsx src/screens/MyProgress/awards/__tests__/awards.ts",
     "test:locales": "node scripts/check-locales.mjs --self-test && node scripts/check-locales.mjs"
   },
   "dependencies": {

@@ -1,4 +1,5 @@
 import {
+  BackButton,
   CustomDrawer,
   DrawerButton,
   LogoutButton,
@@ -12,7 +13,7 @@ import { getSelectedLanguage } from '@/redux/slices';
 import { useFont, useNavShell } from '@/services';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
@@ -124,6 +125,19 @@ export default function Home() {
           }}
         />
         <Tabs.Screen
+          name="progress/award"
+          options={{
+            ...phoneHeaderOptions,
+            // Pushed from the Awards section of My progress: no tab of its
+            // own (href: null), back goes to My progress, not to the first tab.
+            href: null,
+            title: t('awards.detailTitle'),
+            headerLeft: () => (
+              <BackButton onPress={() => router.navigate('/progress')} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
             ...phoneHeaderOptions,
@@ -221,6 +235,21 @@ export default function Home() {
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
           title: t('screen.myProgress.title'),
+        }}
+      />
+      <Drawer.Screen
+        name="progress/award"
+        options={{
+          // Award detail, pushed from My progress. Always has a header so the
+          // permanent rail/sidebar shells get a way back as well.
+          headerShown: true,
+          headerLeft: () => (
+            <BackButton onPress={() => router.navigate('/progress')} />
+          ),
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: theme.colors.customAppBar },
+          title: t('awards.detailTitle'),
         }}
       />
       <Drawer.Screen

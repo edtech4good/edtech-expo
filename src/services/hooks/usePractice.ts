@@ -3,12 +3,15 @@ import { useApi } from '../api/ApiContext';
 import _ from 'lodash';
 import { LessonPracticeResource, PracticeResult } from '@/models';
 import { submitResult } from '../pendingResults';
+import { ensureAwardsBaseline, refreshAwardsAfterResult } from '../awards';
+import useDesign from './useDesign';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { overlayQuestionRows } from '@/transforms/Content';
 
 export default function usePractice(lessonLearningId: string) {
   const api = useApi();
+  const { isCorporate } = useDesign();
   const [isFetching, setIsFetching] = useState(false);
   const language = useAppSelector(getSelectedLanguage);
   // Raw rows (translations included); the screens read the overlay of the
@@ -29,12 +32,17 @@ export default function usePractice(lessonLearningId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: PracticeResult) =>
-    submitResult(api, {
+  const saveResult = async (results: PracticeResult) => {
+    // Corporate only: awards live in My progress, which the kids app lacks.
+    if (isCorporate) await ensureAwardsBaseline(api);
+    const submitted = await submitResult(api, {
       kind: 'practice',
       lessonId: lessonLearningId,
       payload: results,
     });
+    if (isCorporate) refreshAwardsAfterResult(api, submitted.synced);
+    return submitted;
+  };
 
   return { fetch, saveResult, questions, isFetching };
 }

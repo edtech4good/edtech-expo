@@ -14,17 +14,8 @@ import {
 } from 'redux-persist';
 
 import { combinedReducers } from './CombinedReducers';
-import {
-  authenticationSlice,
-  selectionSlice,
-  settingSlice,
-  pendingResultSlice,
-  activityProgressSlice,
-  lessonCacheSlice,
-  levelStepsSlice,
-  librarySlice,
-  progressSlice,
-} from './slices';
+import { authenticationSlice } from './slices';
+import { persistWhitelist } from './persistWhitelist';
 import { setAccessToken } from '@/services/secureToken';
 
 const logger = createLogger({
@@ -57,17 +48,7 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: [
-    authenticationSlice.name,
-    selectionSlice.name,
-    settingSlice.name,
-    pendingResultSlice.name,
-    activityProgressSlice.name,
-    lessonCacheSlice.name,
-    levelStepsSlice.name,
-    librarySlice.name,
-    progressSlice.name,
-  ],
+  whitelist: persistWhitelist,
   transforms: [authTransform],
   // Wait for AsyncStorage however long it takes. redux-persist's default 5 s
   // timeout rehydrates with EMPTY state when the read is slow (a cold start on

@@ -17,6 +17,7 @@ import { activityProgressSlice } from './slices/ActivityProgressSlice';
 import { lessonCacheSlice } from './slices/LessonCacheSlice';
 import { levelStepsSlice } from './slices/LevelStepsSlice';
 import { progressSlice } from './slices/ProgressSlice';
+import { awardsSlice } from './slices/AwardsSlice';
 
 export const combinedReducers = combineReducers({
   [authenticationSlice.name]: authenticationSlice.reducer,
@@ -35,4 +36,5 @@ export const combinedReducers = combineReducers({
   [levelStepsSlice.name]: levelStepsSlice.reducer,
   [librarySlice.name]: librarySlice.reducer,
   [progressSlice.name]: progressSlice.reducer,
+  [awardsSlice.name]: awardsSlice.reducer,
 });

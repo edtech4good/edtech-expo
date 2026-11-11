@@ -44,3 +44,5 @@ export { default as useSyncContent } from './hooks/useSyncContent';
 export { default as useProgressSummary } from './hooks/useProgressSummary';
 export * from './offlineBannerHeight';
 export * from './pendingResults';
+export { default as useAwardsOverview } from './hooks/useAwardsOverview';
+export * from './awards';

@@ -3,12 +3,15 @@ import { useApi } from '../api/ApiContext';
 import { LessonQuizResource, QuizResult } from '@/models';
 import _ from 'lodash';
 import { submitResult } from '../pendingResults';
+import { ensureAwardsBaseline, refreshAwardsAfterResult } from '../awards';
+import useDesign from './useDesign';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { overlayQuestionRows } from '@/transforms/Content';
 
 export default function useQuiz(lessonQuizId: string) {
   const api = useApi();
+  const { isCorporate } = useDesign();
   const [isFetching, setIsFetching] = useState(false);
   const language = useAppSelector(getSelectedLanguage);
   // Raw rows (translations included); the screens read the overlay of the
@@ -28,12 +31,17 @@ export default function useQuiz(lessonQuizId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: QuizResult) =>
-    submitResult(api, {
+  const saveResult = async (results: QuizResult) => {
+    // Corporate only: awards live in My progress, which the kids app lacks.
+    if (isCorporate) await ensureAwardsBaseline(api);
+    const submitted = await submitResult(api, {
       kind: 'quiz',
       lessonId: lessonQuizId,
       payload: results,
     });
+    if (isCorporate) refreshAwardsAfterResult(api, submitted.synced);
+    return submitted;
+  };
 
   return { fetch, saveResult, isFetching, questions };
 }
