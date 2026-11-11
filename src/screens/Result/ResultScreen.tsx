@@ -24,7 +24,6 @@ import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
-import AwardEarnedSheet from '../MyProgress/awards/AwardEarnedSheet';
 import CorporateResult from './CorporateResult';
 import { resultBand } from './resultBand';
 
@@ -74,17 +73,14 @@ export default function ResultScreen() {
       .join(' · ');
 
     return (
-      <>
-        <CorporateResult
-          band={resultBand(hasPassed, percentage)}
-          score={score}
-          maxScore={maxScore}
-          percentage={percentage}
-          metaLine={metaLine}
-          onFinish={handleFinishPress}
-        />
-        <AwardEarnedSheet />
-      </>
+      <CorporateResult
+        band={resultBand(hasPassed, percentage)}
+        score={score}
+        maxScore={maxScore}
+        percentage={percentage}
+        metaLine={metaLine}
+        onFinish={handleFinishPress}
+      />
     );
   }
 
