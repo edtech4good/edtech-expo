@@ -5,21 +5,35 @@ import {
   getSelectedLanguage,
   getStudentAwards,
 } from '@/redux/slices';
-import { useFont, useTypeRole } from '@/services';
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useAwardsOverview, useFont, useTypeRole } from '@/services';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, View } from 'react-native';
+import { BackHandler, ScrollView, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 import AwardBadge, { useBadgeColor } from './AwardBadge';
-import { earnedDateWording, findAward, localiseAwardsOverview } from './awardsLogic';
+import {
+  awardColorIndex,
+  earnedDateWording,
+  findAward,
+  localiseAwardsOverview,
+} from './awardsLogic';
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({
+  label,
+  value,
+  valueLanguage,
+}: {
+  label: string;
+  value: string;
+  /** Language of `value` when it is content text (programme name). */
+  valueLanguage?: string;
+}) {
   const theme = useTheme();
   const caption = useTypeRole('caption');
   const body = useTypeRole('body');
-  const semi = useFont('semi', 'body');
+  const semi = useFont('semi', 'body', valueLanguage);
   return (
     <View
       accessible
@@ -54,7 +68,10 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 /**
  * Award detail, pushed from a row in My progress. Opening it marks the award
- * seen (clears its "New" chip). No share, no certificate link.
+ * seen (clears its "New" chip). No share, no certificate link. Opened cold (a
+ * restart, a deep link) with nothing cached it fetches the overview and shows
+ * "Loading" until the award, or "not available", is known. Android's hardware
+ * back goes to My progress (BackHandler below), like the header's back button.
  */
 export default function AwardDetailScreen() {
   const theme = useTheme();
@@ -64,6 +81,7 @@ export default function AwardDetailScreen() {
   const profile = useAppSelector(getProfile);
   const studentId = profile?.studentid;
   const language = useAppSelector(getSelectedLanguage);
+  const { loading, refresh } = useAwardsOverview({ onlyIfMissing: true });
   const rawOverview = useAppSelector(getStudentAwards(studentId))?.overview;
   const overview = useMemo(
     () => localiseAwardsOverview(rawOverview, language),
@@ -73,33 +91,60 @@ export default function AwardDetailScreen() {
     () => (id ? findAward(overview, String(id)) : undefined),
     [overview, id],
   );
-  const groupIndex = Math.max(
-    0,
-    (overview?.curricula ?? []).findIndex(c => c.name === award?.curriculumName),
+  const color = useBadgeColor(
+    award ? awardColorIndex(overview, award.awardId) : 0,
   );
-  const color = useBadgeColor(groupIndex);
-  const title = useTypeRole('screenTitle');
+  const title = useTypeRole('screenTitle', award?.levelNameLanguage);
   const body = useTypeRole('body');
   const caption = useTypeRole('caption');
 
+  // Android hardware back: to My progress, not to the first tab.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        router.navigate('/progress');
+        return true;
+      });
+      return () => sub.remove();
+    }, []),
+  );
+
+  // A cached overview that does not hold this award (it was earned after the
+  // last fetch): look once more before saying it is not available.
+  const refetchedRef = useRef(false);
+  useEffect(() => {
+    if (id && !award && rawOverview && !refetchedRef.current) {
+      refetchedRef.current = true;
+      refresh();
+    }
+  }, [id, award, rawOverview, refresh]);
+
   useEffect(() => {
     if (studentId && award) {
-      dispatch(AwardsActions.markAwardsSeen({ studentId, ids: [award.awardId] }));
+      dispatch(
+        AwardsActions.markAwardsSeen({ studentId, ids: [award.awardId] }),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, award?.awardId]);
 
   if (!award) {
     return (
-      <View style={{ flex: 1, padding: 24, backgroundColor: theme.colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          padding: 24,
+          backgroundColor: theme.colors.background,
+        }}>
         <Text
+          accessibilityLiveRegion="polite"
           style={{
             fontFamily: body.fontFamily,
             fontSize: body.fontSize,
             lineHeight: body.lineHeight,
             color: theme.colors.onSurface,
           }}>
-          {t('awards.notFound')}
+          {loading ? t('awards.loading') : t('awards.notFound')}
         </Text>
       </View>
     );
@@ -135,7 +180,11 @@ export default function AwardDetailScreen() {
         </Text>
       </View>
       <View>
-        <Fact label={t('awards.programme')} value={award.curriculumName} />
+        <Fact
+          label={t('awards.programme')}
+          value={award.curriculumName}
+          valueLanguage={award.curriculumNameLanguage}
+        />
         {award.number > 0 && award.totalInProgramme > 0 && (
           <Fact
             label={t('awards.module')}

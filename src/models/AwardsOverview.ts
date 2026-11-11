@@ -2,7 +2,10 @@
 // the wire contract; normalise through normaliseAwardsOverview before the
 // redux store or the UI sees them.
 
-export type RawTranslations = Record<string, Record<string, string> | null | undefined> | null;
+export type RawTranslations = Record<
+  string,
+  Record<string, string> | null | undefined
+> | null;
 
 export interface RawAward {
   studentawardid: string;
@@ -76,6 +79,12 @@ export interface AwardLevel {
   translations: RawTranslations;
   gradeTranslations: RawTranslations;
   contentLanguage: string | null;
+  /** Language of the grade's base text (its own stamp, else the level's). */
+  gradeContentLanguage: string | null;
+  /** Set by localiseAwardsOverview: the language of the text now in levelName (typography). */
+  levelNameLanguage?: string;
+  /** Set by localiseAwardsOverview: the language of the text now in gradeName. */
+  gradeNameLanguage?: string;
   /** ISO string; null when not earned (or the server sent none) */
   earnedAt: string | null;
   approximate: boolean;
@@ -86,6 +95,8 @@ export interface AwardsCurriculum {
   name: string;
   translations: RawTranslations;
   contentLanguage: string | null;
+  /** Set by localiseAwardsOverview: the language of the text now in name. */
+  nameLanguage?: string;
   /** Levels in the server's order (grade, then level order). */
   levels: AwardLevel[];
 }
@@ -99,6 +110,12 @@ export interface AwardElsewhere {
   gradeName: string;
   translations: RawTranslations;
   contentLanguage: string | null;
+  /** Set by localiseAwardsOverview: the language of the text now in levelName. */
+  levelNameLanguage?: string;
+  /** ...in curriculumName. */
+  curriculumNameLanguage?: string;
+  /** ...in gradeName. */
+  gradeNameLanguage?: string;
   earnedAt: string | null;
   approximate: boolean;
 }

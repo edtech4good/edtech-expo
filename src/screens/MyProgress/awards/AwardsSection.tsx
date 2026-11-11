@@ -27,6 +27,8 @@ export interface AwardsSectionProps {
   seenAwardIds: string[] | null;
   loading: boolean;
   error: boolean;
+  /** The learning server has no awards (404): the section hides, quietly. */
+  unsupported?: boolean;
   isStale: boolean;
   onRetry: () => void;
 }
@@ -81,6 +83,7 @@ function AwardRow({
   const semi = useFont('semi', 'body');
   const earnedText = useEarnedText();
   const color = useBadgeColor(group.index);
+  const nameFont = useFont('semi', 'body', item.levelNameLanguage);
 
   const earned = item.kind === 'earned';
   let sub: string;
@@ -125,7 +128,7 @@ function AwardRow({
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           style={{
-            fontFamily: semi,
+            fontFamily: nameFont,
             fontSize: body.fontSize,
             lineHeight: body.lineHeight,
             color: theme.colors.onBackground,
@@ -203,7 +206,7 @@ function GroupBlock({
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const display = useTypeRole('cardTitle');
+  const display = useTypeRole('cardTitle', group.nameLanguage);
   const caption = useTypeRole('caption');
   return (
     <View style={{ gap: 8 }}>
@@ -255,6 +258,7 @@ export default function AwardsSection({
   seenAwardIds,
   loading,
   error,
+  unsupported = false,
   isStale,
   onRetry,
 }: AwardsSectionProps) {
@@ -269,6 +273,9 @@ export default function AwardsSection({
     () => buildAwardsView(localiseAwardsOverview(overview, language)),
     [overview, language],
   );
+
+  // An older learning server without awards: no section, no error, no Retry.
+  if (unsupported) return null;
 
   const countLine =
     view.earnedTotal === 0
@@ -301,7 +308,12 @@ export default function AwardsSection({
           accessibilityLabel={t('awards.retry')}
           onPress={onRetry}
           style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text style={{ fontFamily: semi, fontSize: body.fontSize, color: theme.colors.primary }}>
+          <Text
+            style={{
+              fontFamily: semi,
+              fontSize: body.fontSize,
+              color: theme.colors.primary,
+            }}>
             {t('awards.retry')}
           </Text>
         </Pressable>

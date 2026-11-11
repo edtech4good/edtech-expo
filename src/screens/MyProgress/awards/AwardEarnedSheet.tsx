@@ -1,63 +1,86 @@
 import { AppButton } from '@/components/ui';
 import { useAppDispatch, useAppSelector } from '@/redux';
 import {
+  AwardSheetActions,
   AwardsActions,
+  getAwardSheet,
   getProfile,
   getSelectedLanguage,
   getStudentAwards,
+  liveAwardSheetIds,
 } from '@/redux/slices';
-import { useFont, useTypeRole } from '@/services';
+import { useDesign, useFont, useTypeRole } from '@/services';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 
 import AwardBadge, { useBadgeColor } from './AwardBadge';
-import { findAward, localiseAwardsOverview } from './awardsLogic';
+import {
+  awardColorIndex,
+  displayPercent,
+  findAward,
+  localiseAwardsOverview,
+} from './awardsLogic';
 
 /**
- * "Award earned" bottom sheet over the corporate result screen. It shows when
- * the awards slice holds a queued award (queued only by a refetch after a
- * result the server accepted, see awardsLogic.decideSeen). Closing it, by
- * either button, marks that award seen. Offline results queue nothing, so
- * nothing shows. One award at a time; a second one follows when the first is
- * closed.
+ * "Award earned" bottom sheet, mounted ONCE at the corporate home layout
+ * (app/(app)/(home)/_layout.tsx) so it shows over whichever screen the learner
+ * is on, quiz result or practice result alike. It shows the first award in the
+ * in-memory queue (AwardSheetSlice), which only a result the server accepted
+ * can fill (services/awardsFlow). Closing it, by either button, marks the
+ * award seen. Offline results queue nothing, so nothing shows. One award at a
+ * time; the next follows when the first is closed. Entries expire and are
+ * dropped rather than shown late; the queue is cleared on logout and when the
+ * learner changes.
  */
 export default function AwardEarnedSheet() {
   const theme = useTheme();
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { isCorporate } = useDesign();
   const studentId = useAppSelector(getProfile)?.studentid;
   const entry = useAppSelector(getStudentAwards(studentId));
+  const sheet = useAppSelector(getAwardSheet);
   const language = useAppSelector(getSelectedLanguage);
   const overview = useMemo(
     () => localiseAwardsOverview(entry?.overview, language),
     [entry?.overview, language],
   );
-  const awardId = entry?.sheetAwardIds?.[0];
+  const awardId = isCorporate
+    ? liveAwardSheetIds(sheet, studentId, Date.now())[0]
+    : undefined;
   const award = useMemo(
     () => (awardId ? findAward(overview, awardId) : undefined),
     [overview, awardId],
   );
-  const groupIndex = Math.max(
-    0,
-    (overview?.curricula ?? []).findIndex(
-      c => c.name === award?.curriculumName,
-    ),
-  );
-  const color = useBadgeColor(groupIndex);
-  const display = useTypeRole('cardTitle');
+  const color = useBadgeColor(awardId ? awardColorIndex(overview, awardId) : 0);
+  const display = useTypeRole('cardTitle', award?.levelNameLanguage);
   const body = useTypeRole('body');
+  const curriculumBody = useTypeRole('body', award?.curriculumNameLanguage);
   const caption = useTypeRole('caption');
   const eyebrow = useFont('semi', 'body');
 
-  if (!studentId || !awardId) return null;
-  // A queued id the overview no longer knows: drop it quietly.
-  if (!award) {
-    dispatch(AwardsActions.markAwardsSeen({ studentId, ids: [awardId] }));
-    return null;
-  }
+  // Housekeeping, never during render: a queue that belongs to another
+  // learner, expired entries, and an id the overview no longer knows.
+  useEffect(() => {
+    if (!sheet) return;
+    if (sheet.studentId !== null && sheet.studentId !== (studentId ?? null)) {
+      dispatch(AwardSheetActions.clearAwardSheet());
+      return;
+    }
+    if (sheet.queue.some(q => q.expiresAt <= Date.now())) {
+      dispatch(AwardSheetActions.dropExpiredAwardSheet({ now: Date.now() }));
+    }
+  }, [sheet, studentId, dispatch]);
+  useEffect(() => {
+    if (studentId && awardId && !award) {
+      dispatch(AwardsActions.markAwardsSeen({ studentId, ids: [awardId] }));
+    }
+  }, [studentId, awardId, award, dispatch]);
+
+  if (!studentId || !awardId || !award) return null;
 
   const close = () =>
     dispatch(AwardsActions.markAwardsSeen({ studentId, ids: [awardId] }));
@@ -65,7 +88,8 @@ export default function AwardEarnedSheet() {
     close();
     router.navigate('/progress');
   };
-  const percent = award.progress === null ? null : Math.floor(award.progress);
+  const percent =
+    award.progress === null ? null : displayPercent(award.progress);
 
   return (
     <Modal transparent animationType="slide" visible onRequestClose={close}>
@@ -119,9 +143,9 @@ export default function AwardEarnedSheet() {
           </Text>
           <Text
             style={{
-              fontFamily: body.fontFamily,
-              fontSize: body.fontSize,
-              lineHeight: body.lineHeight,
+              fontFamily: curriculumBody.fontFamily,
+              fontSize: curriculumBody.fontSize,
+              lineHeight: curriculumBody.lineHeight,
               color: theme.colors.onSurfaceVariant,
               textAlign: 'center',
             }}>

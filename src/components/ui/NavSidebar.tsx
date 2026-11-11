@@ -1,5 +1,6 @@
 import { Images } from '@/assets';
 import {
+  activeNavRouteName,
   corporateStudentNavItems,
   progressNavItem,
   teacherNavItems,
@@ -262,7 +263,9 @@ export default function NavSidebar(props: DrawerContentComponentProps) {
   const { profile, logout } = useAuth();
   const { downloadContentFromRpi } = useSyncContent();
 
-  const activeRouteName = props.state.routes[props.state.index]?.name;
+  const activeRouteName = activeNavRouteName(
+    props.state.routes[props.state.index]?.name,
+  );
   const isStudent = profile?.schooluserrole === 4;
 
   const navItems = useMemo(

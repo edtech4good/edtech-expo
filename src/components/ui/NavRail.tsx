@@ -1,6 +1,7 @@
 import { Images as EdtechImages } from '@/assets_edtech';
 import { Images } from '@/assets';
 import {
+  activeNavRouteName,
   corporateStudentNavItems,
   progressNavItem,
   teacherNavItems,
@@ -112,7 +113,9 @@ export default function NavRail(props: DrawerContentComponentProps) {
   const { profile, logout } = useAuth();
   const { downloadContentFromRpi } = useSyncContent();
 
-  const activeRouteName = props.state.routes[props.state.index]?.name;
+  const activeRouteName = activeNavRouteName(
+    props.state.routes[props.state.index]?.name,
+  );
 
   // Students: Home, Library, My progress, Profile. Library and My progress
   // are corporate-only, so they come from corporateStudentNavItems and are

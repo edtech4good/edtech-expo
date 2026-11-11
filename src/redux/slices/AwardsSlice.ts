@@ -8,8 +8,6 @@ export interface StudentAwardsState {
   overview?: AwardsOverview;
   /** null until the first successful fetch (then every award found is "seen"). */
   seenAwardIds: string[] | null;
-  /** Awards whose "Award earned" sheet is waiting to be shown (oldest first). */
-  sheetAwardIds: string[];
 }
 
 interface Props {
@@ -22,14 +20,12 @@ const initialState: Props = { byStudent: {} };
 
 const entry = (state: Props, studentId: string): StudentAwardsState => {
   state.byStudent ??= {};
-  return (state.byStudent[studentId] ??= {
-    seenAwardIds: null,
-    sheetAwardIds: [],
-  });
+  return (state.byStudent[studentId] ??= { seenAwardIds: null });
 };
 
 // Persisted (Store.ts whitelist) so My progress shows the last-known awards
-// offline and "seen" survives a restart.
+// offline and "seen" survives a restart. The "Award earned" sheet queue is NOT
+// here: it lives in AwardSheetSlice, which is never persisted.
 export const awardsSlice = createSlice({
   name,
   initialState,
@@ -39,13 +35,11 @@ export const awardsSlice = createSlice({
       action: PayloadAction<{
         overview: AwardsOverview;
         seenAwardIds: string[];
-        sheetAwardIds: string[];
       }>,
     ) => {
       const e = entry(state, action.payload.overview.studentId);
       e.overview = action.payload.overview;
       e.seenAwardIds = action.payload.seenAwardIds;
-      e.sheetAwardIds = action.payload.sheetAwardIds;
     },
     markAwardsSeen: (
       state,
@@ -53,12 +47,6 @@ export const awardsSlice = createSlice({
     ) => {
       const e = entry(state, action.payload.studentId);
       e.seenAwardIds = markSeen(e.seenAwardIds, action.payload.ids);
-      e.sheetAwardIds = e.sheetAwardIds.filter(
-        id => !action.payload.ids.includes(id),
-      );
-    },
-    clearAwardsSheet: (state, action: PayloadAction<{ studentId: string }>) => {
-      entry(state, action.payload.studentId).sheetAwardIds = [];
     },
   },
   extraReducers: builder => {

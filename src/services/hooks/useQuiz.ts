@@ -3,7 +3,8 @@ import { useApi } from '../api/ApiContext';
 import { LessonQuizResource, QuizResult } from '@/models';
 import _ from 'lodash';
 import { submitResult } from '../pendingResults';
-import { ensureAwardsBaseline, refreshAwardsAfterResult } from '../awards';
+import { refreshAwardsAfterResult } from '../awards';
+import { saveResultThenAwards } from '../awardsFlow';
 import useDesign from './useDesign';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
@@ -31,17 +32,21 @@ export default function useQuiz(lessonQuizId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: QuizResult) => {
-    // Corporate only: awards live in My progress, which the kids app lacks.
-    if (isCorporate) await ensureAwardsBaseline(api);
-    const submitted = await submitResult(api, {
-      kind: 'quiz',
-      lessonId: lessonQuizId,
-      payload: results,
+  // The save is exactly the pre-awards one (enqueue, then flush). Corporate
+  // only, and only once the server has accepted it, awards are looked for in
+  // the background; that check is never awaited here (awardsFlow).
+  const saveResult = (results: QuizResult) =>
+    saveResultThenAwards({
+      submit: () =>
+        submitResult(api, {
+          kind: 'quiz',
+          lessonId: lessonQuizId,
+          payload: results,
+        }),
+      enabled: isCorporate,
+      startMs: results.starttime,
+      afterSynced: startMs => refreshAwardsAfterResult(api, startMs),
     });
-    if (isCorporate) refreshAwardsAfterResult(api, submitted.synced);
-    return submitted;
-  };
 
   return { fetch, saveResult, isFetching, questions };
 }

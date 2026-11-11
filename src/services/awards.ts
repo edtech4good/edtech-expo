@@ -1,72 +1,36 @@
 import { store } from '@/redux';
-import { AwardsActions, getProfile, getStudentAwards } from '@/redux/slices';
+import { getProfile, getStudentAwards } from '@/redux/slices';
 import {
-  allAwardIds,
-  decideSeen,
-  normaliseAwardsOverview,
-  shouldCheckAwardsAfterResult,
-} from '@/screens/MyProgress/awards/awardsLogic';
+  checkAwardsAfterResult,
+  fetchAwards,
+  type AwardsFetchEnv,
+  type AwardsFetchOutcome,
+} from './awardsFlow';
 import type Api from './api/Api';
 
-const BASELINE_WAIT_MS = 3000;
+/** The awards flow (awardsFlow.ts) wired to the real store and API. */
+function realEnv(api: Api): AwardsFetchEnv {
+  return {
+    fetchOverview: () =>
+      api.fetchAwardsOverview() as ReturnType<AwardsFetchEnv['fetchOverview']>,
+    studentId: () => getProfile(store.getState())?.studentid,
+    seenAwardIds: studentId =>
+      getStudentAwards(studentId)(store.getState())?.seenAwardIds ?? null,
+    dispatch: action =>
+      store.dispatch(action as Parameters<typeof store.dispatch>[0]),
+    now: () => Date.now(),
+  };
+}
 
-/**
- * Fetch the awards overview and store it, applying the seen/new rule
- * (awardsLogic.decideSeen). Returns false (cache untouched) when offline, on a
- * server error or on an unusable body.
- */
-export async function fetchAndStoreAwards(
-  api: Api,
-  trigger: 'result' | 'refresh',
-): Promise<boolean> {
-  const studentId = getProfile(store.getState())?.studentid;
-  if (!studentId) return false;
-  try {
-    const response = await api.fetchAwardsOverview();
-    const payload = response.data?.data;
-    if (!response.ok || !response.data || response.data.error || !payload) {
-      return false;
-    }
-    // The learner may have changed while the request was out.
-    if (getProfile(store.getState())?.studentid !== studentId) return false;
-    const overview = normaliseAwardsOverview(studentId, payload);
-    const prev = getStudentAwards(studentId)(store.getState());
-    const decision = decideSeen({
-      prevSeen: prev?.seenAwardIds ?? null,
-      prevSheet: prev?.sheetAwardIds ?? [],
-      awardIds: allAwardIds(overview),
-      trigger,
-    });
-    store.dispatch(AwardsActions.setAwardsOverview({ overview, ...decision }));
-    return true;
-  } catch {
-    return false;
-  }
+/** Fetch and store the overview (My progress, the award detail). Never throws. */
+export function fetchAndStoreAwards(api: Api): Promise<AwardsFetchOutcome> {
+  return fetchAwards(realEnv(api));
 }
 
 /**
- * Before the first result is submitted on a device: take the baseline (every
- * award already earned counts as seen) so the award that THIS result earns is
- * recognised as new instead of being swallowed by the first-fetch rule. Never
- * blocks submitting for more than a few seconds, never throws.
+ * After a result the server accepted: refetch in the background so an award
+ * it earned can raise the sheet. Returns at once; never throws.
  */
-export async function ensureAwardsBaseline(api: Api): Promise<void> {
-  const studentId = getProfile(store.getState())?.studentid;
-  if (!studentId) return;
-  if (getStudentAwards(studentId)(store.getState())?.seenAwardIds) return;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const wait = new Promise<void>(resolve => {
-    timer = setTimeout(resolve, BASELINE_WAIT_MS);
-  });
-  await Promise.race([fetchAndStoreAwards(api, 'refresh'), wait]);
-  clearTimeout(timer);
-}
-
-/**
- * After a result: when the server accepted it (not left in the offline
- * queue), refetch so a newly earned award can raise its sheet. Fire and forget.
- */
-export function refreshAwardsAfterResult(api: Api, synced: boolean): void {
-  if (!shouldCheckAwardsAfterResult(synced)) return;
-  fetchAndStoreAwards(api, 'result').catch(() => {});
+export function refreshAwardsAfterResult(api: Api, startMs: number): void {
+  checkAwardsAfterResult(realEnv(api), startMs);
 }

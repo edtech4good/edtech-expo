@@ -15,3 +15,4 @@ export * from './ActivityProgressSlice';
 export * from './LibrarySlice';
 export * from './ProgressSlice';
 export * from './AwardsSlice';
+export * from './AwardSheetSlice';

@@ -8,12 +8,13 @@ import {
   NAV_RAIL_WIDTH,
   NAV_SIDEBAR_WIDTH,
 } from '@/components';
+import AwardEarnedSheet from '@/screens/MyProgress/awards/AwardEarnedSheet';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { useFont, useNavShell } from '@/services';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
-import { Tabs, router } from 'expo-router';
+import { Tabs, router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
@@ -30,13 +31,28 @@ const TAB_BAR_BASE_HEIGHT_KM = 64;
 const TAB_BAR_PADDING_TOP_KM = 8;
 const TAB_BAR_PADDING_BOTTOM_KM = 6;
 
+// The "Award earned" sheet is mounted once, here at the home layout, next to
+// whichever shell is showing (it hides itself unless the design is corporate),
+// so it appears over any screen of the learner's: after a quiz or a practice.
 export default function Home() {
+  return (
+    <>
+      <HomeShell />
+      <AwardEarnedSheet />
+    </>
+  );
+}
+
+function HomeShell() {
   const theme = useTheme();
   const { t } = useTranslation();
   const font = useFont('semi');
   const { isRail, isSidebar, isTabs, hasPermanentNav } = useNavShell();
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const insets = useSafeAreaInsets();
+  // The award detail is a pushed screen with no tab of its own; while it is
+  // open the Progress tab stays lit (NavRail/NavSidebar map the route too).
+  const onAwardDetail = usePathname().startsWith('/progress/award');
 
   // Phone tab headers (My progress and Profile share one look).
   const phoneHeaderOptions = {
@@ -113,6 +129,9 @@ export default function Home() {
           options={{
             ...phoneHeaderOptions,
             title: t('screen.myProgress.title'),
+            ...(onAwardDetail
+              ? { tabBarInactiveTintColor: theme.colors.primary }
+              : {}),
             tabBarTestID: 'tab-progress',
             tabBarAccessibilityLabel: t('screen.myProgress.title'),
             tabBarIcon: ({ color, size }) => (
