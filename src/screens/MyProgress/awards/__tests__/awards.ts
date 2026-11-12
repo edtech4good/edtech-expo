@@ -35,6 +35,8 @@ import {
 import {
   allAwardIds,
   awardColorIndex,
+  certificateOnLevel,
+  overviewNeedsRecognition,
   awardsEarnedByResult,
   buildAwardsView,
   displayPercent,
@@ -286,7 +288,7 @@ check('missing or bad date falls back to plain "Earned"', () => {
 
 
 // ------------------------------------------- numbering, percent, colour, language
-check('badge number and "n of total" count only the levels the section shows', () => {
+check('badge number is the level\'s position in the full order, hidden levels included', () => {
   const raw: RawAwardsOverview = {
     curricula: [{
       curid: 'c', curriculumname: 'C',
@@ -304,11 +306,11 @@ check('badge number and "n of total" count only the levels the section shows', (
   const numbers = Object.fromEntries(
     g.items.map(i => [i.kind === 'earned' ? i.awardId : i.levelId, i.number]),
   );
-  assert.deepEqual(numbers, { x5: 3, x2: 1, l4: 2 });
+  assert.deepEqual(numbers, { x5: 5, x2: 2, l4: 4 });
   const found = findAward(o, 'x2')!;
-  assert.equal(found.number, 1);
-  assert.equal(found.totalInProgramme, 3);
-  assert.equal(findAward(o, 'x5')!.number, 3, 'list, sheet and detail agree');
+  assert.equal(found.number, 2);
+  assert.equal(found.totalInProgramme, 5);
+  assert.equal(findAward(o, 'x5')!.number, 5, 'list, sheet and detail agree');
 });
 
 check('the sheet percent is displayPercent of the level progress (as the list rounds)', () => {
@@ -816,6 +818,124 @@ const WITH_NEW = (at: string, approx = false): RawAwardsOverview =>
     assert.deepEqual(Object.keys(s.byStudent).sort(), ['s1', 's2']);
     assert.deepEqual(s.byStudent.s1.seenAwardIds, ['a1']);
     assert.deepEqual(awardsSlice.reducer(s, clearAllData()).byStudent, {});
+  });
+
+  // Level screen certificate line: only a curriculum set to certificate for levels.
+  const recOverview = (recognition: unknown) =>
+    normaliseAwardsOverview('s1', {
+      curricula: [
+        {
+          curid: 'c1',
+          curriculumname: 'Course',
+          recognition: recognition as never,
+          grades: [{ gradeid: 'g1', levels: [lvl('lv1', 1, 0, true)] }],
+        },
+      ],
+    });
+  const rec = (level: unknown) => ({ level, grade: 'none', curriculum: 'none' });
+
+  check('certificateOnLevel: level recognition certificate -> certificate wording', () => {
+    const ov = recOverview(rec('certificate'));
+    assert.equal(certificateOnLevel(ov, { levelId: 'lv1' }), true);
+    assert.equal(certificateOnLevel(ov, { curriculumId: 'c1' }), true);
+  });
+
+  check('certificateOnLevel: award and none -> plain count', () => {
+    assert.equal(certificateOnLevel(recOverview(rec('award')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('none')), { levelId: 'lv1' }), false);
+    // grade/curriculum certificate does not promise a level certificate
+    const other = recOverview({ level: 'none', grade: 'certificate', curriculum: 'certificate' });
+    assert.equal(certificateOnLevel(other, { levelId: 'lv1' }), false);
+  });
+
+  check('certificateOnLevel: no overview, unknown level, absent or unknown recognition -> plain count', () => {
+    const ov = recOverview(rec('certificate'));
+    assert.equal(certificateOnLevel(undefined, { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(null, { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(ov, { levelId: 'nope' }), false);
+    assert.equal(certificateOnLevel(ov, { curriculumId: 'nope' }), false);
+    assert.equal(certificateOnLevel(ov, {}), false);
+    assert.equal(certificateOnLevel(recOverview(undefined), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(null), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview({}), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('Certificate')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('gold')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec(7)), { levelId: 'lv1' }), false);
+    // an overview cached before the field existed
+    assert.equal(certificateOnLevel(OV, { levelId: 'lv1' }), false);
+  });
+
+  check('overviewNeedsRecognition: only a cached overview with no recognition anywhere', () => {
+    assert.equal(overviewNeedsRecognition(undefined), false);
+    assert.equal(overviewNeedsRecognition(null), false);
+    assert.equal(overviewNeedsRecognition(OV), true);
+    assert.equal(overviewNeedsRecognition(recOverview(undefined)), true);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('none'))), false);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('certificate'))), false);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('gold'))), true);
+    assert.equal(overviewNeedsRecognition(normaliseAwardsOverview('s1', { curricula: [] })), false);
+  });
+
+  const twoCur = (recA: unknown, awardedA: boolean) =>
+    normaliseAwardsOverview('s1', {
+      curricula: [
+        {
+          curid: 'a', curriculumname: 'A', recognition: recA as never,
+          grades: [{ gradeid: 'g', levels: [
+            lvl('a1', 1, 90, true),
+            lvl('a2', 2, 100, true, awardedA ? { id: 'ax', at: '2026-10-03T12:00:00Z' } : null),
+          ] }],
+        },
+      ],
+    });
+
+  check('no-award recognition: unearned levels contribute nothing, an earned award stays', () => {
+    for (const r of ['none', 'certificate']) {
+      const empty = buildAwardsView(twoCur(rec(r), false));
+      assert.deepEqual(empty.groups, [], r);
+      assert.equal(empty.hideSection, true, r + ' with nothing earned hides the section');
+      const kept = buildAwardsView(twoCur(rec(r), true));
+      assert.equal(kept.hideSection, false);
+      assert.equal(kept.earnedTotal, 1);
+      assert.equal(kept.toEarnTotal, 0, 'the unearned level is not offered');
+      assert.equal(kept.groups[0].items.length, 1);
+    }
+  });
+
+  check('award recognition and old servers keep today\'s section', () => {
+    const award = buildAwardsView(twoCur(rec('award'), false));
+    assert.equal(award.hideSection, false);
+    assert.equal(award.toEarnTotal, 2);
+    const old = buildAwardsView(twoCur(undefined, false));
+    assert.equal(old.hideSection, false);
+    assert.equal(old.toEarnTotal, 2);
+    // an old server with nothing awardable still shows the (empty) section
+    const oldEmpty = buildAwardsView(normaliseAwardsOverview('s', { curricula: [{ curid: 'c', curriculumname: 'C', grades: [{ gradeid: 'g', levels: [lvl('h', 1, 0, false)] }] }] }));
+    assert.equal(oldEmpty.hideSection, false);
+  });
+
+  check('mixed: a no-award curriculum adds nothing beside an award one', () => {
+    const o = normaliseAwardsOverview('s1', { curricula: [
+      { curid: 'n', curriculumname: 'N', recognition: rec('none') as never, grades: [{ gradeid: 'g', levels: [lvl('n1', 1, 0, true)] }] },
+      { curid: 'a', curriculumname: 'A', recognition: rec('award') as never, grades: [{ gradeid: 'g', levels: [lvl('a1', 1, 0, true)] }] },
+    ] });
+    const v = buildAwardsView(o);
+    assert.deepEqual(v.groups.map(g => g.name), ['A']);
+    assert.equal(v.hideSection, false);
+  });
+
+  check('hexagon number is the level position in the full order, same as the detail', () => {
+    // level 1 is hidden (not awardable); the award on level 2 shows 2, not 1
+    const o = normaliseAwardsOverview('s1', { curricula: [{
+      curid: 'c', curriculumname: 'C', recognition: rec('award') as never,
+      grades: [{ gradeid: 'g', levels: [
+        lvl('l1', 1, 0, false),
+        lvl('l2', 2, 100, true, { id: 'x2', at: '2026-10-03T12:00:00Z' }),
+      ] }],
+    }] });
+    const item = buildAwardsView(o).groups[0].items[0];
+    assert.equal(item.number, 2);
+    assert.equal(findAward(o, 'x2')!.number, item.number);
   });
 
   console.log(`\n${passed} checks passed`);

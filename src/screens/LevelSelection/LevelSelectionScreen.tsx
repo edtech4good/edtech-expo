@@ -8,13 +8,23 @@ import {
   ProgressCard,
   SizedBox,
 } from '@/components';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from 'styled-components/native';
 import { UnitCardColors } from '@/constants';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { KeyExtractorHelper, getRemoteResourceUrl } from '@/utils';
-import { useBreakpoint, useDesign, useFont, useTypeRole } from '@/services';
+import {
+  useAwardsOverview,
+  useBreakpoint,
+  useDesign,
+  useFont,
+  useTypeRole,
+} from '@/services';
+import {
+  certificateOnLevel,
+  overviewNeedsRecognition,
+} from '@/screens/MyProgress/awards/awardsLogic';
 import {
   Redirect,
   router,
@@ -121,6 +131,21 @@ export default function LevelSelectionScreen() {
     selectedUnit?.levelid ||
     '';
   const { fetch, clear, selectLesson, lessons } = useLevel(levelId);
+  // The certificate wording follows the level's curriculum recognition
+  // setting. Read from the cached awards overview (fetched in the background
+  // only when nothing is cached; corporate only, a no-op in the kids app);
+  // unknown reads as the plain count.
+  const { overview: awardsOverview, refresh: refreshAwards } =
+    useAwardsOverview({ onlyIfMissing: true });
+  // An overview cached before the server sent recognition is refreshed once
+  // per mount, in the background.
+  const refreshedAwardsRef = useRef(false);
+  useEffect(() => {
+    if (refreshedAwardsRef.current) return;
+    if (!overviewNeedsRecognition(awardsOverview)) return;
+    refreshedAwardsRef.current = true;
+    refreshAwards();
+  }, [awardsOverview]);
   const {
     unit: headerUnit,
     gradeName: headerGradeName,
@@ -361,10 +386,15 @@ export default function LevelSelectionScreen() {
               lineHeight: microLineHeight,
               color: theme.colors.onSurface,
             }}>
-            {t('screen.level.progressWithCertificate', {
-              done: doneCount,
-              total: sortedLessons.length,
-            })}
+            {t(
+              certificateOnLevel(awardsOverview, { levelId })
+                ? 'screen.level.progressWithCertificate'
+                : 'screen.library.lessonsProgress',
+              {
+                done: doneCount,
+                total: sortedLessons.length,
+              },
+            )}
           </Text>
           <Text
             style={{

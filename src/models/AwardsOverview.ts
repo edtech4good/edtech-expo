@@ -32,9 +32,17 @@ export interface RawAwardsGrade {
   contentlanguage?: string | null;
 }
 
+/** What a curriculum gives for completing a tier. Absent on older servers. */
+export interface RawRecognition {
+  level?: string | null;
+  grade?: string | null;
+  curriculum?: string | null;
+}
+
 export interface RawAwardsCurriculum {
   curid: string;
   curriculumname: string;
+  recognition?: RawRecognition | null;
   grades?: RawAwardsGrade[] | null;
   translations?: RawTranslations;
   contentlanguage?: string | null;
@@ -90,9 +98,13 @@ export interface AwardLevel {
   approximate: boolean;
 }
 
+export type LevelRecognition = 'none' | 'award' | 'certificate';
+
 export interface AwardsCurriculum {
   curriculumId: string;
   name: string;
+  /** Recognition for completing a level; undefined when the server sent none or an unknown value. */
+  levelRecognition?: LevelRecognition;
   translations: RawTranslations;
   contentLanguage: string | null;
   /** Set by localiseAwardsOverview: the language of the text now in name. */
