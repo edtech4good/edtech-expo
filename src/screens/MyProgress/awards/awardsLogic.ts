@@ -231,8 +231,8 @@ export interface EarnedAwardItem {
   levelName: string;
   levelNameLanguage?: string;
   /**
-   * 1-based position among the levels the section SHOWS in its programme
-   * (awardable or earned), the badge number.
+   * 1-based position of the level in its programme's full order (hidden
+   * levels still count, so the badge agrees with the level's own name).
    */
   number: number;
   earnedAt: string | null;
@@ -264,6 +264,12 @@ export interface AwardGroup {
 }
 
 export interface AwardsView {
+  /**
+   * True when the overview is known to give no level awards anywhere
+   * (a curriculum is set to none or certificate) and nothing is left to show:
+   * the section hides entirely.
+   */
+  hideSection: boolean;
   groups: AwardGroup[];
   earnedTotal: number;
   toEarnTotal: number;
@@ -299,7 +305,13 @@ export function buildAwardsView(
   (overview?.curricula ?? []).forEach(cur => {
     const earned: EarnedAwardItem[] = [];
     const unearned: UnearnedAwardItem[] = [];
-    shownLevels(cur).forEach((level, i) => {
+    // A programme that gives no level awards contributes only awards already
+    // earned (kept); unknown (older server) behaves as before.
+    const noAwards =
+      cur.levelRecognition === 'none' || cur.levelRecognition === 'certificate';
+    shownLevels(cur).forEach(level => {
+      const position = cur.levels.indexOf(level) + 1;
+      if (noAwards && !level.awardId) return;
       if (level.awardId) {
         earned.push({
           kind: 'earned',
@@ -307,7 +319,7 @@ export function buildAwardsView(
           levelId: level.levelId,
           levelName: level.levelName,
           levelNameLanguage: level.levelNameLanguage,
-          number: i + 1,
+          number: position,
           earnedAt: level.earnedAt,
           approximate: level.approximate,
           elsewhere: false,
@@ -318,7 +330,7 @@ export function buildAwardsView(
           levelId: level.levelId,
           levelName: level.levelName,
           levelNameLanguage: level.levelNameLanguage,
-          number: i + 1,
+          number: position,
           progress: level.progress,
         });
       }
@@ -378,7 +390,11 @@ export function buildAwardsView(
   });
 
   const visible = groups.filter(g => g.items.length > 0);
+  const anyNoAwards = (overview?.curricula ?? []).some(
+    c => c.levelRecognition === 'none' || c.levelRecognition === 'certificate',
+  );
   return {
+    hideSection: anyNoAwards && visible.length === 0,
     groups: visible,
     earnedTotal: visible.reduce((n, g) => n + g.earnedCount, 0),
     toEarnTotal: visible.reduce(
@@ -405,9 +421,9 @@ export interface FoundAward {
   curriculumName: string;
   curriculumNameLanguage?: string;
   gradeName: string;
-  /** Position among the levels the section shows (0: earned elsewhere). */
+  /** Position in the programme's full level order (0: earned elsewhere). */
   number: number;
-  /** How many levels the section shows in that programme (0: earned elsewhere). */
+  /** How many levels the programme has (0: earned elsewhere). */
   totalInProgramme: number;
   progress: number | null;
   earnedAt: string | null;
@@ -419,10 +435,9 @@ export function findAward(
   awardId: string,
 ): FoundAward | undefined {
   for (const cur of overview?.curricula ?? []) {
-    const shown = shownLevels(cur);
-    const idx = shown.findIndex(l => l.awardId === awardId);
+    const idx = cur.levels.findIndex(l => l.awardId === awardId);
     if (idx >= 0) {
-      const l = shown[idx];
+      const l = cur.levels[idx];
       return {
         awardId,
         levelName: l.levelName,
@@ -432,7 +447,7 @@ export function findAward(
         curriculumNameLanguage: cur.nameLanguage,
         gradeName: l.gradeName,
         number: idx + 1,
-        totalInProgramme: shown.length,
+        totalInProgramme: cur.levels.length,
         progress: l.progress,
         earnedAt: l.earnedAt,
         approximate: l.approximate,

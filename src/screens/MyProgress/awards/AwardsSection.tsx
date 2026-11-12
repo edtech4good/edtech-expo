@@ -276,6 +276,8 @@ export default function AwardsSection({
 
   // An older learning server without awards: no section, no error, no Retry.
   if (unsupported) return null;
+  // Every curriculum gives no level awards and none was earned: nothing to say.
+  if (overview && view.hideSection) return null;
 
   const countLine =
     view.earnedTotal === 0
