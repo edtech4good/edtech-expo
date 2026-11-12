@@ -194,8 +194,7 @@
       },
       "stepFormat": "{{step}} ({{state}})",
       "stepFormatWithCount": "{{step}} ({{state}}, {{done}} ក្នុងចំណោម {{total}})",
-      "progressWithCertificate": "មេរៀន {{done}} ក្នុងចំណោម {{total}} · ទទួលវិញ្ញាបនបត្រពេលបញ្ចប់",
-      "progress": "{{done}} of {{total}} lessons"
+      "progressWithCertificate": "មេរៀន {{done}} ក្នុងចំណោម {{total}} · ទទួលវិញ្ញាបនបត្រពេលបញ្ចប់"
     },
     "lesson": {
       "header": "លំហាត់",

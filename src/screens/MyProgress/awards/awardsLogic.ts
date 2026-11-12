@@ -60,6 +60,21 @@ export function certificateOnLevel(
   return cur?.levelRecognition === 'certificate';
 }
 
+/**
+ * True when a cached overview predates the recognition setting: it has
+ * curricula but none carries a level recognition. The Level screen refreshes
+ * such an overview once; no overview at all is the hook's own fetch.
+ */
+export function overviewNeedsRecognition(
+  overview: AwardsOverview | null | undefined,
+): boolean {
+  return (
+    !!overview &&
+    overview.curricula.length > 0 &&
+    overview.curricula.every(c => c.levelRecognition === undefined)
+  );
+}
+
 export function normaliseAwardsOverview(
   studentId: string,
   raw: RawAwardsOverview,

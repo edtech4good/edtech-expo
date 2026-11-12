@@ -36,6 +36,7 @@ import {
   allAwardIds,
   awardColorIndex,
   certificateOnLevel,
+  overviewNeedsRecognition,
   awardsEarnedByResult,
   buildAwardsView,
   displayPercent,
@@ -862,6 +863,17 @@ const WITH_NEW = (at: string, approx = false): RawAwardsOverview =>
     assert.equal(certificateOnLevel(recOverview(rec(7)), { levelId: 'lv1' }), false);
     // an overview cached before the field existed
     assert.equal(certificateOnLevel(OV, { levelId: 'lv1' }), false);
+  });
+
+  check('overviewNeedsRecognition: only a cached overview with no recognition anywhere', () => {
+    assert.equal(overviewNeedsRecognition(undefined), false);
+    assert.equal(overviewNeedsRecognition(null), false);
+    assert.equal(overviewNeedsRecognition(OV), true);
+    assert.equal(overviewNeedsRecognition(recOverview(undefined)), true);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('none'))), false);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('certificate'))), false);
+    assert.equal(overviewNeedsRecognition(recOverview(rec('gold'))), true);
+    assert.equal(overviewNeedsRecognition(normaliseAwardsOverview('s1', { curricula: [] })), false);
   });
 
   console.log(`\n${passed} checks passed`);
