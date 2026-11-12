@@ -6,6 +6,7 @@ import {
   CurriculumResponse,
   ProgressSummaryResponse,
   AwardsOverviewResponse,
+  CertificatesOverviewResponse,
   BrandingResponse,
   EdtechLoginPayload,
   EdtechLoginResponse,
@@ -397,6 +398,16 @@ export default class Api {
   > {
     return this.apiSauceInstance.get<AwardsOverviewResponse>(
       'student/awards/overview',
+    );
+  }
+
+  // Certificates overview: issued certificates and, for tiers set to
+  // Certificate, what is left to earn. 404 on a server that predates it.
+  async fetchCertificatesOverview(): Promise<
+    ApiResponse<CertificatesOverviewResponse, CertificatesOverviewResponse>
+  > {
+    return this.apiSauceInstance.get<CertificatesOverviewResponse>(
+      'student/certificates/overview',
     );
   }
 

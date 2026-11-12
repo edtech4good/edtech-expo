@@ -1,12 +1,14 @@
 import {
   useAuth,
   useAwardsOverview,
+  useCertificatesOverview,
   useDesign,
   useProgressSummary,
 } from '@/services';
 import { ScrollView, useWindowDimensions } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import AwardsSection from './awards/AwardsSection';
+import CertificatesSection from './certificates/CertificatesSection';
 import MyProgressSection, {
   myProgressVariantFor,
 } from './Components/MyProgressSection';
@@ -32,6 +34,7 @@ export default function MyProgressScreen() {
   const { summary, loading, error, isStale, refresh } = useProgressSummary();
   const { isCorporate } = useDesign();
   const awards = useAwardsOverview();
+  const certificates = useCertificatesOverview();
 
   const variant = myProgressVariantFor(width, theme.breakpoints);
   const isDesktop = variant === 'desktop';
@@ -71,6 +74,18 @@ export default function MyProgressScreen() {
           unsupported={awards.unsupported}
           isStale={awards.isStale}
           onRetry={awards.refresh}
+        />
+      )}
+      {isCorporate && (
+        <CertificatesSection
+          overview={certificates.overview}
+          seenCertificateIds={certificates.seenCertificateIds}
+          studentName={studentName}
+          loading={certificates.loading}
+          error={certificates.error}
+          unsupported={certificates.unsupported}
+          isStale={certificates.isStale}
+          onRetry={certificates.refresh}
         />
       )}
     </ScrollView>
