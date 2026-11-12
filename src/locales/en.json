@@ -195,7 +195,8 @@
       },
       "stepFormat": "{{step}} ({{state}})",
       "stepFormatWithCount": "{{step}} ({{state}}, {{done}} of {{total}})",
-      "progressWithCertificate": "{{done}} of {{total}} lessons · Certificate on completion"
+      "progressWithCertificate": "{{done}} of {{total}} lessons · Certificate on completion",
+      "progress": "{{done}} of {{total}} lessons"
     },
     "lesson": {
       "header": "Lessons",

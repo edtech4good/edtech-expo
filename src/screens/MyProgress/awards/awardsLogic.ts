@@ -6,6 +6,7 @@ import type {
   AwardLevel,
   AwardsCurriculum,
   AwardsOverview,
+  LevelRecognition,
   RawAwardsOverview,
 } from '@/models';
 
@@ -31,6 +32,34 @@ export function displayPercent(progress: unknown): number {
   return r;
 }
 
+const LEVEL_RECOGNITIONS: readonly string[] = ['none', 'award', 'certificate'];
+
+/** Absent or unknown value (older server, newer server) reads as undefined. */
+function levelRecognitionOf(raw: unknown): LevelRecognition | undefined {
+  const value = (raw as { level?: unknown } | null | undefined)?.level;
+  return typeof value === 'string' && LEVEL_RECOGNITIONS.includes(value)
+    ? (value as LevelRecognition)
+    : undefined;
+}
+
+/**
+ * Whether the Level screen may promise a certificate: only when the level's
+ * curriculum is set to certificate for levels. No overview cached, level or
+ * curriculum not found, recognition absent or unknown all read false (the
+ * plain lesson count). Matches on curriculum id, or on a level id inside it.
+ */
+export function certificateOnLevel(
+  overview: AwardsOverview | null | undefined,
+  ids: { curriculumId?: string | null; levelId?: string | null },
+): boolean {
+  const cur = overview?.curricula?.find(c =>
+    ids.curriculumId
+      ? c.curriculumId === ids.curriculumId
+      : !!ids.levelId && c.levels.some(l => l.levelId === ids.levelId),
+  );
+  return cur?.levelRecognition === 'certificate';
+}
+
 export function normaliseAwardsOverview(
   studentId: string,
   raw: RawAwardsOverview,
@@ -39,6 +68,7 @@ export function normaliseAwardsOverview(
   const curricula: AwardsCurriculum[] = (raw?.curricula ?? []).map(cur => ({
     curriculumId: cur.curid,
     name: cur.curriculumname,
+    levelRecognition: levelRecognitionOf(cur.recognition),
     translations: cur.translations ?? null,
     contentLanguage: cur.contentlanguage ?? null,
     levels: (cur.grades ?? []).flatMap(grade =>

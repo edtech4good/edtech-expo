@@ -35,6 +35,7 @@ import {
 import {
   allAwardIds,
   awardColorIndex,
+  certificateOnLevel,
   awardsEarnedByResult,
   buildAwardsView,
   displayPercent,
@@ -816,6 +817,51 @@ const WITH_NEW = (at: string, approx = false): RawAwardsOverview =>
     assert.deepEqual(Object.keys(s.byStudent).sort(), ['s1', 's2']);
     assert.deepEqual(s.byStudent.s1.seenAwardIds, ['a1']);
     assert.deepEqual(awardsSlice.reducer(s, clearAllData()).byStudent, {});
+  });
+
+  // Level screen certificate line: only a curriculum set to certificate for levels.
+  const recOverview = (recognition: unknown) =>
+    normaliseAwardsOverview('s1', {
+      curricula: [
+        {
+          curid: 'c1',
+          curriculumname: 'Course',
+          recognition: recognition as never,
+          grades: [{ gradeid: 'g1', levels: [lvl('lv1', 1, 0, true)] }],
+        },
+      ],
+    });
+  const rec = (level: unknown) => ({ level, grade: 'none', curriculum: 'none' });
+
+  check('certificateOnLevel: level recognition certificate -> certificate wording', () => {
+    const ov = recOverview(rec('certificate'));
+    assert.equal(certificateOnLevel(ov, { levelId: 'lv1' }), true);
+    assert.equal(certificateOnLevel(ov, { curriculumId: 'c1' }), true);
+  });
+
+  check('certificateOnLevel: award and none -> plain count', () => {
+    assert.equal(certificateOnLevel(recOverview(rec('award')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('none')), { levelId: 'lv1' }), false);
+    // grade/curriculum certificate does not promise a level certificate
+    const other = recOverview({ level: 'none', grade: 'certificate', curriculum: 'certificate' });
+    assert.equal(certificateOnLevel(other, { levelId: 'lv1' }), false);
+  });
+
+  check('certificateOnLevel: no overview, unknown level, absent or unknown recognition -> plain count', () => {
+    const ov = recOverview(rec('certificate'));
+    assert.equal(certificateOnLevel(undefined, { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(null, { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(ov, { levelId: 'nope' }), false);
+    assert.equal(certificateOnLevel(ov, { curriculumId: 'nope' }), false);
+    assert.equal(certificateOnLevel(ov, {}), false);
+    assert.equal(certificateOnLevel(recOverview(undefined), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(null), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview({}), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('Certificate')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec('gold')), { levelId: 'lv1' }), false);
+    assert.equal(certificateOnLevel(recOverview(rec(7)), { levelId: 'lv1' }), false);
+    // an overview cached before the field existed
+    assert.equal(certificateOnLevel(OV, { levelId: 'lv1' }), false);
   });
 
   console.log(`\n${passed} checks passed`);
