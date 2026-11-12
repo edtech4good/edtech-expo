@@ -3,12 +3,16 @@ import { useApi } from '../api/ApiContext';
 import { LessonQuizResource, QuizResult } from '@/models';
 import _ from 'lodash';
 import { submitResult } from '../pendingResults';
+import { refreshAwardsAfterResult } from '../awards';
+import { saveResultThenAwards } from '../awardsFlow';
+import useDesign from './useDesign';
 import { useAppSelector } from '@/redux';
 import { getSelectedLanguage } from '@/redux/slices';
 import { overlayQuestionRows } from '@/transforms/Content';
 
 export default function useQuiz(lessonQuizId: string) {
   const api = useApi();
+  const { isCorporate } = useDesign();
   const [isFetching, setIsFetching] = useState(false);
   const language = useAppSelector(getSelectedLanguage);
   // Raw rows (translations included); the screens read the overlay of the
@@ -28,11 +32,20 @@ export default function useQuiz(lessonQuizId: string) {
     await setIsFetching(false);
   };
 
-  const saveResult = async (results: QuizResult) =>
-    submitResult(api, {
-      kind: 'quiz',
-      lessonId: lessonQuizId,
-      payload: results,
+  // The save is exactly the pre-awards one (enqueue, then flush). Corporate
+  // only, and only once the server has accepted it, awards are looked for in
+  // the background; that check is never awaited here (awardsFlow).
+  const saveResult = (results: QuizResult) =>
+    saveResultThenAwards({
+      submit: () =>
+        submitResult(api, {
+          kind: 'quiz',
+          lessonId: lessonQuizId,
+          payload: results,
+        }),
+      enabled: isCorporate,
+      startMs: results.starttime,
+      afterSynced: startMs => refreshAwardsAfterResult(api, startMs),
     });
 
   return { fetch, saveResult, isFetching, questions };

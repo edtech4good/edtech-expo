@@ -106,6 +106,9 @@ jobs:
       - name: Sign-in error copy (no developer text when the server can't be reached)
         run: yarn test:login
 
+      - name: Awards in My progress (grouping, dates, seen/new rule, persisted slice)
+        run: yarn test:awards
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 
