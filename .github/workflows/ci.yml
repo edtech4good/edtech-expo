@@ -109,6 +109,9 @@ jobs:
       - name: Awards in My progress (grouping, dates, seen/new rule, persisted slice)
         run: yarn test:awards
 
+      - name: Certificates in My progress (overview, wording, seen/new rule, buttons, hidden section)
+        run: yarn test:certificates
+
       - name: Web export (build check)
         run: npx expo export -p web --output-dir /tmp/expo-web-export
 

@@ -58,10 +58,11 @@ export const progressNavItem: NavItem = {
   route: '/progress',
 };
 
-// Routes with no nav item of their own that belong to one: while the award
-// detail is open, My progress is the active item in the rail and sidebar.
+// Routes with no nav item of their own that belong to one: while the award or
+// certificate detail is open, My progress is the active item in the rail and sidebar.
 const ACTIVE_NAV_ROUTE_ALIAS: Record<string, string> = {
   'progress/award': 'progress/index',
+  'progress/certificate': 'progress/index',
 };
 
 /** The navigator route name whose nav item should show as active. */

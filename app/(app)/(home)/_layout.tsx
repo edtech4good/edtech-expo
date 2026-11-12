@@ -50,9 +50,12 @@ function HomeShell() {
   const { isRail, isSidebar, isTabs, hasPermanentNav } = useNavShell();
   const isKhmer = useAppSelector(getSelectedLanguage) === 'km';
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   // The award detail is a pushed screen with no tab of its own; while it is
   // open the Progress tab stays lit (NavRail/NavSidebar map the route too).
-  const onAwardDetail = usePathname().startsWith('/progress/award');
+  const onAwardDetail = ['/progress/award', '/progress/certificate'].some(
+    path => pathname.startsWith(path),
+  );
 
   // Phone tab headers (My progress and Profile share one look).
   const phoneHeaderOptions = {
@@ -151,6 +154,19 @@ function HomeShell() {
             // own (href: null), back goes to My progress, not to the first tab.
             href: null,
             title: t('awards.detailTitle'),
+            headerLeft: () => (
+              <BackButton onPress={() => router.navigate('/progress')} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="progress/certificate"
+          options={{
+            ...phoneHeaderOptions,
+            // Pushed from the Certificates section of My progress, like the
+            // award detail: no tab of its own, back goes to My progress.
+            href: null,
+            title: t('certificates.detailTitle'),
             headerLeft: () => (
               <BackButton onPress={() => router.navigate('/progress')} />
             ),
@@ -269,6 +285,20 @@ function HomeShell() {
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.customAppBar },
           title: t('awards.detailTitle'),
+        }}
+      />
+      <Drawer.Screen
+        name="progress/certificate"
+        options={{
+          // Certificate detail, pushed from My progress (like the award detail).
+          headerShown: true,
+          headerLeft: () => (
+            <BackButton onPress={() => router.navigate('/progress')} />
+          ),
+          headerRight: hasPermanentNav ? undefined : () => <DrawerButton />,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: theme.colors.customAppBar },
+          title: t('certificates.detailTitle'),
         }}
       />
       <Drawer.Screen

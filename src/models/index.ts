@@ -17,3 +17,4 @@ export * from './Library';
 export * from './ProgressSummary';
 export * from './Content';
 export * from './AwardsOverview';
+export * from './CertificatesOverview';

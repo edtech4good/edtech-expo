@@ -46,3 +46,5 @@ export * from './offlineBannerHeight';
 export * from './pendingResults';
 export { default as useAwardsOverview } from './hooks/useAwardsOverview';
 export * from './awards';
+export { default as useCertificatesOverview } from './hooks/useCertificatesOverview';
+export * from './certificates';

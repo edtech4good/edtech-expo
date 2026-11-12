@@ -8,6 +8,7 @@ import { levelStepsSlice } from './slices/LevelStepsSlice';
 import { librarySlice } from './slices/LibrarySlice';
 import { progressSlice } from './slices/ProgressSlice';
 import { awardsSlice } from './slices/AwardsSlice';
+import { certificatesSlice } from './slices/CertificatesSlice';
 
 /**
  * The slices redux-persist writes to disk (Store.ts persistConfig). Kept in
@@ -24,4 +25,5 @@ export const persistWhitelist: string[] = [
   librarySlice.name,
   progressSlice.name,
   awardsSlice.name,
+  certificatesSlice.name,
 ];
