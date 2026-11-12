@@ -17,6 +17,7 @@ import {
   itemTitle,
   itemLines,
   localiseCertificatesOverview,
+  scopeLineKey,
   sectionVisible,
 } from './certificatesLogic';
 
@@ -70,11 +71,10 @@ function Card({
   const scope = scopeLabel(item);
   const title = itemTitle(item, scope, curriculumName);
   const day = issued ? issuedDay(issued.issuedAt, language) : '';
-  const sub = issued
-    ? day
-      ? t('certificates.issuedLine', { scope, date: day })
-      : t('certificates.issuedNoDate', { scope })
-    : t('certificates.notYetLine', { scope });
+  const sub = t(`certificates.${scopeLineKey(item, day !== '')}`, {
+    scope,
+    date: day,
+  });
   const { lines, more } = itemLines(item);
   const lineTexts = lines.map(l => t(`certificates.${l.key}`, l.params));
   if (more > 0) lineTexts.push(t('certificates.andMore', { n: more }));

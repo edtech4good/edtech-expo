@@ -395,6 +395,9 @@
     "shareLink": "Share link",
     "noteOffline": "Connect to the internet to save or share",
     "noteNoLink": "Your organisation hasn't set up certificate links yet",
-    "shareFailed": "Couldn't open sharing. Try again."
+    "shareFailed": "Couldn't open sharing. Try again.",
+    "readyLine": "{{scope}} · ready to issue",
+    "labelClass": "Cohort",
+    "linkCopied": "Link copied"
   }
 }

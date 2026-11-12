@@ -23,6 +23,7 @@ export interface RawCertificate {
   shortcode?: string | null;
   issuedat?: string | null;
   checkurl?: string | null;
+  classname?: string | null;
 }
 
 export interface RawCertificateItem {
@@ -76,6 +77,8 @@ export interface IssuedCertificate {
   issuedAt: string;
   /** Public check page; null when the organisation has no certificate links */
   checkUrl: string | null;
+  /** The learner's class or cohort when the server sent one */
+  className: string | null;
 }
 
 export interface CertificateItem {

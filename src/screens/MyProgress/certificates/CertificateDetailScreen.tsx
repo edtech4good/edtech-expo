@@ -35,6 +35,7 @@ import {
   itemTitle,
   localiseCertificatesOverview,
   shareContent,
+  shareOnWeb,
 } from './certificatesLogic';
 
 function Fact({
@@ -119,6 +120,7 @@ export default function CertificateDetailScreen() {
   const scopeLabel = useScopeLabel();
   const { isOffline } = useConnectivity();
   const [shareFailed, setShareFailed] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const title = useTypeRole('screenTitle', found?.item.nameLanguage);
   const body = useTypeRole('body');
   const caption = useTypeRole('caption');
@@ -193,6 +195,16 @@ export default function CertificateDetailScreen() {
   const shareLink = async () => {
     if (!actions.shareUrl) return;
     setShareFailed(false);
+    setLinkCopied(false);
+    if (Platform.OS === 'web') {
+      const outcome = await shareOnWeb(
+        typeof navigator !== 'undefined' ? navigator : undefined,
+        actions.shareUrl,
+      );
+      if (outcome === 'copied') setLinkCopied(true);
+      if (outcome === 'failed') setShareFailed(true);
+      return;
+    }
     try {
       await Share.share(shareContent(Platform.OS, actions.shareUrl));
     } catch {
@@ -239,6 +251,12 @@ export default function CertificateDetailScreen() {
             valueLanguage={item.nameLanguage}
           />
         )}
+        {certificate.className && (
+          <Fact
+            label={t('certificates.labelClass')}
+            value={certificate.className}
+          />
+        )}
         {issued !== '' && (
           <Fact label={t('certificates.labelIssued')} value={issued} />
         )}
@@ -278,6 +296,19 @@ export default function CertificateDetailScreen() {
                 ? 'certificates.noteOffline'
                 : 'certificates.noteNoLink',
             )}
+          </Text>
+        )}
+        {linkCopied && (
+          <Text
+            accessibilityLiveRegion="polite"
+            testID="certificate-link-copied"
+            style={{
+              fontFamily: caption.fontFamily,
+              fontSize: caption.fontSize,
+              lineHeight: caption.lineHeight,
+              color: theme.colors.onSurfaceVariant,
+            }}>
+            {t('certificates.linkCopied')}
           </Text>
         )}
         {shareFailed && (

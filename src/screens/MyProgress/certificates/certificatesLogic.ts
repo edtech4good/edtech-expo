@@ -63,6 +63,7 @@ function certificateOf(raw: RawCertificateItem['certificate']): IssuedCertificat
     code,
     issuedAt: text(raw?.issuedat),
     checkUrl: checkUrl === '' ? null : checkUrl,
+    className: text(raw?.classname).trim() || null,
   };
 }
 
@@ -330,4 +331,44 @@ export function shareContent(os: string, link: string): { url: string } | { mess
  */
 export function itemTitle(item: { name: string }, scopeWord: string, curriculumName: string): string {
   return item.name || scopeWord || curriculumName;
+}
+
+/** Which scope-line string a card uses: issued, ready to issue, or not yet. */
+export function scopeLineKey(item: { status: string }, hasDate: boolean): 'issuedLine' | 'issuedNoDate' | 'readyLine' | 'notYetLine' {
+  if (item.status === 'issued') return hasDate ? 'issuedLine' : 'issuedNoDate';
+  return item.status === 'ready' ? 'readyLine' : 'notYetLine';
+}
+
+export type ShareOutcome = 'shared' | 'copied' | 'failed';
+
+/**
+ * Web "Share link": the browser's share sheet when it has one; otherwise copy the
+ * link and say so; only if neither works is it a failure. A dismissed share sheet
+ * (AbortError) is not a failure.
+ */
+export async function shareOnWeb(
+  nav: {
+    share?: (data: { url: string }) => Promise<void>;
+    clipboard?: { writeText?: (text: string) => Promise<void> };
+  } | undefined | null,
+  link: string,
+): Promise<ShareOutcome> {
+  if (typeof nav?.share === 'function') {
+    try {
+      await nav.share({ url: link });
+      return 'shared';
+    } catch (err) {
+      if ((err as { name?: string } | null)?.name === 'AbortError') return 'shared';
+      // fall through to copying
+    }
+  }
+  if (typeof nav?.clipboard?.writeText === 'function') {
+    try {
+      await nav.clipboard.writeText(link);
+      return 'copied';
+    } catch {
+      return 'failed';
+    }
+  }
+  return 'failed';
 }

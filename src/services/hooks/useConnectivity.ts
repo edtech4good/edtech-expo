@@ -1,6 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { initialOffline } from '../connectivityInitial';
 
 /**
  * Runtime connectivity signal that drives the corporate OfflineBanner
@@ -34,7 +35,9 @@ import { Platform } from 'react-native';
  * they never register these listeners.
  */
 export default function useConnectivity(): { isOffline: boolean } {
-  const [isOffline, setIsOffline] = useState(false);
+  const [isOffline, setIsOffline] = useState(() =>
+    initialOffline(Platform.OS, typeof navigator !== 'undefined' ? navigator : undefined),
+  );
 
   useEffect(() => {
     let cancelled = false;

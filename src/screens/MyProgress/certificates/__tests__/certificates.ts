@@ -21,6 +21,7 @@ import { clearAllData } from '../../../../redux/CommonAction';
 import { persistWhitelist } from '../../../../redux/persistWhitelist';
 import { combinedReducers } from '../../../../redux/CombinedReducers';
 import { activeNavRouteName } from '../../../../constants/NavItems';
+import { initialOffline } from '../../../../services/connectivityInitial';
 import { isCertificatesUnsupported } from '../../../../services/certificatesSession';
 import {
   fetchCertificates,
@@ -35,7 +36,9 @@ import {
   FOCUS_REFRESH_MIN_MS,
   issuedIds,
   itemTitle,
+  scopeLineKey,
   shareContent,
+  shareOnWeb,
   shouldFocusFetch,
   itemLines,
   localiseCertificatesOverview,
@@ -364,6 +367,52 @@ const RAW: RawCertificatesOverview = {
     assert.deepEqual(shareContent('ios', 'https://x/y'), { url: 'https://x/y' });
     assert.deepEqual(shareContent('android', 'https://x/y'), { message: 'https://x/y' });
     assert.deepEqual(shareContent('web', 'https://x/y'), { message: 'https://x/y' });
+  });
+
+  await check('1: classname is normalised (trimmed, null when absent) and ignored on not-yet items', () => {
+    const cert = (classname: unknown) => ({ certificateid: 'k', shortcode: 'C', classname }) as never;
+    const get = (classname: unknown) => normaliseCertificatesOverview('s1', { curricula: [{ curriculumid: 'c', curriculumname: 'C', items: [{ scope: 'level', scopeid: 'l', name: 'L', status: 'issued', certificate: cert(classname) }] }] }, NOW).curricula[0].items[0].certificate!.className;
+    assert.equal(get('Cohort II '), 'Cohort II');
+    assert.equal(get(null), null);
+    assert.equal(get(undefined), null);
+    assert.equal(get(''), null);
+    assert.equal(get(7), null);
+    assert.equal(en.certificates.labelClass, 'Cohort');
+    assert.equal(normaliseCertificatesOverview('s1', RAW, NOW).curricula[0].items[0].certificate!.className, null);
+  });
+
+  await check('2: web share: share sheet, else copy the link, else the error', async () => {
+    const L = 'https://learn.example.org/v/X';
+    const copied: string[] = [];
+    const clipboard = { writeText: async (s: string) => { copied.push(s); } };
+    assert.equal(await shareOnWeb({ share: async () => {}, clipboard }, L), 'shared');
+    assert.equal(copied.length, 0);
+    assert.equal(await shareOnWeb({ share: async () => { throw Object.assign(new Error('x'), { name: 'AbortError' }); }, clipboard }, L), 'shared', 'a dismissed sheet is not a failure');
+    assert.equal(await shareOnWeb({ clipboard }, L), 'copied');
+    assert.deepEqual(copied, [L]);
+    assert.equal(await shareOnWeb({ share: async () => { throw new Error('nope'); }, clipboard }, L), 'copied', 'a share that fails falls back to copying');
+    assert.equal(await shareOnWeb({}, L), 'failed');
+    assert.equal(await shareOnWeb(undefined, L), 'failed');
+    assert.equal(await shareOnWeb({ clipboard: { writeText: async () => { throw new Error('denied'); } } }, L), 'failed');
+    assert.equal(en.certificates.linkCopied, 'Link copied');
+  });
+
+  await check('3: initial connectivity: web reads navigator.onLine, native is unchanged', () => {
+    assert.equal(initialOffline('web', { onLine: false }), true);
+    assert.equal(initialOffline('web', { onLine: true }), false);
+    assert.equal(initialOffline('web', undefined), false);
+    assert.equal(initialOffline('web', {}), false);
+    assert.equal(initialOffline('android', { onLine: false }), false);
+    assert.equal(initialOffline('ios', { onLine: false }), false);
+  });
+
+  await check('4: a ready item says "ready to issue", not "not yet"', () => {
+    assert.equal(scopeLineKey({ status: 'ready' }, false), 'readyLine');
+    assert.equal(scopeLineKey({ status: 'not_yet' }, false), 'notYetLine');
+    assert.equal(scopeLineKey({ status: 'cant_check' }, false), 'notYetLine');
+    assert.equal(scopeLineKey({ status: 'issued' }, true), 'issuedLine');
+    assert.equal(scopeLineKey({ status: 'issued' }, false), 'issuedNoDate');
+    assert.equal(en.certificates.readyLine.replace('{{scope}}', 'Grade'), 'Grade · ready to issue');
   });
 
   // ------------------------------------------------------------- slice and wiring
