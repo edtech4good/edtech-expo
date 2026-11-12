@@ -14,6 +14,7 @@ import {
   buildCertificatesView,
   isNewCertificate,
   issuedDay,
+  itemTitle,
   itemLines,
   localiseCertificatesOverview,
   sectionVisible,
@@ -47,10 +48,12 @@ export function useScopeLabel() {
 
 function Card({
   item,
+  curriculumName,
   studentName,
   isNew,
 }: {
   item: CertificateItem;
+  curriculumName: string;
   studentName: string;
   isNew: boolean;
 }) {
@@ -65,6 +68,7 @@ function Card({
 
   const issued = item.certificate;
   const scope = scopeLabel(item);
+  const title = itemTitle(item, scope, curriculumName);
   const day = issued ? issuedDay(issued.issuedAt, language) : '';
   const sub = issued
     ? day
@@ -104,7 +108,7 @@ function Card({
             lineHeight: body.lineHeight,
             color: theme.colors.onBackground,
           }}>
-          {item.name}
+          {title}
         </Text>
         {isNew && (
           <View
@@ -160,7 +164,7 @@ function Card({
   );
 
   const a11yLabel = [
-    item.name,
+    title,
     issued ? t('certificates.a11yIssued') : t('certificates.a11yNotYet'),
     sub,
     isNew ? t('certificates.newChip') : null,
@@ -264,7 +268,7 @@ export default function CertificatesSection({
       <View style={{ gap: 20 }}>
         {view.groups.map(group => (
           <View key={group.curriculumId} style={{ gap: 8 }}>
-            {group.showHeading && (
+            {group.showHeading && group.name !== '' && (
               <Text accessibilityRole="header" style={{ ...muted, color: theme.colors.onBackground }}>
                 {group.name}
               </Text>
@@ -273,6 +277,7 @@ export default function CertificatesSection({
               <Card
                 key={`${item.scope}-${item.scopeId}`}
                 item={item}
+                curriculumName={group.name}
                 studentName={studentName}
                 isNew={
                   !!item.certificate &&

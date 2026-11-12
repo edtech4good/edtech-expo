@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../Store';
 import { CertificatesOverview } from '@/models';
 import { clearAllData } from '../CommonAction';
+import { resetCertificatesUnsupported } from '@/services/certificatesSession';
 import { markCertificatesSeen } from '@/screens/MyProgress/certificates/certificatesLogic';
 
 export interface StudentCertificatesState {
@@ -52,7 +53,11 @@ export const certificatesSlice = createSlice({
     },
   },
   extraReducers: builder => {
-    builder.addCase(clearAllData, () => initialState);
+    builder.addCase(clearAllData, () => {
+      // logout: the next sign-in may reach a different (newer) server
+      resetCertificatesUnsupported();
+      return initialState;
+    });
   },
 });
 

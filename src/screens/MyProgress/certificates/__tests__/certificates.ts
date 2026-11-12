@@ -21,6 +21,7 @@ import { clearAllData } from '../../../../redux/CommonAction';
 import { persistWhitelist } from '../../../../redux/persistWhitelist';
 import { combinedReducers } from '../../../../redux/CombinedReducers';
 import { activeNavRouteName } from '../../../../constants/NavItems';
+import { isCertificatesUnsupported } from '../../../../services/certificatesSession';
 import {
   fetchCertificates,
   resetCertificatesFlowForTest,
@@ -31,7 +32,11 @@ import {
   certificateActions,
   findCertificate,
   isNewCertificate,
+  FOCUS_REFRESH_MIN_MS,
   issuedIds,
+  itemTitle,
+  shareContent,
+  shouldFocusFetch,
   itemLines,
   localiseCertificatesOverview,
   markCertificatesSeen,
@@ -316,6 +321,49 @@ const RAW: RawCertificatesOverview = {
     const lone = buildCertificatesView(normaliseCertificatesOverview('s1', { curricula: [{ curriculumid: 'c', curriculumname: 'C', items: [{ scope: 'curriculum', scopeid: 'c', name: 'C', status: 'ready' }] }] }, NOW));
     assert.equal(lone.groups[0].showHeading, false);
     assert.equal(lone.earnedCount, 0);
+  });
+
+  // ------------------------------------------------------------- fix round
+  await check('a response that arrives after the learner changed is not stored', async () => {
+    resetCertificatesFlowForTest();
+    const store = realStore();
+    const student = { id: 's1' };
+    const env = { ...makeEnv(store, async () => { student.id = 's2'; return okResponse(issuedRaw('x')); }), studentId: () => student.id };
+    assert.equal(await fetchCertificates(env), 'failed');
+    assert.deepEqual(store.getState().certificates.byStudent, {});
+  });
+
+  await check('1: a snapshot-only certificate with no name is titled by its scope word, then the programme', () => {
+    assert.equal(itemTitle({ name: '' }, 'Module', 'Programme X'), 'Module');
+    assert.equal(itemTitle({ name: '' }, '', 'Programme X'), 'Programme X');
+    assert.equal(itemTitle({ name: 'M1' }, 'Module', 'Programme X'), 'M1');
+    // a curriculum with no name gives a view whose heading the section skips (group.name === '')
+    const o = normaliseCertificatesOverview('s1', { curricula: [{ curriculumid: 'c', curriculumname: '', items: [{ scope: 'level', scopeid: 'l', name: '', status: 'issued', certificate: { certificateid: 'k', shortcode: 'C' } }] }] }, NOW);
+    assert.equal(buildCertificatesView(o).groups[0].name, '');
+  });
+
+  await check('2: a cache under 30 s old is not refetched on focus', () => {
+    const o = normaliseCertificatesOverview('s1', RAW, NOW);
+    assert.equal(shouldFocusFetch(undefined, NOW), true);
+    assert.equal(shouldFocusFetch(o, NOW + FOCUS_REFRESH_MIN_MS - 1), false);
+    assert.equal(shouldFocusFetch(o, NOW + FOCUS_REFRESH_MIN_MS), true);
+  });
+
+  await check('3: the 404 memory is cleared on logout (clearAllData) and by a reset', async () => {
+    resetCertificatesFlowForTest();
+    const store = realStore();
+    const gone = async () => { throw Object.assign(new Error('x'), { status: 404 }); };
+    await fetchCertificates(makeEnv(store, gone as never));
+    assert.equal(isCertificatesUnsupported(), true);
+    store.dispatch(clearAllData());
+    assert.equal(isCertificatesUnsupported(), false);
+    assert.equal(await fetchCertificates(makeEnv(store, async () => okResponse(issuedRaw('a')))), 'ok', 'asked again after logout');
+  });
+
+  await check('4: the share sheet gets url only on iOS, message only elsewhere', () => {
+    assert.deepEqual(shareContent('ios', 'https://x/y'), { url: 'https://x/y' });
+    assert.deepEqual(shareContent('android', 'https://x/y'), { message: 'https://x/y' });
+    assert.deepEqual(shareContent('web', 'https://x/y'), { message: 'https://x/y' });
   });
 
   // ------------------------------------------------------------- slice and wiring

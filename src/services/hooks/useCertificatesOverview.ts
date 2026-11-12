@@ -4,6 +4,7 @@ import { useApi } from '../api/ApiContext';
 import { useAppSelector } from '@/redux';
 import { getProfile, getStudentCertificates } from '@/redux/slices';
 import { fetchAndStoreCertificates } from '../certificates';
+import { shouldFocusFetch } from '@/screens/MyProgress/certificates/certificatesLogic';
 import useDesign from './useDesign';
 
 /**
@@ -65,10 +66,17 @@ export default function useCertificatesOverview(
     setLoading(false);
   }, [api, enabled, studentId]);
 
-  const hadOverview = !!overview;
+  // The focus callback is memoised; read the latest cache through a ref.
+  const overviewRef = useRef(overview);
+  overviewRef.current = overview;
   useFocusEffect(
     useCallback(() => {
-      if (options.onlyIfMissing && hadOverview) {
+      if (options.onlyIfMissing && overviewRef.current) {
+        setLoading(false);
+        return;
+      }
+      // A fresh cache (under 30 s) is not refetched on every focus; Retry still is.
+      if (!shouldFocusFetch(overviewRef.current, Date.now())) {
         setLoading(false);
         return;
       }

@@ -8,6 +8,11 @@ import {
   normaliseCertificatesOverview,
   seenAfterFetch,
 } from '@/screens/MyProgress/certificates/certificatesLogic';
+import {
+  isCertificatesUnsupported,
+  markCertificatesUnsupported,
+  resetCertificatesUnsupported,
+} from './certificatesSession';
 import { CertificatesActions } from '@/redux/slices/CertificatesSlice';
 
 export type CertificatesFetchOutcome = 'ok' | 'unsupported' | 'failed';
@@ -24,17 +29,16 @@ export interface CertificatesFetchEnv {
   now(): number;
 }
 
-// Session-only (a restart forgets all three).
+// Session-only (a restart forgets them). The 404 memory lives in certificatesSession.ts and is cleared on logout.
 let requestSeq = 0;
 let appliedSeq = 0;
-// A server that answered 404 has no route; it is not asked again this session,
-// so a focus-refresh loop never hammers an older server.
-let unsupportedSession = false;
+// A server that answered 404 has no route; it is not asked again this session
+// (until logout), so a focus-refresh loop never hammers an older server.
 
 export function resetCertificatesFlowForTest(): void {
   requestSeq = 0;
   appliedSeq = 0;
-  unsupportedSession = false;
+  resetCertificatesUnsupported();
 }
 
 const statusOf = (err: unknown): number | undefined => {
@@ -54,7 +58,7 @@ export async function fetchCertificates(
   env: CertificatesFetchEnv,
 ): Promise<CertificatesFetchOutcome> {
   try {
-    if (unsupportedSession) return 'unsupported';
+    if (isCertificatesUnsupported()) return 'unsupported';
     const studentId = env.studentId();
     if (!studentId) return 'failed';
     const seq = ++requestSeq;
@@ -64,13 +68,13 @@ export async function fetchCertificates(
     } catch (err) {
       // The API layer throws for any non-2xx, carrying the status.
       if (statusOf(err) === 404) {
-        unsupportedSession = true;
+        markCertificatesUnsupported();
         return 'unsupported';
       }
       return 'failed';
     }
     if (response?.status === 404) {
-      unsupportedSession = true;
+      markCertificatesUnsupported();
       return 'unsupported';
     }
     const payload = response?.data?.data;

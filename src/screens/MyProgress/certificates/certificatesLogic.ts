@@ -308,3 +308,26 @@ export function certificateActions(input: {
   }
   return { enabled: true, note: null, pdfUrl: `${base}/certificate`, shareUrl: base };
 }
+
+// ------------------------------------------------------------ focus throttle, share, titles
+
+/** A cached overview younger than this is not refetched on focus (Retry always fetches). */
+export const FOCUS_REFRESH_MIN_MS = 30_000;
+
+export function shouldFocusFetch(overview: CertificatesOverview | undefined, now: number): boolean {
+  return !overview || !(now - overview.fetchedAt < FOCUS_REFRESH_MIN_MS);
+}
+
+/** What the share sheet gets: the link as `url` on iOS, as `message` elsewhere (Android ignores `url`). */
+export function shareContent(os: string, link: string): { url: string } | { message: string } {
+  return os === 'ios' ? { url: link } : { message: link };
+}
+
+/**
+ * The title of an item: its name, else (a certificate kept from a snapshot with
+ * no name) the scope word, else the programme name. `scopeWord` is the label of
+ * the item's tier.
+ */
+export function itemTitle(item: { name: string }, scopeWord: string, curriculumName: string): string {
+  return item.name || scopeWord || curriculumName;
+}

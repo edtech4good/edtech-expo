@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import {
   BackHandler,
   Linking,
+  Platform,
   ScrollView,
   Share,
   Text,
@@ -31,7 +32,9 @@ import {
   certificateActions,
   findCertificate,
   issuedDay,
+  itemTitle,
   localiseCertificatesOverview,
+  shareContent,
 } from './certificatesLogic';
 
 function Fact({
@@ -191,7 +194,7 @@ export default function CertificateDetailScreen() {
     if (!actions.shareUrl) return;
     setShareFailed(false);
     try {
-      await Share.share({ message: actions.shareUrl, url: actions.shareUrl });
+      await Share.share(shareContent(Platform.OS, actions.shareUrl));
     } catch {
       setShareFailed(true);
     }
@@ -218,7 +221,7 @@ export default function CertificateDetailScreen() {
           color: theme.colors.onBackground,
           textAlign: 'center',
         }}>
-        {item.name || curriculum.name}
+        {itemTitle(item, scopeLabel(item), curriculum.name)}
       </Text>
       <View>
         {studentName !== '' && (
